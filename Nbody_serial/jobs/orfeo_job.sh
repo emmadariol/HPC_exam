@@ -15,6 +15,12 @@
 set -euo pipefail
 cd $SLURM_SUBMIT_DIR
 
+# Load site MPI module if available (adjust module name as needed)
+MPI_MODULE="openmpi/4.1.6"
+if type module >/dev/null 2>&1; then
+	module load "${MPI_MODULE}"
+fi
+
 # Recommended parameter sweep for Orfeo (fast, debug-focused)
 RANKS="1 2"
 THREADS="1 2"

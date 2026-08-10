@@ -174,7 +174,7 @@ RANKS="1 2 4" THREADS=1 REPEATS=5 N=1000 NSTEPS=20 ./benchmark_docker.sh
 ```
 
 The Docker benchmark runs the native executable and then the same executable
-inside the Docker image using the same input file mounted into `/data`. OpenMPI
+inside the Docker image using the same input file mounted into `/data`. Open MPI
 inside Docker runs as root, so the helper sets the standard
 `OMPI_ALLOW_RUN_AS_ROOT` variables.
 

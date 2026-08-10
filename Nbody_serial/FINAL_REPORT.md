@@ -80,7 +80,7 @@ reports one NUMA node containing CPUs `0-11`.
 |---|---|
 | C compiler | GCC `11.4.0` |
 | MPI compiler wrapper | `mpicc`, backed by GCC `11.4.0` |
-| MPI runtime | Open MPI `4.1.2` |
+| MPI runtime | Open MPI `4.1.6` |
 | OpenMP runtime | GCC `libgomp` via `-fopenmp` |
 | Container runtime | Docker Desktop / Docker Engine from WSL |
 | Base Docker image | `ubuntu:24.04` |

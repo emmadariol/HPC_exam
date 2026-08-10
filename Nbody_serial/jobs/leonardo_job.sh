@@ -15,6 +15,12 @@
 set -euo pipefail
 cd $SLURM_SUBMIT_DIR
 
+# Load site MPI module if available (adjust module name as needed)
+MPI_MODULE="openmpi/4.1.6"
+if type module >/dev/null 2>&1; then
+	module load "${MPI_MODULE}"
+fi
+
 # Recommended production sweep for Leonardo (full derivables)
 RANKS="1 2 4 8"
 THREADS="1 2 4"
