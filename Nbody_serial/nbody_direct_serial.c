@@ -471,9 +471,9 @@ static void compute_accelerations_naive(size_t n,                // number of pa
     dtype azi = (dtype)0.0;
 
     /* Inner all-pairs loop: mark for vectorization when safe. */
-  #if defined(_OPENMP)
-  #pragma omp simd
-  #endif
+#if defined(_OPENMP)
+#pragma omp simd
+#endif
     for (j = 0u; j < n; ++j)
     {
       if (j != i)

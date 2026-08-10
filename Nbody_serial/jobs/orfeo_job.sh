@@ -18,9 +18,8 @@
 
 #SBATCH --job-name=nbody_scale
 #SBATCH --nodes=1
-#SBATCH --time=02:00:00
+#SBATCH --time=01:30:00
 #SBATCH --partition=EPYC
-#SBATCH --exclusive
 #SBATCH --output=orfeo_scaling_%j.out
 
 set -euo pipefail
@@ -31,7 +30,7 @@ cd $SLURM_SUBMIT_DIR
 # Ambiente rigoroso: carica/controlla i moduli (se disponibili)
 if type module >/dev/null 2>&1; then
 	module purge
-	module load openmpi/4.1.6
+	module load openMPI/4.1.6
 fi
 
 export OMP_PLACES=cores
