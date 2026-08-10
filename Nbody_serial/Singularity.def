@@ -1,0 +1,24 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+%post
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        build-essential openmpi-bin libopenmpi-dev ca-certificates
+    rm -rf /var/lib/apt/lists/*
+
+%files
+    . /opt/nbody
+
+%environment
+    export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
+
+%runscript
+    exec /opt/nbody/nbody_direct_hybrid "$@"
+
+%test
+    cd /opt/nbody
+    make clean
+    make
+    ./generate_ic --model 0 --n 64 --seed 1 --output test.bin
+    mpirun -np 1 ./nbody_direct_hybrid --input test.bin --nsteps 2 --dt 1e-4 --eps 0.05 --quiet

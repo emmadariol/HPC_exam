@@ -1,0 +1,12 @@
+.git
+*.o
+*.bin
+*.sif
+benchmark_results.csv
+benchmark_summary.csv
+container_overhead.csv
+docker_overhead.csv
+system_info.txt
+vectorization_report.txt
+scaling_*.svg
+test_*

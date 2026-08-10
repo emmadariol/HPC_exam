@@ -1,0 +1,15 @@
+# Build artifacts
+*.o
+generate_ic
+nbody_direct_serial
+nbody_direct_hybrid
+
+# Generated particle states
+*.bin
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local benchmark scratch files
+*_input.bin
