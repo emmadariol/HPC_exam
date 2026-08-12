@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=ablation_leo
-#SBATCH --account=<IL_TUO_ACCOUNT>
-#SBATCH --partition=dcgp
+#SBATCH --account=uTS26_Tornator
+#SBATCH --partition=boost_usr_prod
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=32
 #SBATCH --time=01:00:00

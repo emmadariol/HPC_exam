@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=mpi_scale_leo
-#SBATCH --account=<IL_TUO_ACCOUNT>
-#SBATCH --partition=dcgp
+#SBATCH --account=uTS26_Tornator
+#SBATCH --partition=boost_usr_prod
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=112
+#SBATCH --ntasks-per-node=32
 #SBATCH --time=02:00:00
 #SBATCH --output=leo_1_mpi_%j.out
 
@@ -34,7 +34,7 @@ make clean && make -j
 input_strong="ic_strong_N${STRONG_N}.bin"
 ./generate_ic --model 0 --n "$STRONG_N" --seed 42 --output "$input_strong" >/dev/null
 
-for P in 1 2 4 8 16 32 64 112; do
+for P in 1 2 4 8 16 32; do
     for REP in {1..5}; do
         LOG=$(mpirun -np "$P" --bind-to core ./nbody_direct_hybrid --input "$input_strong" --nsteps "$NSTEPS" --dt "$DT" --eps "$EPS" --quiet 2>&1)
         TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | head -n1 | cut -d= -f2 || true)
@@ -47,7 +47,7 @@ rm -f "$input_strong"
 # ==========================================
 # WEAK SCALING MPI (5 Ripetizioni)
 # ==========================================
-for P in 1 2 4 8 16 32 64 112; do
+for P in 1 2 4 8 16 32; do
     WEAK_N=$((P * LOAD_PER_CORE))
     input_weak="ic_weak_N${WEAK_N}_P${P}.bin"
     ./generate_ic --model 0 --n "$WEAK_N" --seed 42 --output "$input_weak" >/dev/null
