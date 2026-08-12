@@ -10,7 +10,7 @@ set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
 
 module purge
-module load openmpi/4.1.6
+module load openMPI/4.1.6
 
 export OMP_PLACES=cores
 export OMP_PROC_BIND=spread
