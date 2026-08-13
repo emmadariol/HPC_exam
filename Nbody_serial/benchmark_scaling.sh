@@ -17,7 +17,7 @@ kernel="${KERNEL:-direct}"
 rsqrt="${RSQRT:-exact}"
 out="${OUT:-benchmark_results.csv}"
 
-make nbody_direct_hybrid generate_ic >/dev/null
+# RIMOSSO: make nbody_direct_hybrid generate_ic >/dev/null
 
 echo "kind,N,ranks,threads,repeat,integrator,comm,kernel,rsqrt,total,io,drift,force,kick,energy,gpairs,status,max_rel_drift" > "$out"
 
@@ -36,7 +36,9 @@ run_case() {
   fi
 
   ./generate_ic --model "$model" --n "$n" --seed "$((1000 + repeat))" --output "$input" >/dev/null
-  log="$(OMP_NUM_THREADS="$threads" mpirun -np "$ranks" ./nbody_direct_hybrid \
+  
+  # CORRETTO: Uso di srun per l'integrazione nativa con SLURM
+  log="$(OMP_NUM_THREADS="$threads" srun --ntasks="$ranks" --cpus-per-task="$threads" ./nbody_direct_hybrid \
     --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" \
     --energy-every "$energy_every" --integrator "$integrator" --comm "$comm" \
     --kernel "$kernel" --rsqrt "$rsqrt" --quiet)"

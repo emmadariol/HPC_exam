@@ -428,56 +428,51 @@ static void kick(particles_t *p, dtype dt)
   }
 }
 
-static void accumulate_sources(const particles_t *home, size_t home_start,
+static void accumulate_sources(const particles_t *home,
                                const dtype *restrict sx,
                                const dtype *restrict sy,
                                const dtype *restrict sz,
-                               size_t source_start, size_t source_n,
+                               size_t source_n,
                                dtype g, dtype mass, dtype eps,
                                rsqrt_mode_t rsqrt_mode)
 {
   const dtype eps2 = eps * eps;
   size_t i;
+
 #pragma omp parallel for schedule(static)
   for (i = 0u; i < home->n; ++i)
   {
     const dtype xi = home->x[i];
     const dtype yi = home->y[i];
     const dtype zi = home->z[i];
-    dtype ax0 = (dtype)0.0, ay0 = (dtype)0.0, az0 = (dtype)0.0;
-    dtype ax1 = (dtype)0.0, ay1 = (dtype)0.0, az1 = (dtype)0.0;
+    dtype ax = (dtype)0.0;
+    dtype ay = (dtype)0.0;
+    dtype az = (dtype)0.0;
     size_t j;
 
-    for (j = 0u; j < source_n; j += 2u)
+    /*
+     * Il pragma omp simd forza il compilatore a generare istruzioni
+     * vettoriali AVX-512, se supportate dall'architettura target.
+     */
+#pragma omp simd reduction(+ : ax, ay, az)
+    for (j = 0u; j < source_n; ++j)
     {
-      if (home_start + i != source_start + j)
-      {
-        const dtype dx = sx[j] - xi;
-        const dtype dy = sy[j] - yi;
-        const dtype dz = sz[j] - zi;
-        const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;
-        const dtype invr = invsqrt_force(r2, rsqrt_mode);
-        const dtype s = g * mass * invr * invr * invr;
-        ax0 += dx * s;
-        ay0 += dy * s;
-        az0 += dz * s;
-      }
-      if ((j + 1u < source_n) && (home_start + i != source_start + j + 1u))
-      {
-        const dtype dx = sx[j + 1u] - xi;
-        const dtype dy = sy[j + 1u] - yi;
-        const dtype dz = sz[j + 1u] - zi;
-        const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;
-        const dtype invr = invsqrt_force(r2, rsqrt_mode);
-        const dtype s = g * mass * invr * invr * invr;
-        ax1 += dx * s;
-        ay1 += dy * s;
-        az1 += dz * s;
-      }
+      const dtype dx = sx[j] - xi;
+      const dtype dy = sy[j] - yi;
+      const dtype dz = sz[j] - zi;
+
+      const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;
+      const dtype invr = invsqrt_force(r2, rsqrt_mode);
+      const dtype s = g * mass * invr * invr * invr;
+
+      ax += dx * s;
+      ay += dy * s;
+      az += dz * s;
     }
-    home->ax[i] += ax0 + ax1;
-    home->ay[i] += ay0 + ay1;
-    home->az[i] += az0 + az1;
+
+    home->ax[i] += ax;
+    home->ay[i] += ay;
+    home->az[i] += az;
   }
 }
 
@@ -637,14 +632,12 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
         MPI_Request req[6];
         post_source_exchange(bx, by, bz, rx, ry, rz, buf_n, next_n,
                              rank, nranks, 10, dt, comm, req);
-        accumulate_sources(local, local_start, bx, by, bz, buf_start,
-                           buf_n, g, local->mass, eps, rsqrt_mode);
+        accumulate_sources(local, bx, by, bz, buf_n, g, local->mass, eps, rsqrt_mode);
         MPI_Waitall(6, req, MPI_STATUSES_IGNORE);
       }
       else
       {
-        accumulate_sources(local, local_start, bx, by, bz, buf_start,
-                           buf_n, g, local->mass, eps, rsqrt_mode);
+        accumulate_sources(local, bx, by, bz, buf_n, g, local->mass, eps, rsqrt_mode);
         exchange_sources_sendrecv(bx, by, bz, rx, ry, rz, buf_n, next_n,
                                   rank, nranks, 10, dt, comm);
       }
@@ -656,8 +649,7 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
       buf_n = next_n;
     }
     else
-      accumulate_sources(local, local_start, bx, by, bz, buf_start, buf_n,
-                         g, local->mass, eps, rsqrt_mode);
+      accumulate_sources(local, bx, by, bz, buf_n, g, local->mass, eps, rsqrt_mode);
   }
 
   free(bx);
