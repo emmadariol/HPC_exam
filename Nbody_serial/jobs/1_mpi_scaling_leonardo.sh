@@ -36,7 +36,7 @@ input_strong="ic_strong_N${STRONG_N}.bin"
 
 for P in 1 2 4 8 16 32; do
     for REP in {1..5}; do
-        LOG=$(mpirun -np "$P" --bind-to core ./nbody_direct_hybrid --input "$input_strong" --nsteps "$NSTEPS" --dt "$DT" --eps "$EPS" --quiet 2>&1)
+        LOG=$(srun -n "$P" ./nbody_direct_hybrid --input "$input_strong" --nsteps "$NSTEPS" --dt "$DT" --eps "$EPS" --quiet 2>&1)
         TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | head -n1 | cut -d= -f2 || true)
         [ -z "$TIME_SEC" ] && TIME_SEC=$(printf "%s" "$LOG" | grep -i 'Time' | head -n1 | awk '{print $2}' || true)
         echo "Strong,$P,1,$STRONG_N,$TIME_SEC" >> "$CSV_OUT"
@@ -53,7 +53,7 @@ for P in 1 2 4 8 16 32; do
     ./generate_ic --model 0 --n "$WEAK_N" --seed 42 --output "$input_weak" >/dev/null
     
     for REP in {1..5}; do
-        LOG=$(mpirun -np "$P" --bind-to core ./nbody_direct_hybrid --input "$input_weak" --nsteps "$NSTEPS" --dt "$DT" --eps "$EPS" --quiet 2>&1)
+        LOG=$(srun -n "$P" ./nbody_direct_hybrid --input "$input_weak" --nsteps "$NSTEPS" --dt "$DT" --eps "$EPS" --quiet 2>&1)
         TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | head -n1 | cut -d= -f2 || true)
         [ -z "$TIME_SEC" ] && TIME_SEC=$(printf "%s" "$LOG" | grep -i 'Time' | head -n1 | awk '{print $2}' || true)
         echo "Weak,$P,1,$WEAK_N,$TIME_SEC" >> "$CSV_OUT"
