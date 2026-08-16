@@ -19,31 +19,45 @@ module load openmpi/4.1.6--gcc--12.2.0-cuda-12.2
 export OMP_PLACES=cores
 export OMP_PROC_BIND=spread
 
-STRONG_N=100000
-NSTEPS=50
-DT=1e-4
-EPS=0.05
-CSV_OUT="results_2_hybrid_leonardo.csv"
+make clean
+make all
 
-echo "Experiment,MPI_Ranks,OpenMP_Threads,Total_N,Time_Sec" > "$CSV_OUT"
+bash ./collect_system_info.sh system_info_leonardo_dcgp.txt
 
-input_strong="ic_strong_hybrid_N${STRONG_N}.bin"
-./generate_ic --model 0 --n "$STRONG_N" --seed 42 --output "$input_strong" >/dev/null
+summary="results_2_hybrid_leonardo_summary.csv"
+rm -f results_2_hybrid_leonardo_P*_T*.csv results_2_hybrid_leonardo_P*_T*_summary.csv "$summary"
 
-# Rapporto P/T per saturare i 112 core del nodo DCGP
-for T in 2 4 7 8 14 28 56; do
-    P=$((112 / T))
-    export OMP_NUM_THREADS=$T
-    
-    for REP in {1..5}; do
-        # Utilizzo nativo di srun per gestire il binding di MPI e OpenMP
-        LOG=$(srun --cpu-bind=verbose,cores --ntasks="$P" --cpus-per-task="$T" ./nbody_direct_hybrid --input "$input_strong" --nsteps "$NSTEPS" --dt "$DT" --eps "$EPS" --quiet 2>&1)
-        
-        TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | head -n1 | cut -d= -f2 || true)
-        [ -z "$TIME_SEC" ] && TIME_SEC=$(printf "%s" "$LOG" | grep -i 'Time' | head -n1 | awk '{print $2}' || true)
-        
-        echo "Hybrid,$P,$T,$STRONG_N,$TIME_SEC" >> "$CSV_OUT"
-    done
+for pair in ${HYBRID_PAIRS:-112x1 56x2 28x4 16x7 14x8 8x14 4x28 2x56}; do
+  P="${pair%x*}"
+  T="${pair#*x}"
+  export OMP_NUM_THREADS="$T"
+  raw="results_2_hybrid_leonardo_P${P}_T${T}.csv"
+  partial="results_2_hybrid_leonardo_P${P}_T${T}_summary.csv"
+
+  RANKS="$P" \
+  THREADS="$T" \
+  SRUN_CPUS_PER_TASK="$T" \
+  REPEATS="${REPEATS:-5}" \
+  WARMUPS="${WARMUPS:-1}" \
+  STRONG_N="${STRONG_N:-100000}" \
+  WEAK_PER_RANK="${WEAK_PER_RANK:-10000}" \
+  NSTEPS="${NSTEPS:-50}" \
+  DT="${DT:-1e-4}" \
+  EPS="${EPS:-0.05}" \
+  ENERGY_EVERY="${ENERGY_EVERY:-10}" \
+  INTEGRATOR="${INTEGRATOR:-kdk}" \
+  COMM="${COMM:-overlap}" \
+  KERNEL=direct \
+  RSQRT="${RSQRT:-exact}" \
+  OUT="$raw" \
+    bash ./benchmark_scaling.sh
+
+  python3 analyze_benchmark.py "$raw" "$partial"
+  if [[ ! -s "$summary" ]]; then
+    cp "$partial" "$summary"
+  else
+    tail -n +2 "$partial" >> "$summary"
+  fi
 done
 
-rm -f "$input_strong"
+python3 plot_scaling.py "$summary" results_2_hybrid_leonardo

@@ -37,9 +37,20 @@ run_solver() {
   else
     executable="$runtime exec $image /opt/nbody/nbody_direct_hybrid"
   fi
+  set +e
   log="$(OMP_NUM_THREADS="$threads" srun --cpu-bind=verbose,cores --ntasks="$ranks" --cpus-per-task="$threads" $executable \
     --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" \
-    --energy-every "$energy_every" --integrator kdk --comm sendrecv --quiet)"
+    --energy-every "$energy_every" --integrator kdk --comm sendrecv --quiet 2>&1)"
+  local rc=$?
+  set -e
+  if (( rc != 0 )); then
+    printf "%s,%s,%s,%s,%s,%s,nan,RUN_FAILED,nan\n" \
+      "$kind" "$mode" "$n" "$ranks" "$threads" "$rep"
+    printf "warning: %s %s run failed for N=%s ranks=%s repeat=%s rc=%s\n%s\n" \
+      "$kind" "$mode" "$n" "$ranks" "$rep" "$rc" "$log" >&2
+    rm -f "$input"
+    return 0
+  fi
   python3 - "$kind" "$mode" "$n" "$ranks" "$threads" "$rep" "$log" <<'PY'
 import re
 import sys
@@ -48,7 +59,9 @@ field = r"([^ \r\n]+)"
 final = re.search(r"max_relative_energy_drift=" + field + r".*status=" + field, log)
 timing = re.search(r"total=" + field, log)
 if not (final and timing):
-    raise SystemExit("could not parse solver output:\n" + log)
+    print(",".join([kind, mode, n, ranks, threads, rep, "nan", "PARSE_FAILED", "nan"]))
+    print("warning: could not parse solver output:\n" + log, file=sys.stderr)
+    raise SystemExit(0)
 print(",".join([kind, mode, n, ranks, threads, rep, timing.group(1), final.group(2), final.group(1)]))
 PY
   rm -f "$input"
@@ -66,8 +79,11 @@ done
 
 echo "repeat,seconds" > "$launch_out"
 for rep in $(seq 1 "$launch_repeats"); do
-  seconds=$( { time -p "$runtime" exec "$image" true; } 2>&1 | awk '/^real / {print $2}' )
-  [[ -n "$seconds" ]] || { echo "could not measure container launch time" >&2; exit 1; }
+  seconds=$( { time -p "$runtime" exec "$image" true; } 2>&1 | awk '/^real / {print $2}' ) || true
+  if [[ -z "$seconds" ]]; then
+    echo "warning: could not measure container launch time for repeat $rep" >&2
+    seconds="nan"
+  fi
   echo "$rep,$seconds" >> "$launch_out"
 done
 

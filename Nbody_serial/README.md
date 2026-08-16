@@ -24,11 +24,11 @@ This directory contains the stand-alone programs for the direct gravitational N-
 - `benchmark_osu.sh`: collect OSU latency/bandwidth microbenchmarks for the
   MPI stack used by the production runs.
 - `Dockerfile` and `Singularity.def`: starter container recipes for the
-  required native-vs-container comparison.
+  required native-vs-container comparison. Both images also build OSU
+  Micro-Benchmarks so `osu_latency` and `osu_bw` are available inside the
+  container.
 - `benchmark_container.sh`: repeated native-vs-Singularity timing table helper.
-- `docker_build.sh`, `docker_smoke.sh`, `benchmark_docker.sh`: Docker build,
-  correctness, and native-vs-Docker timing helpers.
-- `analyze_container_overhead.py`: reduces Docker/Singularity overhead CSVs to
+- `analyze_container_overhead.py`: reduces Singularity/Apptainer overhead CSVs to
   medians, standard deviations, and overhead percentages.
 - `REPORT_TEMPLATE.md`: checklist-style report skeleton matching the exam
   deliverables.
@@ -143,12 +143,12 @@ separate force-kernel scalability from diagnostic and communication overhead.
 Example benchmark helpers:
 
 ```sh
-./collect_system_info.sh system_info.txt
+bash ./collect_system_info.sh system_info.txt
 RANKS="1 2 4" THREADS="1 2" REPEATS=5 STRONG_N=4000 \
   WEAK_PER_RANK=1000 NSTEPS=50 ENERGY_EVERY=10 \
-  ./benchmark_scaling.sh
-./analyze_benchmark.py benchmark_results.csv benchmark_summary.csv
-./plot_scaling.py benchmark_summary.csv scaling
+  bash ./benchmark_scaling.sh
+python3 analyze_benchmark.py benchmark_results.csv benchmark_summary.csv
+python3 plot_scaling.py benchmark_summary.csv scaling
 make vec-report
 ```
 
@@ -165,17 +165,21 @@ Evidence helpers for the optimization discussion:
 
 ```sh
 THREADS="1 2 4" REPEATS=5 WARMUPS=2 N=50000 bash ./benchmark_layout.sh
-./analyze_layout.py layout_results.csv layout_summary.csv
+python3 analyze_layout.py layout_results.csv layout_summary.csv
 
 RANKS=8 THREADS=1 REPEATS=5 WARMUPS=2 N=50000 NSTEPS=50 \
   ENERGY_LIST="1 5 10 50" bash ./benchmark_energy.sh
-./analyze_energy.py energy_overhead.csv energy_overhead_summary.csv
+python3 analyze_energy.py energy_overhead.csv energy_overhead_summary.csv
 
-MODE=native bash ./benchmark_osu.sh
+bash ./benchmark_osu.sh --mode native
+bash ./benchmark_osu.sh --mode container --image nbody.sif
+bash ./benchmark_osu.sh --mode both --image nbody.sif --out osu_microbench_container.csv
 ```
 
 `benchmark_osu.sh` expects `osu_latency` and `osu_bw` in `PATH`, or explicit
-`OSU_LATENCY=/path/to/osu_latency` and `OSU_BW=/path/to/osu_bw`.
+`OSU_LATENCY=/path/to/osu_latency` and `OSU_BW=/path/to/osu_bw`, for native
+runs. Container runs use the OSU binaries installed by `Dockerfile` and
+`Singularity.def`.
 
 Optional kernel experiments:
 
@@ -193,32 +197,34 @@ OMP_NUM_THREADS=4 mpirun -np 2 ./nbody_direct_hybrid \
 Newton-third-law reuse also requires returning the opposite force contribution
 to the remote owner rank. The direct MPI ring path is the main scalable solver.
 
-Docker workflow:
-
-```sh
-./docker_build.sh
-./docker_smoke.sh
-RANKS="1 2 4" THREADS=1 REPEATS=5 N=1000 NSTEPS=20 ./benchmark_docker.sh
-./analyze_container_overhead.py docker_overhead.csv docker_overhead_summary.csv
-```
-
-The Docker benchmark runs the native executable and then the same executable
-inside the Docker image using the same input file mounted into `/data`. Open MPI
-inside Docker runs as root, so the helper sets the standard
-`OMPI_ALLOW_RUN_AS_ROOT` variables.
-
 Singularity/Apptainer workflow:
 
 ```sh
 singularity build nbody.sif Singularity.def
 singularity run nbody.sif --help
-RANKS="1 2 4" THREADS=1 REPEATS=5 ./benchmark_container.sh
-./analyze_container_overhead.py container_overhead.csv container_overhead_summary.csv
+RANKS="1 2 4" THREADS=1 REPEATS=5 bash ./benchmark_container.sh
+python3 analyze_container_overhead.py container_overhead.csv container_overhead_summary.csv
 ```
 
 On LEONARDO or another cluster, prefer the site-recommended host-MPI workflow
 when available, and report the exact command and binding policy used for both
 native and container runs.
+
+Leonardo batch helpers:
+
+```sh
+sbatch jobs/Leonardo/1_mpi_scaling_leonardo.sh
+sbatch jobs/Leonardo/2_hybrid_scaling_leonardo.sh
+sbatch jobs/Leonardo/3_ablation_leonardo.sh
+sbatch jobs/Leonardo/0_build_container_leonardo.sh
+sbatch jobs/Leonardo/check_singularity_mpi.sh
+sbatch jobs/Leonardo/4_container_leonardo.sh
+sbatch jobs/Leonardo/5_evidence_leonardo.sh
+```
+
+The first two call `benchmark_scaling.sh` directly and therefore produce the
+same CSV schema used by `analyze_benchmark.py`. The evidence job also captures
+`system_info_leonardo.txt` on the allocated DCGP node.
 
 ## Solver notes
 

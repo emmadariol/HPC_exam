@@ -50,10 +50,22 @@ run_case() {
 
   # Rispetto rigoroso della topologia Slurm impostata dallo script padre.
   # L'eseguibile ($exe) viene risolto dinamicamente in base alla variabile USE_CONTAINER.
+  set +e
   log="$(OMP_NUM_THREADS="$threads" srun --cpu-bind=verbose,cores --ntasks="$ranks" --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" $exe \
     --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" \
     --energy-every "$energy_every" --integrator "$integrator" --comm "$comm" \
-    --kernel "$kernel" --rsqrt "$rsqrt" --quiet)"
+    --kernel "$kernel" --rsqrt "$rsqrt" --quiet 2>&1)"
+  local rc=$?
+  set -e
+  if (( rc != 0 )); then
+    printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,double,nan,nan,nan,nan,nan,nan,nan,nan,RUN_FAILED,nan\n" \
+      "$kind" "$n" "$nsteps" "$ranks" "$threads" "$repeat" \
+      "$integrator" "$comm" "$kernel" "$rsqrt"
+    printf "warning: srun failed for %s N=%s ranks=%s threads=%s repeat=%s rc=%s\n%s\n" \
+      "$kind" "$n" "$ranks" "$threads" "$repeat" "$rc" "$log" >&2
+    rm -f "$input"
+    return 0
+  fi
 
   python3 - "$kind" "$n" "$nsteps" "$ranks" "$threads" "$repeat" "$integrator" "$comm" "$kernel" "$rsqrt" "$log" <<'PY'
 import re
@@ -66,7 +78,13 @@ timing = re.search(r"total=" + field + r" io=" + field + r" drift=" + field +
                    r" force=" + field + r" comm_wait=" + field + r" kick=" + field + r" energy=" + field, log)
 rate = re.search(r"gpair_interactions_per_second=" + field, log)
 if not (final and timing and rate):
-    raise SystemExit("could not parse solver output:\n" + log)
+    print(",".join([
+        kind, n, nsteps, ranks, threads, rep, integrator, comm, kernel, rsqrt,
+        "unknown", "nan", "nan", "nan", "nan", "nan", "nan", "nan", "nan",
+        "PARSE_FAILED", "nan",
+    ]))
+    print("warning: could not parse solver output:\n" + log, file=sys.stderr)
+    raise SystemExit(0)
 print(",".join([
     kind, n, nsteps, ranks, threads, rep, integrator, comm, kernel, rsqrt,
     final.group(1), *timing.groups(), rate.group(1), final.group(3), final.group(2)
@@ -92,10 +110,17 @@ run_warmup() {
   fi
 
   ./generate_ic --model "$model" --n "$n" --seed "$((9000 + repeat))" --output "$input" >/dev/null
+  set +e
   OMP_NUM_THREADS="$threads" srun --cpu-bind=verbose,cores --ntasks="$ranks" --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" $exe \
     --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" \
     --energy-every "$energy_every" --integrator "$integrator" --comm "$comm" \
-    --kernel "$kernel" --rsqrt "$rsqrt" --quiet >/dev/null
+    --kernel "$kernel" --rsqrt "$rsqrt" --quiet >/dev/null 2>&1
+  local rc=$?
+  set -e
+  if (( rc != 0 )); then
+    printf "warning: warmup failed for %s N=%s ranks=%s threads=%s repeat=%s rc=%s\n" \
+      "$kind" "$n" "$ranks" "$threads" "$repeat" "$rc" >&2
+  fi
   rm -f "$input"
 }
 

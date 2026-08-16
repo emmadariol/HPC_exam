@@ -30,15 +30,34 @@ echo "Test_Type,Config,Time_Sec" > "$CSV_OUT"
 input_strong="ic_ablation_N${STRONG_N}.bin"
 ./generate_ic --model 0 --n "$STRONG_N" --seed 123 --output "$input_strong" >/dev/null
 
+run_ablation_case() {
+    local test_type="$1"
+    local config="$2"
+    shift 2
+    local log rc time_sec
+    set +e
+    log="$("$@" 2>&1)"
+    rc=$?
+    set -e
+    if (( rc != 0 )); then
+        printf "warning: %s/%s failed rc=%s\n%s\n" "$test_type" "$config" "$rc" "$log" >&2
+        echo "$test_type,$config,nan" >> "$CSV_OUT"
+        return 0
+    fi
+    time_sec=$(printf "%s" "$log" | grep -o 'total=[^ ]*' | cut -d= -f2 || true)
+    [ -z "$time_sec" ] && time_sec=$(printf "%s" "$log" | grep -i 'Time' | awk '{print $2}' || true)
+    [ -z "$time_sec" ] && time_sec="nan"
+    echo "$test_type,$config,$time_sec" >> "$CSV_OUT"
+}
+
 # ==========================================
 # Newton vs Direct (Seriale: -np 1)
 # ==========================================
 for KERNEL in direct newton; do
     for REP in {1..5}; do
-        LOG=$(srun --cpu-bind=verbose,cores -n 1 --cpus-per-task=1 ./nbody_direct_hybrid --kernel "$KERNEL" --input "$input_strong" --nsteps "$NSTEPS" --quiet 2>&1)
-        TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | cut -d= -f2 || true)
-        [ -z "$TIME_SEC" ] && TIME_SEC=$(printf "%s" "$LOG" | grep -i 'Time' | awk '{print $2}' || true)
-        echo "Kernel,$KERNEL,$TIME_SEC" >> "$CSV_OUT"
+        run_ablation_case Kernel "$KERNEL" \
+          srun --cpu-bind=verbose,cores -n 1 --cpus-per-task=1 ./nbody_direct_hybrid \
+          --kernel "$KERNEL" --input "$input_strong" --nsteps "$NSTEPS" --quiet
     done
 done
 
@@ -47,10 +66,9 @@ done
 # ==========================================
 for RSQRT in exact approx; do
     for REP in {1..5}; do
-        LOG=$(srun --cpu-bind=verbose,cores -n "$RANKS" --cpus-per-task=1 ./nbody_direct_hybrid --rsqrt "$RSQRT" --input "$input_strong" --nsteps "$NSTEPS" --quiet 2>&1)
-        TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | cut -d= -f2 || true)
-        [ -z "$TIME_SEC" ] && TIME_SEC=$(printf "%s" "$LOG" | grep -i 'Time' | awk '{print $2}' || true)
-        echo "Math,$RSQRT,$TIME_SEC" >> "$CSV_OUT"
+        run_ablation_case Math "$RSQRT" \
+          srun --cpu-bind=verbose,cores -n "$RANKS" --cpus-per-task=1 ./nbody_direct_hybrid \
+          --rsqrt "$RSQRT" --input "$input_strong" --nsteps "$NSTEPS" --quiet
     done
 done
 
@@ -59,10 +77,9 @@ done
 # ==========================================
 for COMM in sendrecv overlap; do
     for REP in {1..5}; do
-        LOG=$(srun --cpu-bind=verbose,cores -n "$RANKS" --cpus-per-task=1 ./nbody_direct_hybrid --comm "$COMM" --input "$input_strong" --nsteps "$NSTEPS" --quiet 2>&1)
-        TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | cut -d= -f2 || true)
-        [ -z "$TIME_SEC" ] && TIME_SEC=$(printf "%s" "$LOG" | grep -i 'Time' | awk '{print $2}' || true)
-        echo "Comm,$COMM,$TIME_SEC" >> "$CSV_OUT"
+        run_ablation_case Comm "$COMM" \
+          srun --cpu-bind=verbose,cores -n "$RANKS" --cpus-per-task=1 ./nbody_direct_hybrid \
+          --comm "$COMM" --input "$input_strong" --nsteps "$NSTEPS" --quiet
     done
 done
 

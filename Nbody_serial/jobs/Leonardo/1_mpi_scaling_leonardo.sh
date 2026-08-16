@@ -12,7 +12,6 @@
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
 
-# Caricamento del modulo esatto per DCGP
 module purge
 module load profile/base
 module load openmpi/4.1.6--gcc--12.2.0-cuda-12.2
@@ -21,45 +20,27 @@ export OMP_PLACES=cores
 export OMP_PROC_BIND=spread
 export OMP_NUM_THREADS=1
 
-STRONG_N=100000
-LOAD_PER_CORE=10000
-NSTEPS=50
-DT=1e-4
-EPS=0.05
-CSV_OUT="results_1_mpi_leonardo.csv"
+make clean
+make all
 
-echo "Experiment,MPI_Ranks,OpenMP_Threads,Total_N,Time_Sec" > "$CSV_OUT"
+bash ./collect_system_info.sh system_info_leonardo_dcgp.txt
 
-# ==========================================
-# STRONG SCALING MPI (5 Ripetizioni)
-# ==========================================
-input_strong="ic_strong_N${STRONG_N}.bin"
-./generate_ic --model 0 --n "$STRONG_N" --seed 42 --output "$input_strong" >/dev/null
+RANKS="${RANKS:-1 2 4 8 16 32 64 112}" \
+THREADS=1 \
+REPEATS="${REPEATS:-5}" \
+WARMUPS="${WARMUPS:-1}" \
+STRONG_N="${STRONG_N:-100000}" \
+WEAK_PER_RANK="${WEAK_PER_RANK:-10000}" \
+NSTEPS="${NSTEPS:-50}" \
+DT="${DT:-1e-4}" \
+EPS="${EPS:-0.05}" \
+ENERGY_EVERY="${ENERGY_EVERY:-10}" \
+INTEGRATOR="${INTEGRATOR:-kdk}" \
+COMM="${COMM:-overlap}" \
+KERNEL=direct \
+RSQRT="${RSQRT:-exact}" \
+OUT="${OUT:-results_1_mpi_leonardo.csv}" \
+  bash ./benchmark_scaling.sh
 
-# Array di test esteso fino a 112 per saturare il nodo DCGP
-for P in 1 2 4 8 16 32 64 112; do
-    for REP in {1..5}; do
-        LOG=$(srun --cpu-bind=verbose,cores -n "$P" --cpus-per-task=1 ./nbody_direct_hybrid --input "$input_strong" --nsteps "$NSTEPS" --dt "$DT" --eps "$EPS" --quiet 2>&1)
-        TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | head -n1 | cut -d= -f2 || true)
-        [ -z "$TIME_SEC" ] && TIME_SEC=$(printf "%s" "$LOG" | grep -i 'Time' | head -n1 | awk '{print $2}' || true)
-        echo "Strong,$P,1,$STRONG_N,$TIME_SEC" >> "$CSV_OUT"
-    done
-done
-rm -f "$input_strong"
-
-# ==========================================
-# WEAK SCALING MPI (5 Ripetizioni)
-# ==========================================
-for P in 1 2 4 8 16 32 64 112; do
-    WEAK_N=$((P * LOAD_PER_CORE))
-    input_weak="ic_weak_N${WEAK_N}_P${P}.bin"
-    ./generate_ic --model 0 --n "$WEAK_N" --seed 42 --output "$input_weak" >/dev/null
-    
-    for REP in {1..5}; do
-        LOG=$(srun --cpu-bind=verbose,cores -n "$P" --cpus-per-task=1 ./nbody_direct_hybrid --input "$input_weak" --nsteps "$NSTEPS" --dt "$DT" --eps "$EPS" --quiet 2>&1)
-        TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | head -n1 | cut -d= -f2 || true)
-        [ -z "$TIME_SEC" ] && TIME_SEC=$(printf "%s" "$LOG" | grep -i 'Time' | head -n1 | awk '{print $2}' || true)
-        echo "Weak,$P,1,$WEAK_N,$TIME_SEC" >> "$CSV_OUT"
-    done
-    rm -f "$input_weak"
-done
+python3 analyze_benchmark.py "${OUT:-results_1_mpi_leonardo.csv}" results_1_mpi_leonardo_summary.csv
+python3 plot_scaling.py results_1_mpi_leonardo_summary.csv results_1_mpi_leonardo

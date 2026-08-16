@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import csv
+import math
 import statistics
 import sys
 from collections import defaultdict
@@ -42,6 +43,11 @@ def keep_non_outliers(values):
 def dtype_size(dtype_name):
     return 4 if dtype_name == "float" else 8
 
+def is_valid_run(row):
+    return (row.get("status") in ("OK", "WARNING") and
+            all(math.isfinite(row[key]) for key in
+                ("total", "force", "comm_wait", "gpairs")))
+
 groups = defaultdict(list)
 for row in rows:
     key = (row["kind"], row["N"], row["ranks"], row["threads"],
@@ -52,7 +58,10 @@ for row in rows:
 summary = []
 for key, values in sorted(groups.items()):
     kind, n, ranks, threads, integrator, comm, kernel, rsqrt = key
-    kept, outliers, total_mad = keep_non_outliers(values)
+    valid = [v for v in values if is_valid_run(v)]
+    if not valid:
+        continue
+    kept, outliers, total_mad = keep_non_outliers(valid)
     totals = [v["total"] for v in kept]
     forces = [v["force"] for v in kept]
     comm_waits = [v["comm_wait"] for v in kept]
@@ -78,6 +87,7 @@ for key, values in sorted(groups.items()):
         "rsqrt": rsqrt,
         "dtype": values[0].get("dtype", "double"),
         "runs": len(values),
+        "failed_runs": len(values) - len(valid),
         "used_runs": len(kept),
         "outliers": outliers,
         "total_mad": total_mad,
@@ -87,7 +97,7 @@ for key, values in sorted(groups.items()):
         "comm_wait_median": comm_wait_median,
         "comm_bandwidth_GBps": comm_bandwidth,
         "gpairs_median": statistics.median(gpairs),
-        "all_ok": all(v["status"] == "OK" for v in values),
+        "all_ok": all(v["status"] == "OK" for v in valid) and len(valid) == len(values),
     })
 
 baselines = {}
@@ -120,7 +130,7 @@ for row in summary:
 fields = [
     "kind", "N", "nsteps", "ranks", "threads", "resources", "integrator", "comm",
     "kernel", "rsqrt", "dtype",
-    "runs", "used_runs", "outliers", "total_mad", "total_median",
+    "runs", "failed_runs", "used_runs", "outliers", "total_mad", "total_median",
     "total_stdev", "force_median", "comm_wait_median",
     "comm_bandwidth_GBps", "gpairs_median",
     "speedup", "efficiency", "all_ok",

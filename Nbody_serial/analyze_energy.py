@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import csv
+import math
 import statistics
 import sys
 from collections import defaultdict
@@ -27,9 +28,13 @@ for row in rows:
 summary = []
 for key, values in sorted(groups.items()):
     n, nsteps, ranks, threads, energy_every = key
-    totals = [v["total"] for v in values]
-    forces = [v["force"] for v in values]
-    energies = [v["energy"] for v in values]
+    valid = [v for v in values if v["status"] in ("OK", "WARNING") and
+             all(math.isfinite(v[k]) for k in ("total", "force", "energy"))]
+    if not valid:
+        continue
+    totals = [v["total"] for v in valid]
+    forces = [v["force"] for v in valid]
+    energies = [v["energy"] for v in valid]
     summary.append({
         "N": n,
         "nsteps": nsteps,
@@ -37,12 +42,13 @@ for key, values in sorted(groups.items()):
         "threads": threads,
         "energy_every": energy_every,
         "runs": len(values),
+        "failed_runs": len(values) - len(valid),
         "total_median": statistics.median(totals),
         "force_median": statistics.median(forces),
         "energy_median": statistics.median(energies),
         "energy_fraction": statistics.median(energies) / statistics.median(totals),
-        "max_rel_drift": max(v["max_rel_drift"] for v in values),
-        "all_ok": all(v["status"] == "OK" for v in values),
+        "max_rel_drift": max(v["max_rel_drift"] for v in valid),
+        "all_ok": all(v["status"] == "OK" for v in valid) and len(valid) == len(values),
     })
 
 base_by_case = {}
@@ -60,7 +66,7 @@ for row in summary:
     )
 
 fields = [
-    "N", "nsteps", "ranks", "threads", "energy_every", "runs",
+    "N", "nsteps", "ranks", "threads", "energy_every", "runs", "failed_runs",
     "total_median", "force_median", "energy_median", "energy_fraction",
     "overhead_vs_sparse_percent", "max_rel_drift", "all_ok",
 ]

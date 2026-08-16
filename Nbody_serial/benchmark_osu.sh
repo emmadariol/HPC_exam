@@ -9,6 +9,33 @@ bw_tool="${OSU_BW:-osu_bw}"
 container_latency_tool="${CONTAINER_OSU_LATENCY:-$latency_tool}"
 container_bw_tool="${CONTAINER_OSU_BW:-$bw_tool}"
 
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --mode)
+      mode="$2"; shift 2 ;;
+    --mode=*)
+      mode="${1#*=}"; shift ;;
+    --image)
+      image="$2"; shift 2 ;;
+    --image=*)
+      image="${1#*=}"; shift ;;
+    --out)
+      out="$2"; shift 2 ;;
+    --out=*)
+      out="${1#*=}"; shift ;;
+    --osu-latency)
+      latency_tool="$2"; container_latency_tool="${CONTAINER_OSU_LATENCY:-$latency_tool}"; shift 2 ;;
+    --osu-bw)
+      bw_tool="$2"; container_bw_tool="${CONTAINER_OSU_BW:-$bw_tool}"; shift 2 ;;
+    --help)
+      echo "usage: benchmark_osu.sh [--mode native|container|both] [--image nbody.sif] [--out osu_microbench.csv]"
+      exit 0 ;;
+    *)
+      echo "unknown option: $1" >&2
+      exit 1 ;;
+  esac
+done
+
 runtime=""
 if command -v apptainer >/dev/null 2>&1; then
   runtime="apptainer"
@@ -50,18 +77,39 @@ run_container() {
   srun --cpu-bind=verbose,cores -n 2 "$runtime" exec "$image" "$tool"
 }
 
+run_one() {
+  local mode_name="$1"
+  local bench="$2"
+  local metric="$3"
+  local tool="$4"
+  local log rc
+  set +e
+  if [[ "$mode_name" == "native" ]]; then
+    log="$(run_native "$tool" 2>&1)"
+  else
+    log="$(run_container "$tool" 2>&1)"
+  fi
+  rc=$?
+  set -e
+  if (( rc != 0 )); then
+    printf "warning: OSU %s %s failed rc=%s\n%s\n" "$mode_name" "$bench" "$rc" "$log" >&2
+    return 0
+  fi
+  printf "%s\n" "$log" | parse_osu "$mode_name" "$bench" "$metric"
+}
+
 echo "mode,benchmark,metric,bytes,value" > "$out"
 
 if [[ "$mode" == "native" || "$mode" == "both" ]]; then
   require_tool "$latency_tool"
   require_tool "$bw_tool"
-  run_native "$latency_tool" | parse_osu native latency latency_us >> "$out"
-  run_native "$bw_tool" | parse_osu native bandwidth bandwidth_MBps >> "$out"
+  run_one native latency latency_us "$latency_tool" >> "$out"
+  run_one native bandwidth bandwidth_MBps "$bw_tool" >> "$out"
 fi
 
 if [[ "$mode" == "container" || "$mode" == "both" ]]; then
-  run_container "$container_latency_tool" | parse_osu container latency latency_us >> "$out"
-  run_container "$container_bw_tool" | parse_osu container bandwidth bandwidth_MBps >> "$out"
+  run_one container latency latency_us "$container_latency_tool" >> "$out"
+  run_one container bandwidth bandwidth_MBps "$container_bw_tool" >> "$out"
 fi
 
 echo "wrote $out"

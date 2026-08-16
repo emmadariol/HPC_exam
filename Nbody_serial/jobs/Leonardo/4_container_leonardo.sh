@@ -16,6 +16,7 @@ module purge
 module load profile/base
 module load openmpi/4.1.6--gcc--12.2.0-cuda-12.2
 module load apptainer
+module load osu-micro-benchmarks 2>/dev/null || true
 
 # Esplorazione completa fino a 112 rank per saturare il nodo DCGP
 export RANKS="1 2 4 8 16 32 64 112"
@@ -24,7 +25,19 @@ export REPEATS=5
 export N=50000
 export N_PER_RANK=10000
 export NSTEPS=50
+export IMAGE="${IMAGE:-nbody.sif}"
 
-./benchmark_container.sh
+if [[ ! -f "$IMAGE" ]]; then
+  echo "missing $IMAGE; run jobs/Leonardo/0_build_container_leonardo.sh first" >&2
+  exit 1
+fi
+
+bash ./benchmark_container.sh
 python3 analyze_container_overhead.py container_overhead.csv
 python3 plot_container_overhead.py container_overhead_summary.csv
+
+if command -v osu_latency >/dev/null 2>&1 && command -v osu_bw >/dev/null 2>&1; then
+  bash ./benchmark_osu.sh --mode both --image "$IMAGE" --out osu_microbench_container.csv
+else
+  echo "OSU Micro-Benchmarks not found natively; container OSU exists, but native-vs-container comparison needs the native OSU module." >&2
+fi

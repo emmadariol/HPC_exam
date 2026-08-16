@@ -23,7 +23,7 @@ export OMP_PROC_BIND=spread
 make clean
 make all
 
-bash ./collect_system_info.sh > system_info_leonardo.txt
+bash ./collect_system_info.sh system_info_leonardo.txt
 
 THREADS="1 2 4 8" REPEATS=5 WARMUPS=2 N=50000 INNER_REPEATS=3 \
   bash ./benchmark_layout.sh
@@ -34,7 +34,7 @@ RANKS=8 THREADS=1 REPEATS=5 WARMUPS=2 N=50000 NSTEPS=50 \
 python3 analyze_energy.py energy_overhead.csv energy_overhead_summary.csv
 
 if command -v osu_latency >/dev/null 2>&1 && command -v osu_bw >/dev/null 2>&1; then
-  MODE=native bash ./benchmark_osu.sh
+  bash ./benchmark_osu.sh --mode native
 else
   echo "OSU Micro-Benchmarks not found; load the cluster OSU module or set OSU_LATENCY/OSU_BW." >&2
 fi

@@ -27,12 +27,22 @@ run_once() {
   local energy_every="$1"
   local repeat="$2"
   local log
+  set +e
   log="$(OMP_NUM_THREADS="$threads" srun --cpu-bind=verbose,cores \
     --ntasks="$ranks" --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" \
     ./nbody_direct_hybrid --input "$input" --nsteps "$nsteps" \
     --dt "$dt" --eps "$eps" --energy-every "$energy_every" \
     --integrator "$integrator" --comm "$comm" --kernel "$kernel" \
-    --rsqrt "$rsqrt" --quiet)"
+    --rsqrt "$rsqrt" --quiet 2>&1)"
+  local rc=$?
+  set -e
+  if (( rc != 0 )); then
+    printf "%s,%s,%s,%s,%s,%s,nan,nan,nan,RUN_FAILED,nan\n" \
+      "$n" "$nsteps" "$ranks" "$threads" "$repeat" "$energy_every"
+    printf "warning: srun failed for energy_every=%s repeat=%s rc=%s\n%s\n" \
+      "$energy_every" "$repeat" "$rc" "$log" >&2
+    return 0
+  fi
 
   python3 - "$n" "$nsteps" "$ranks" "$threads" "$repeat" "$energy_every" "$log" <<'PY'
 import re
@@ -45,7 +55,12 @@ timing = re.search(r"total=" + field + r" io=" + field + r" drift=" + field +
                    r" force=" + field + r" comm_wait=" + field +
                    r" kick=" + field + r" energy=" + field, log)
 if not (final and timing):
-    raise SystemExit("could not parse solver output:\n" + log)
+    print(",".join([
+        n, nsteps, ranks, threads, repeat, energy_every,
+        "nan", "nan", "nan", "PARSE_FAILED", "nan",
+    ]))
+    print("warning: could not parse solver output:\n" + log, file=sys.stderr)
+    raise SystemExit(0)
 groups = timing.groups()
 print(",".join([
     n, nsteps, ranks, threads, repeat, energy_every,

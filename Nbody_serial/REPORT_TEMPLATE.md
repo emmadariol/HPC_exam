@@ -80,7 +80,7 @@ steps when comparing variants.
 
 ## 8. Container Overhead
 
-Run the same case natively and through Docker or Singularity/Apptainer for at
+Run the same case natively and through Singularity/Apptainer for at
 least three process/thread configurations. Report median time, standard
 deviation, and overhead percentage:
 
@@ -88,28 +88,22 @@ deviation, and overhead percentage:
 overhead_percent = 100 * (container_time - native_time) / native_time
 ```
 
-Docker helper:
-
-```sh
-RANKS="1 2 4" THREADS=1 REPEATS=5 N=1000 NSTEPS=20 ./benchmark_docker.sh
-./analyze_container_overhead.py docker_overhead.csv docker_overhead_summary.csv
-```
-
 Singularity/Apptainer helper:
 
 ```sh
-RANKS="1 2 4" THREADS=1 REPEATS=5 N=1000 NSTEPS=20 ./benchmark_container.sh
-./analyze_container_overhead.py container_overhead.csv container_overhead_summary.csv
+RANKS="1 2 4" THREADS=1 REPEATS=5 N=1000 NSTEPS=20 bash ./benchmark_container.sh
+python3 analyze_container_overhead.py container_overhead.csv container_overhead_summary.csv
 ```
 
 Additional evidence helpers:
 
 ```sh
 THREADS="1 2 4" REPEATS=5 WARMUPS=2 N=50000 bash ./benchmark_layout.sh
-./analyze_layout.py layout_results.csv layout_summary.csv
+python3 analyze_layout.py layout_results.csv layout_summary.csv
 RANKS=8 THREADS=1 REPEATS=5 WARMUPS=2 N=50000 NSTEPS=50 bash ./benchmark_energy.sh
-./analyze_energy.py energy_overhead.csv energy_overhead_summary.csv
-MODE=native bash ./benchmark_osu.sh
+python3 analyze_energy.py energy_overhead.csv energy_overhead_summary.csv
+bash ./benchmark_osu.sh --mode native
+bash ./benchmark_osu.sh --mode both --image nbody.sif --out osu_microbench_container.csv
 ```
 
 ## 9. Bottlenecks
