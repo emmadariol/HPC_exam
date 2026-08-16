@@ -1,3 +1,33 @@
+
+# 1. Impostazioni IDE locali
+.vscode/
+
+# 2. File binari ed eseguibili compilati
+*.o
+nbody_direct_serial
+nbody_direct_hybrid
+generate_ic
+
+# 3. File temporanei, dati e condizioni iniziali
+*.bin
+
+# 4. Output di SLURM e report di calcolo
+*.out
+*.err
+*.log
+*.csv
+system_info*.txt
+vectorization_report.txt
+
+# 5. Immagini container e archivi
+*.sif
+*.tar.gz
+*.tgz
+
+# 6. Materiale didattico o documenti non sorgenti
+*.pdf
+
+
 # Build artifacts
 *.o
 generate_ic
