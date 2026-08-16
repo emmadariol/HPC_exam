@@ -17,7 +17,11 @@ kernel="${KERNEL:-direct}"
 rsqrt="${RSQRT:-exact}"
 out="${OUT:-benchmark_results.csv}"
 
-# RIMOSSO: make nbody_direct_hybrid generate_ic >/dev/null
+# Nuove variabili per il controllo del layer container
+use_container="${USE_CONTAINER:-0}"
+container_image="${CONTAINER_IMAGE:-nbody.sif}"
+
+# La compilazione deve essere gestita a monte.
 
 echo "kind,N,ranks,threads,repeat,integrator,comm,kernel,rsqrt,total,io,drift,force,kick,energy,gpairs,status,max_rel_drift" > "$out"
 
@@ -29,16 +33,23 @@ run_case() {
   local repeat="$5"
   local input="${kind}_N${n}_seed${repeat}.bin"
   local log
+  local exe="./nbody_direct_hybrid"
 
   if [[ "$kernel" == "newton" && "$ranks" != "1" ]]; then
     echo "skipping kernel=newton with ranks=$ranks because this variant is single-rank only" >&2
     return
   fi
 
+  # Intercettazione della modalità container
+  if [[ "$use_container" == "1" ]]; then
+    exe="singularity exec $container_image /opt/nbody/nbody_direct_hybrid"
+  fi
+
   ./generate_ic --model "$model" --n "$n" --seed "$((1000 + repeat))" --output "$input" >/dev/null
   
-  # CORRETTO: Uso di srun per l'integrazione nativa con SLURM
-  log="$(OMP_NUM_THREADS="$threads" srun --ntasks="$ranks" --cpus-per-task="$threads" ./nbody_direct_hybrid \
+  # Rispetto rigoroso della topologia Slurm impostata dallo script padre.
+  # L'eseguibile ($exe) viene risolto dinamicamente in base alla variabile USE_CONTAINER.
+  log="$(OMP_NUM_THREADS="$threads" srun --ntasks="$ranks" --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" $exe \
     --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" \
     --energy-every "$energy_every" --integrator "$integrator" --comm "$comm" \
     --kernel "$kernel" --rsqrt "$rsqrt" --quiet)"

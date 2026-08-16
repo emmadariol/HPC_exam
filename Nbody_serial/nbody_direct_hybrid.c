@@ -445,36 +445,87 @@ static void accumulate_sources(const particles_t *home,
     const dtype xi = home->x[i];
     const dtype yi = home->y[i];
     const dtype zi = home->z[i];
-    dtype ax = (dtype)0.0;
-    dtype ay = (dtype)0.0;
-    dtype az = (dtype)0.0;
-    size_t j;
 
-    /*
-     * Il pragma omp simd forza il compilatore a generare istruzioni
-     * vettoriali AVX-512, se supportate dall'architettura target.
-     */
-#pragma omp simd reduction(+ : ax, ay, az)
-    for (j = 0u; j < source_n; ++j)
+    // 1. Dichiarazione di 4 accumulatori indipendenti
+    dtype ax0 = (dtype)0.0, ay0 = (dtype)0.0, az0 = (dtype)0.0;
+    dtype ax1 = (dtype)0.0, ay1 = (dtype)0.0, az1 = (dtype)0.0;
+    dtype ax2 = (dtype)0.0, ay2 = (dtype)0.0, az2 = (dtype)0.0;
+    dtype ax3 = (dtype)0.0, ay3 = (dtype)0.0, az3 = (dtype)0.0;
+
+    size_t j = 0u;
+    // Calcoliamo il limite per il loop srotolato (multiplo di 4)
+    const size_t source_n_unrolled = source_n & ~(size_t)3;
+
+    // 2. Loop principale srotolato a step di 4
+#pragma omp simd
+    for (j = 0u; j < source_n_unrolled; j += 4u)
+    {
+      // Particella 0
+      const dtype dx0 = sx[j] - xi;
+      const dtype dy0 = sy[j] - yi;
+      const dtype dz0 = sz[j] - zi;
+      const dtype r2_0 = dx0 * dx0 + dy0 * dy0 + dz0 * dz0 + eps2;
+      const dtype invr0 = invsqrt_force(r2_0, rsqrt_mode);
+      const dtype s0 = g * mass * invr0 * invr0 * invr0;
+      ax0 += dx0 * s0;
+      ay0 += dy0 * s0;
+      az0 += dz0 * s0;
+
+      // Particella 1
+      const dtype dx1 = sx[j + 1] - xi;
+      const dtype dy1 = sy[j + 1] - yi;
+      const dtype dz1 = sz[j + 1] - zi;
+      const dtype r2_1 = dx1 * dx1 + dy1 * dy1 + dz1 * dz1 + eps2;
+      const dtype invr1 = invsqrt_force(r2_1, rsqrt_mode);
+      const dtype s1 = g * mass * invr1 * invr1 * invr1;
+      ax1 += dx1 * s1;
+      ay1 += dy1 * s1;
+      az1 += dz1 * s1;
+
+      // Particella 2
+      const dtype dx2 = sx[j + 2] - xi;
+      const dtype dy2 = sy[j + 2] - yi;
+      const dtype dz2 = sz[j + 2] - zi;
+      const dtype r2_2 = dx2 * dx2 + dy2 * dy2 + dz2 * dz2 + eps2;
+      const dtype invr2 = invsqrt_force(r2_2, rsqrt_mode);
+      const dtype s2 = g * mass * invr2 * invr2 * invr2;
+      ax2 += dx2 * s2;
+      ay2 += dy2 * s2;
+      az2 += dz2 * s2;
+
+      // Particella 3
+      const dtype dx3 = sx[j + 3] - xi;
+      const dtype dy3 = sy[j + 3] - yi;
+      const dtype dz3 = sz[j + 3] - zi;
+      const dtype r2_3 = dx3 * dx3 + dy3 * dy3 + dz3 * dz3 + eps2;
+      const dtype invr3 = invsqrt_force(r2_3, rsqrt_mode);
+      const dtype s3 = g * mass * invr3 * invr3 * invr3;
+      ax3 += dx3 * s3;
+      ay3 += dy3 * s3;
+      az3 += dz3 * s3;
+    }
+
+    // 3. Loop di resto per gestire le particelle che non sono multiple di 4
+    dtype ax_rem = (dtype)0.0, ay_rem = (dtype)0.0, az_rem = (dtype)0.0;
+    for (; j < source_n; ++j)
     {
       const dtype dx = sx[j] - xi;
       const dtype dy = sy[j] - yi;
       const dtype dz = sz[j] - zi;
-
       const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;
       const dtype invr = invsqrt_force(r2, rsqrt_mode);
       const dtype s = g * mass * invr * invr * invr;
-
-      ax += dx * s;
-      ay += dy * s;
-      az += dz * s;
+      ax_rem += dx * s;
+      ay_rem += dy * s;
+      az_rem += dz * s;
     }
 
-    home->ax[i] += ax;
-    home->ay[i] += ay;
-    home->az[i] += az;
-  }
-}
+    // 4. Riduzione finale sugli accumulatori effettivi della particella home
+    home->ax[i] += ax0 + ax1 + ax2 + ax3 + ax_rem;
+    home->ay[i] += ay0 + ay1 + ay2 + ay3 + ay_rem;
+    home->az[i] += az0 + az1 + az2 + az3 + az_rem;
+  } // <-- AGGIUNGI QUESTA: Chiude il pragma omp parallel for
+} // <-- AGGIUNGI QUESTA: Chiude la funzione accumulate_sources
 
 static void compute_accelerations_newton_private(particles_t *local, dtype g,
                                                  dtype eps,
