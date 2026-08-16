@@ -23,6 +23,7 @@ typedef struct timings_s
 {
   double drift;
   double force;
+  double comm_wait;
   double kick;
   double energy;
   double io;
@@ -446,21 +447,18 @@ static void accumulate_sources(const particles_t *home,
     const dtype yi = home->y[i];
     const dtype zi = home->z[i];
 
-    // 1. Dichiarazione di 4 accumulatori indipendenti
+    /* Four independent accumulators shorten the dependency chain. */
     dtype ax0 = (dtype)0.0, ay0 = (dtype)0.0, az0 = (dtype)0.0;
     dtype ax1 = (dtype)0.0, ay1 = (dtype)0.0, az1 = (dtype)0.0;
     dtype ax2 = (dtype)0.0, ay2 = (dtype)0.0, az2 = (dtype)0.0;
     dtype ax3 = (dtype)0.0, ay3 = (dtype)0.0, az3 = (dtype)0.0;
 
     size_t j = 0u;
-    // Calcoliamo il limite per il loop srotolato (multiplo di 4)
     const size_t source_n_unrolled = source_n & ~(size_t)3;
 
-    // 2. Loop principale srotolato a step di 4
 #pragma omp simd
     for (j = 0u; j < source_n_unrolled; j += 4u)
     {
-      // Particella 0
       const dtype dx0 = sx[j] - xi;
       const dtype dy0 = sy[j] - yi;
       const dtype dz0 = sz[j] - zi;
@@ -471,7 +469,6 @@ static void accumulate_sources(const particles_t *home,
       ay0 += dy0 * s0;
       az0 += dz0 * s0;
 
-      // Particella 1
       const dtype dx1 = sx[j + 1] - xi;
       const dtype dy1 = sy[j + 1] - yi;
       const dtype dz1 = sz[j + 1] - zi;
@@ -482,7 +479,6 @@ static void accumulate_sources(const particles_t *home,
       ay1 += dy1 * s1;
       az1 += dz1 * s1;
 
-      // Particella 2
       const dtype dx2 = sx[j + 2] - xi;
       const dtype dy2 = sy[j + 2] - yi;
       const dtype dz2 = sz[j + 2] - zi;
@@ -493,7 +489,6 @@ static void accumulate_sources(const particles_t *home,
       ay2 += dy2 * s2;
       az2 += dz2 * s2;
 
-      // Particella 3
       const dtype dx3 = sx[j + 3] - xi;
       const dtype dy3 = sy[j + 3] - yi;
       const dtype dz3 = sz[j + 3] - zi;
@@ -505,7 +500,6 @@ static void accumulate_sources(const particles_t *home,
       az3 += dz3 * s3;
     }
 
-    // 3. Loop di resto per gestire le particelle che non sono multiple di 4
     dtype ax_rem = (dtype)0.0, ay_rem = (dtype)0.0, az_rem = (dtype)0.0;
     for (; j < source_n; ++j)
     {
@@ -520,12 +514,11 @@ static void accumulate_sources(const particles_t *home,
       az_rem += dz * s;
     }
 
-    // 4. Riduzione finale sugli accumulatori effettivi della particella home
     home->ax[i] += ax0 + ax1 + ax2 + ax3 + ax_rem;
     home->ay[i] += ay0 + ay1 + ay2 + ay3 + ay_rem;
     home->az[i] += az0 + az1 + az2 + az3 + az_rem;
-  } // <-- AGGIUNGI QUESTA: Chiude il pragma omp parallel for
-} // <-- AGGIUNGI QUESTA: Chiude la funzione accumulate_sources
+  }
+}
 
 static void compute_accelerations_newton_private(particles_t *local, dtype g,
                                                  dtype eps,
@@ -642,6 +635,7 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
                                        int rank, int nranks, comm_mode_t mode,
                                        kernel_mode_t kernel_mode,
                                        rsqrt_mode_t rsqrt_mode,
+                                       double *comm_wait,
                                        MPI_Comm comm)
 {
   const size_t max_n = max_block_count(global_n, nranks);
@@ -653,7 +647,7 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
   dtype *rz = checked_aligned_alloc(max_n * sizeof(dtype));
   MPI_Datatype dt = mpi_dtype();
   int owner = rank;
-  size_t buf_start = local_start, buf_n = local->n;
+  size_t buf_n = local->n;
   size_t i;
 
   if (kernel_mode == KERNEL_NEWTON)
@@ -678,25 +672,33 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
       const int next_owner = (owner + nranks - 1) % nranks;
       size_t next_start, next_n;
       block_bounds(global_n, next_owner, nranks, &next_start, &next_n);
+      (void)next_start;
       if (mode == COMM_OVERLAP)
       {
         MPI_Request req[6];
         post_source_exchange(bx, by, bz, rx, ry, rz, buf_n, next_n,
                              rank, nranks, 10, dt, comm, req);
         accumulate_sources(local, bx, by, bz, buf_n, g, local->mass, eps, rsqrt_mode);
-        MPI_Waitall(6, req, MPI_STATUSES_IGNORE);
+        {
+          const double comm_t0 = seconds();
+          MPI_Waitall(6, req, MPI_STATUSES_IGNORE);
+          *comm_wait += seconds() - comm_t0;
+        }
       }
       else
       {
         accumulate_sources(local, bx, by, bz, buf_n, g, local->mass, eps, rsqrt_mode);
-        exchange_sources_sendrecv(bx, by, bz, rx, ry, rz, buf_n, next_n,
-                                  rank, nranks, 10, dt, comm);
+        {
+          const double comm_t0 = seconds();
+          exchange_sources_sendrecv(bx, by, bz, rx, ry, rz, buf_n, next_n,
+                                    rank, nranks, 10, dt, comm);
+          *comm_wait += seconds() - comm_t0;
+        }
       }
       memcpy(bx, rx, next_n * sizeof(dtype));
       memcpy(by, ry, next_n * sizeof(dtype));
       memcpy(bz, rz, next_n * sizeof(dtype));
       owner = next_owner;
-      buf_start = next_start;
       buf_n = next_n;
     }
     else
@@ -856,7 +858,7 @@ int main(int argc, char **argv)
   bool quiet = false;
   int rank, nranks, provided;
   particles_t local;
-  timings_t timing = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+  timings_t timing = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   dtype kinetic0, potential0, energy0;
   double max_rel_drift = 0.0;
   double t0, t1;
@@ -948,6 +950,7 @@ int main(int argc, char **argv)
     t0 = seconds();
     compute_accelerations_ring(&local, global_n, local_start, g, eps, rank,
                                nranks, comm_mode, kernel_mode, rsqrt_mode,
+                               &timing.comm_wait,
                                MPI_COMM_WORLD);
     timing.force += seconds() - t0;
   }
@@ -967,7 +970,8 @@ int main(int argc, char **argv)
       t0 = seconds();
       compute_accelerations_ring(&local, global_n, local_start, g, eps,
                                  rank, nranks, comm_mode, kernel_mode,
-                                 rsqrt_mode, MPI_COMM_WORLD);
+                                 rsqrt_mode, &timing.comm_wait,
+                                 MPI_COMM_WORLD);
       timing.force += seconds() - t0;
 
       t0 = seconds();
@@ -983,7 +987,8 @@ int main(int argc, char **argv)
       t0 = seconds();
       compute_accelerations_ring(&local, global_n, local_start, g, eps,
                                  rank, nranks, comm_mode, kernel_mode,
-                                 rsqrt_mode, MPI_COMM_WORLD);
+                                 rsqrt_mode, &timing.comm_wait,
+                                 MPI_COMM_WORLD);
       timing.force += seconds() - t0;
 
       t0 = seconds();
@@ -1030,6 +1035,8 @@ int main(int argc, char **argv)
              MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   MPI_Reduce(rank == 0 ? MPI_IN_PLACE : &timing.force, &timing.force, 1,
              MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(rank == 0 ? MPI_IN_PLACE : &timing.comm_wait, &timing.comm_wait,
+             1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   MPI_Reduce(rank == 0 ? MPI_IN_PLACE : &timing.kick, &timing.kick, 1,
              MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   MPI_Reduce(rank == 0 ? MPI_IN_PLACE : &timing.energy, &timing.energy, 1,
@@ -1056,9 +1063,9 @@ int main(int argc, char **argv)
            DTYPE_NAME, max_rel_drift, (double)energy_tol,
            (max_rel_drift <= (double)energy_tol) ? "OK" : "WARNING");
     printf("# timing_max_seconds total=%.6f io=%.6f drift=%.6f "
-           "force=%.6f kick=%.6f energy=%.6f\n",
+           "force=%.6f comm_wait=%.6f kick=%.6f energy=%.6f\n",
            timing.total, timing.io, timing.drift, timing.force,
-           timing.kick, timing.energy);
+           timing.comm_wait, timing.kick, timing.energy);
     printf("# kernel_rate pair_interactions_per_second=%.6e "
            "gpair_interactions_per_second=%.6f\n",
            interactions / timing.force, ginteractions);

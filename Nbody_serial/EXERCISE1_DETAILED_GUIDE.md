@@ -184,6 +184,7 @@ Cleanup implemented:
 
 - `Makefile`: serial + hybrid + generator builds, smoke runs, vectorization report target.
 - `collect_system_info.sh`: captures hardware/software environment.
+- `nbody_layout_benchmark.c`: standalone force-only AoS-vs-SoA benchmark.
 - `Dockerfile`: reproducible Docker build environment.
 - `Singularity.def`: Singularity/Apptainer recipe.
 - `.dockerignore`: reduces Docker build context.
@@ -206,8 +207,21 @@ Cleanup implemented:
   - renders SVG plots:
     - `scaling_strong_speedup.svg`,
     - `scaling_strong_efficiency.svg`,
+    - `scaling_strong_comm_bandwidth.svg`,
     - `scaling_weak_speedup.svg`,
-    - `scaling_weak_efficiency.svg`.
+    - `scaling_weak_efficiency.svg`,
+    - `scaling_weak_comm_bandwidth.svg`.
+
+### Evidence and ablation helpers
+
+- `benchmark_layout.sh` + `analyze_layout.py`: AoS-vs-SoA table for the
+  optimization discussion.
+- `benchmark_energy.sh` + `analyze_energy.py`: cost of different
+  `--energy-every` settings.
+- `benchmark_osu.sh`: OSU latency/bandwidth microbenchmarks for the MPI layer.
+- `jobs/Leonardo/5_evidence_leonardo.sh`: one-node Leonardo job that collects
+  system info, layout evidence, energy diagnostic overhead, and OSU results
+  when the OSU tools are available.
 
 ### Container overhead pipeline
 
@@ -267,9 +281,31 @@ Outputs:
 
 - raw table: `benchmark_results.csv`
 - reduced summary: `benchmark_summary.csv`
-- strong/weak SVG charts listed above
+- strong/weak SVG charts listed above, including estimated communication
+  bandwidth when `comm_wait` is present
 
-## 6.3 Container overhead derivables
+`benchmark_scaling.sh` supports `WARMUPS`; these repetitions are executed before
+the measured repetitions and are not written to the raw CSV. The analyzer uses a
+MAD-based rule to count timing outliers and reports the number in
+`benchmark_summary.csv`.
+
+## 6.3 AoS-vs-SoA, energy overhead, and OSU derivables
+
+```bash
+THREADS="1 2 4" REPEATS=5 WARMUPS=2 N=50000 bash ./benchmark_layout.sh
+./analyze_layout.py layout_results.csv layout_summary.csv
+
+RANKS=8 THREADS=1 REPEATS=5 WARMUPS=2 N=50000 NSTEPS=50 \
+ENERGY_LIST="1 5 10 50" bash ./benchmark_energy.sh
+./analyze_energy.py energy_overhead.csv energy_overhead_summary.csv
+
+MODE=native bash ./benchmark_osu.sh
+```
+
+On Leonardo, `sbatch jobs/Leonardo/5_evidence_leonardo.sh` runs the same
+evidence workflow using the configured DCGP modules.
+
+## 6.4 Container overhead derivables
 
 Docker path:
 

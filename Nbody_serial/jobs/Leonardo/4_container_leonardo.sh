@@ -22,6 +22,9 @@ export RANKS="1 2 4 8 16 32 64 112"
 export THREADS=1
 export REPEATS=5
 export N=50000
+export N_PER_RANK=10000
 export NSTEPS=50
 
 ./benchmark_container.sh
+python3 analyze_container_overhead.py container_overhead.csv
+python3 plot_container_overhead.py container_overhead_summary.csv

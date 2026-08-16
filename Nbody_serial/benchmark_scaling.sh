@@ -9,6 +9,7 @@ dt="${DT:-1e-4}"
 eps="${EPS:-0.05}"
 energy_every="${ENERGY_EVERY:-10}"
 repeats="${REPEATS:-5}"
+warmups="${WARMUPS:-1}"
 rank_list="${RANKS:-1 2 4}"
 thread_list="${THREADS:-1 2}"
 integrator="${INTEGRATOR:-kdk}"
@@ -23,7 +24,7 @@ container_image="${CONTAINER_IMAGE:-nbody.sif}"
 
 # La compilazione deve essere gestita a monte.
 
-echo "kind,N,ranks,threads,repeat,integrator,comm,kernel,rsqrt,total,io,drift,force,kick,energy,gpairs,status,max_rel_drift" > "$out"
+echo "kind,N,nsteps,ranks,threads,repeat,integrator,comm,kernel,rsqrt,dtype,total,io,drift,force,comm_wait,kick,energy,gpairs,status,max_rel_drift" > "$out"
 
 run_case() {
   local kind="$1"
@@ -46,36 +47,63 @@ run_case() {
   fi
 
   ./generate_ic --model "$model" --n "$n" --seed "$((1000 + repeat))" --output "$input" >/dev/null
-  
+
   # Rispetto rigoroso della topologia Slurm impostata dallo script padre.
   # L'eseguibile ($exe) viene risolto dinamicamente in base alla variabile USE_CONTAINER.
-  log="$(OMP_NUM_THREADS="$threads" srun --ntasks="$ranks" --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" $exe \
+  log="$(OMP_NUM_THREADS="$threads" srun --cpu-bind=verbose,cores --ntasks="$ranks" --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" $exe \
     --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" \
     --energy-every "$energy_every" --integrator "$integrator" --comm "$comm" \
     --kernel "$kernel" --rsqrt "$rsqrt" --quiet)"
 
-  python3 - "$kind" "$n" "$ranks" "$threads" "$repeat" "$integrator" "$comm" "$kernel" "$rsqrt" "$log" <<'PY'
+  python3 - "$kind" "$n" "$nsteps" "$ranks" "$threads" "$repeat" "$integrator" "$comm" "$kernel" "$rsqrt" "$log" <<'PY'
 import re
 import sys
 
-kind, n, ranks, threads, rep, integrator, comm, kernel, rsqrt, log = sys.argv[1:]
+kind, n, nsteps, ranks, threads, rep, integrator, comm, kernel, rsqrt, log = sys.argv[1:]
 field = r"([^ \r\n]+)"
-final = re.search(r"max_relative_energy_drift=" + field + r".*status=" + field, log)
+final = re.search(r"arithmetic_dtype=" + field + r".*max_relative_energy_drift=" + field + r".*status=" + field, log)
 timing = re.search(r"total=" + field + r" io=" + field + r" drift=" + field +
-                   r" force=" + field + r" kick=" + field + r" energy=" + field, log)
+                   r" force=" + field + r" comm_wait=" + field + r" kick=" + field + r" energy=" + field, log)
 rate = re.search(r"gpair_interactions_per_second=" + field, log)
 if not (final and timing and rate):
     raise SystemExit("could not parse solver output:\n" + log)
 print(",".join([
-    kind, n, ranks, threads, rep, integrator, comm, kernel, rsqrt,
-    *timing.groups(), rate.group(1), final.group(2), final.group(1)
+    kind, n, nsteps, ranks, threads, rep, integrator, comm, kernel, rsqrt,
+    final.group(1), *timing.groups(), rate.group(1), final.group(3), final.group(2)
 ]))
 PY
   rm -f "$input"
 }
 
+run_warmup() {
+  local kind="$1"
+  local n="$2"
+  local ranks="$3"
+  local threads="$4"
+  local repeat="$5"
+  local input="warmup_${kind}_N${n}_P${ranks}_T${threads}_seed${repeat}.bin"
+  local exe="./nbody_direct_hybrid"
+
+  if [[ "$kernel" == "newton" && "$ranks" != "1" ]]; then
+    return
+  fi
+  if [[ "$use_container" == "1" ]]; then
+    exe="singularity exec $container_image /opt/nbody/nbody_direct_hybrid"
+  fi
+
+  ./generate_ic --model "$model" --n "$n" --seed "$((9000 + repeat))" --output "$input" >/dev/null
+  OMP_NUM_THREADS="$threads" srun --cpu-bind=verbose,cores --ntasks="$ranks" --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" $exe \
+    --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" \
+    --energy-every "$energy_every" --integrator "$integrator" --comm "$comm" \
+    --kernel "$kernel" --rsqrt "$rsqrt" --quiet >/dev/null
+  rm -f "$input"
+}
+
 for ranks in $rank_list; do
   for threads in $thread_list; do
+    for rep in $(seq 1 "$warmups"); do
+      run_warmup "strong" "$strong_n" "$ranks" "$threads" "$rep"
+    done
     for rep in $(seq 1 "$repeats"); do
       run_case "strong" "$strong_n" "$ranks" "$threads" "$rep" >> "$out"
     done
@@ -85,6 +113,9 @@ done
 for ranks in $rank_list; do
   n=$((weak_per_rank * ranks))
   for threads in $thread_list; do
+    for rep in $(seq 1 "$warmups"); do
+      run_warmup "weak" "$n" "$ranks" "$threads" "$rep"
+    done
     for rep in $(seq 1 "$repeats"); do
       run_case "weak" "$n" "$ranks" "$threads" "$rep" >> "$out"
     done

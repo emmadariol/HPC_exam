@@ -14,8 +14,7 @@ cd "$SLURM_SUBMIT_DIR"
 
 module purge
 module load profile/base
-# Rimossa la dipendenza CUDA, inutile per partizioni pure CPU
-module load openmpi/4.1.6--gcc--12.2.0
+module load openmpi/4.1.6--gcc--12.2.0-cuda-12.2
 module load python/3.11.6--gcc--12.2.0 
 
 export OMP_PLACES=cores

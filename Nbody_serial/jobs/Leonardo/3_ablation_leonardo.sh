@@ -35,7 +35,7 @@ input_strong="ic_ablation_N${STRONG_N}.bin"
 # ==========================================
 for KERNEL in direct newton; do
     for REP in {1..5}; do
-        LOG=$(srun -n 1 --cpus-per-task=1 ./nbody_direct_hybrid --kernel "$KERNEL" --input "$input_strong" --nsteps "$NSTEPS" --quiet 2>&1)
+        LOG=$(srun --cpu-bind=verbose,cores -n 1 --cpus-per-task=1 ./nbody_direct_hybrid --kernel "$KERNEL" --input "$input_strong" --nsteps "$NSTEPS" --quiet 2>&1)
         TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | cut -d= -f2 || true)
         [ -z "$TIME_SEC" ] && TIME_SEC=$(printf "%s" "$LOG" | grep -i 'Time' | awk '{print $2}' || true)
         echo "Kernel,$KERNEL,$TIME_SEC" >> "$CSV_OUT"
@@ -47,7 +47,7 @@ done
 # ==========================================
 for RSQRT in exact approx; do
     for REP in {1..5}; do
-        LOG=$(srun -n "$RANKS" --cpus-per-task=1 ./nbody_direct_hybrid --rsqrt "$RSQRT" --input "$input_strong" --nsteps "$NSTEPS" --quiet 2>&1)
+        LOG=$(srun --cpu-bind=verbose,cores -n "$RANKS" --cpus-per-task=1 ./nbody_direct_hybrid --rsqrt "$RSQRT" --input "$input_strong" --nsteps "$NSTEPS" --quiet 2>&1)
         TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | cut -d= -f2 || true)
         [ -z "$TIME_SEC" ] && TIME_SEC=$(printf "%s" "$LOG" | grep -i 'Time' | awk '{print $2}' || true)
         echo "Math,$RSQRT,$TIME_SEC" >> "$CSV_OUT"
@@ -59,7 +59,7 @@ done
 # ==========================================
 for COMM in sendrecv overlap; do
     for REP in {1..5}; do
-        LOG=$(srun -n "$RANKS" --cpus-per-task=1 ./nbody_direct_hybrid --comm "$COMM" --input "$input_strong" --nsteps "$NSTEPS" --quiet 2>&1)
+        LOG=$(srun --cpu-bind=verbose,cores -n "$RANKS" --cpus-per-task=1 ./nbody_direct_hybrid --comm "$COMM" --input "$input_strong" --nsteps "$NSTEPS" --quiet 2>&1)
         TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | cut -d= -f2 || true)
         [ -z "$TIME_SEC" ] && TIME_SEC=$(printf "%s" "$LOG" | grep -i 'Time' | awk '{print $2}' || true)
         echo "Comm,$COMM,$TIME_SEC" >> "$CSV_OUT"

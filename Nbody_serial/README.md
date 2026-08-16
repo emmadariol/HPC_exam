@@ -8,12 +8,21 @@ This directory contains the stand-alone programs for the direct gravitational N-
   rank owns one permanent SoA chunk, rotates source chunks with a ring-shift
   communication pattern, parallelises the home-particle force loop with OpenMP,
   and reports per-section timings plus a pair-interaction rate.
+- `nbody_layout_benchmark.c`: force-only AoS-vs-SoA microbenchmark using the
+  same binary input format and force law as the solver.
 - `collect_system_info.sh`: writes the hardware/software stack requested in the
   report.
 - `benchmark_scaling.sh`: runs repeated strong/weak scaling experiments and
   writes a CSV that can be plotted for speedup and efficiency.
 - `analyze_benchmark.py`: reduces the raw benchmark CSV to medians, standard
-  deviations, speedup, and efficiency.
+  deviations, outlier counts, speedup, efficiency, and estimated ring
+  communication bandwidth.
+- `benchmark_layout.sh`, `analyze_layout.py`: generate and summarize the
+  AoS-vs-SoA evidence table.
+- `benchmark_energy.sh`, `analyze_energy.py`: quantify the cost of different
+  `--energy-every` diagnostic periods.
+- `benchmark_osu.sh`: collect OSU latency/bandwidth microbenchmarks for the
+  MPI stack used by the production runs.
 - `Dockerfile` and `Singularity.def`: starter container recipes for the
   required native-vs-container comparison.
 - `benchmark_container.sh`: repeated native-vs-Singularity timing table helper.
@@ -146,7 +155,27 @@ make vec-report
 The generated `benchmark_results.csv` contains one line per run, including
 status, energy drift, section timings, and kernel rate. Use the median (or
 trimmed mean and standard deviation) across the repeated rows in the report.
-`plot_scaling.py` writes SVG plots for strong/weak speedup and efficiency.
+`WARMUPS` controls unrecorded warmup repetitions before each measured point.
+`analyze_benchmark.py` reports MAD-based outlier counts and estimates
+communication bandwidth from the ring traffic and `comm_wait`. `plot_scaling.py`
+writes SVG plots for strong/weak speedup, efficiency, and estimated
+communication bandwidth.
+
+Evidence helpers for the optimization discussion:
+
+```sh
+THREADS="1 2 4" REPEATS=5 WARMUPS=2 N=50000 bash ./benchmark_layout.sh
+./analyze_layout.py layout_results.csv layout_summary.csv
+
+RANKS=8 THREADS=1 REPEATS=5 WARMUPS=2 N=50000 NSTEPS=50 \
+  ENERGY_LIST="1 5 10 50" bash ./benchmark_energy.sh
+./analyze_energy.py energy_overhead.csv energy_overhead_summary.csv
+
+MODE=native bash ./benchmark_osu.sh
+```
+
+`benchmark_osu.sh` expects `osu_latency` and `osu_bw` in `PATH`, or explicit
+`OSU_LATENCY=/path/to/osu_latency` and `OSU_BW=/path/to/osu_bw`.
 
 Optional kernel experiments:
 

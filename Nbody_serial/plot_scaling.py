@@ -15,6 +15,7 @@ with open(src, newline="") as f:
         row["resources"] = int(row["resources"])
         row["speedup"] = float(row["speedup"])
         row["efficiency"] = float(row["efficiency"])
+        row["comm_bandwidth_GBps"] = float(row.get("comm_bandwidth_GBps", 0.0) or 0.0)
         row["N"] = int(row["N"])
         rows.append(row)
 
@@ -76,5 +77,7 @@ def write_plot(kind, metric, ylabel, path):
 
 write_plot("strong", "speedup", "speedup", f"{prefix}_strong_speedup.svg")
 write_plot("strong", "efficiency", "efficiency", f"{prefix}_strong_efficiency.svg")
+write_plot("strong", "comm_bandwidth_GBps", "estimated communication GB/s", f"{prefix}_strong_comm_bandwidth.svg")
 write_plot("weak", "speedup", "relative throughput", f"{prefix}_weak_speedup.svg")
 write_plot("weak", "efficiency", "weak efficiency", f"{prefix}_weak_efficiency.svg")
+write_plot("weak", "comm_bandwidth_GBps", "estimated communication GB/s", f"{prefix}_weak_comm_bandwidth.svg")

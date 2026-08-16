@@ -37,7 +37,7 @@ for T in 2 4 7 8 14 28 56; do
     
     for REP in {1..5}; do
         # Utilizzo nativo di srun per gestire il binding di MPI e OpenMP
-        LOG=$(srun --ntasks="$P" --cpus-per-task="$T" ./nbody_direct_hybrid --input "$input_strong" --nsteps "$NSTEPS" --dt "$DT" --eps "$EPS" --quiet 2>&1)
+        LOG=$(srun --cpu-bind=verbose,cores --ntasks="$P" --cpus-per-task="$T" ./nbody_direct_hybrid --input "$input_strong" --nsteps "$NSTEPS" --dt "$DT" --eps "$EPS" --quiet 2>&1)
         
         TIME_SEC=$(printf "%s" "$LOG" | grep -o 'total=[^ ]*' | head -n1 | cut -d= -f2 || true)
         [ -z "$TIME_SEC" ] && TIME_SEC=$(printf "%s" "$LOG" | grep -i 'Time' | head -n1 | awk '{print $2}' || true)
