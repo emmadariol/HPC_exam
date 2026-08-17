@@ -1,12 +1,16 @@
 #!/bin/bash
 #SBATCH --job-name=build_sif_leo
-#SBATCH --account=uTS26_Tornator
+#SBATCH --account=uts26_tornator
 #SBATCH --partition=dcgp_usr_prod
 #SBATCH --qos=dcgp_qos_bprod
+#SBATCH --gres=tmpfs:10g
 #SBATCH --nodes=1
 #SBATCH --time=00:45:00
 #SBATCH --output=leo_0_build_container_%j.out
 #SBATCH --error=leo_0_build_container_%j.err
+
+
+
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"

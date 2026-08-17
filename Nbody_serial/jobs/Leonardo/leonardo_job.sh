@@ -1,8 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=nbody-leonardo
-#SBATCH --account=uTS26_Tornator
+#SBATCH --account=uts26_tornator
 #SBATCH --partition=dcgp_usr_prod
 #SBATCH --qos=dcgp_qos_bprod
+#SBATCH --gres=tmpfs:10g
 #SBATCH --nodes=4
 #SBATCH --exclusive
 #SBATCH --time=04:00:00
