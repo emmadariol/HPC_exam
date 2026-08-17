@@ -1,31 +1,29 @@
 #!/bin/bash
-#SBATCH --job-name=ablation_leo
-#SBATCH --account=uts26_tornator_0
-#SBATCH --partition=dcgp_usr_prod
-#SBATCH --qos=dcgp_qos_bprod
-#SBATCH --gres=tmpfs:10g
+#SBATCH --job-name=ablation_orfeo
+#SBATCH --account=dssc
+#SBATCH --partition=epyc
+#SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --exclusive
 #SBATCH --time=01:00:00
-#SBATCH --output=leo_3_ablation_%j.out
-#SBATCH --error=leo_3_ablation_%j.err
+#SBATCH --output=orfeo_3_ablation_%j.out
+#SBATCH --error=orfeo_3_ablation_%j.err
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
 
-# Pulizia e caricamento moduli esatti per l'ambiente DCGP
 module purge
-module load profile/base
-module load openmpi/4.1.6--gcc--12.2.0-cuda-12.2
+module load openMPI/4.1.6
+
+make clean
+make all
 
 export OMP_NUM_THREADS=1
 
-# Numero di core del nodo DCGP per saturare le risorse nel test distribuito
-RANKS=112 
-
-STRONG_N=50000
-NSTEPS=50
-CSV_OUT="results_3_ablation_leonardo.csv"
+RANKS="${RANKS:-128}"
+STRONG_N="${STRONG_N:-50000}"
+NSTEPS="${NSTEPS:-50}"
+CSV_OUT="${CSV_OUT:-results_3_ablation_orfeo.csv}"
 
 echo "Test_Type,Config,Time_Sec" > "$CSV_OUT"
 input_strong="ic_ablation_N${STRONG_N}.bin"
@@ -51,9 +49,6 @@ run_ablation_case() {
     echo "$test_type,$config,$time_sec" >> "$CSV_OUT"
 }
 
-# ==========================================
-# Newton vs Direct (Seriale: -np 1)
-# ==========================================
 for KERNEL in direct newton; do
     for REP in {1..5}; do
         run_ablation_case Kernel "$KERNEL" \
@@ -62,9 +57,6 @@ for KERNEL in direct newton; do
     done
 done
 
-# ==========================================
-# Exact vs Approx rsqrt (Distribuito)
-# ==========================================
 for RSQRT in exact approx; do
     for REP in {1..5}; do
         run_ablation_case Math "$RSQRT" \
@@ -73,9 +65,6 @@ for RSQRT in exact approx; do
     done
 done
 
-# ==========================================
-# Overlap vs Sendrecv (Distribuito)
-# ==========================================
 for COMM in sendrecv overlap; do
     for REP in {1..5}; do
         run_ablation_case Comm "$COMM" \

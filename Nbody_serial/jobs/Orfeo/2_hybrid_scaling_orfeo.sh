@@ -1,21 +1,19 @@
 #!/bin/bash
-#SBATCH --job-name=hybrid_scale_leo
-#SBATCH --account=uts26_tornator_0
-#SBATCH --partition=dcgp_usr_prod
-#SBATCH --qos=dcgp_qos_bprod
-#SBATCH --gres=tmpfs:10g
+#SBATCH --job-name=hybrid_scale_orfeo
+#SBATCH --account=dssc
+#SBATCH --partition=epyc
+#SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --exclusive
 #SBATCH --time=02:00:00
-#SBATCH --output=leo_2_hybrid_%j.out
-#SBATCH --error=leo_2_hybrid_%j.err
+#SBATCH --output=orfeo_2_hybrid_%j.out
+#SBATCH --error=orfeo_2_hybrid_%j.err
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
 
 module purge
-module load profile/base
-module load openmpi/4.1.6--gcc--12.2.0-cuda-12.2
+module load openMPI/4.1.6
 
 export OMP_PLACES=cores
 export OMP_PROC_BIND=spread
@@ -23,17 +21,17 @@ export OMP_PROC_BIND=spread
 make clean
 make all
 
-bash ./collect_system_info.sh system_info_leonardo_dcgp.txt
+bash ./collect_system_info.sh system_info_orfeo_epyc.txt
 
-summary="results_2_hybrid_leonardo_summary.csv"
-rm -f results_2_hybrid_leonardo_P*_T*.csv results_2_hybrid_leonardo_P*_T*_summary.csv "$summary"
+summary="results_2_hybrid_orfeo_summary.csv"
+rm -f results_2_hybrid_orfeo_P*_T*.csv results_2_hybrid_orfeo_P*_T*_summary.csv "$summary"
 
-for pair in ${HYBRID_PAIRS:-112x1 56x2 28x4 16x7 14x8 8x14 4x28 2x56}; do
+for pair in ${HYBRID_PAIRS:-128x1 64x2 32x4 16x8 8x16 4x32 2x64}; do
   P="${pair%x*}"
   T="${pair#*x}"
   export OMP_NUM_THREADS="$T"
-  raw="results_2_hybrid_leonardo_P${P}_T${T}.csv"
-  partial="results_2_hybrid_leonardo_P${P}_T${T}_summary.csv"
+  raw="results_2_hybrid_orfeo_P${P}_T${T}.csv"
+  partial="results_2_hybrid_orfeo_P${P}_T${T}_summary.csv"
 
   RANKS="$P" \
   THREADS="$T" \
@@ -61,4 +59,4 @@ for pair in ${HYBRID_PAIRS:-112x1 56x2 28x4 16x7 14x8 8x14 4x28 2x56}; do
   fi
 done
 
-python3 plot_scaling.py "$summary" results_2_hybrid_leonardo
+python3 plot_scaling.py "$summary" results_2_hybrid_orfeo

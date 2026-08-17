@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=container_leo
-#SBATCH --account=uts26_tornator
+#SBATCH --account=uts26_tornator_0
 #SBATCH --partition=dcgp_usr_prod
 #SBATCH --qos=dcgp_qos_bprod
 #SBATCH --gres=tmpfs:10g
