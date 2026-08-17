@@ -4,7 +4,6 @@
 #SBATCH --partition=EPYC
 #SBATCH --qos=normal
 #SBATCH --nodes=1
-#SBATCH --exclusive
 #SBATCH --time=01:00:00
 #SBATCH --output=orfeo_3_ablation_%j.out
 #SBATCH --error=orfeo_3_ablation_%j.err

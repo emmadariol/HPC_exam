@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+<rect width="100%" height="100%" fill="white"/>
+<line x1="80" y1="450" x2="870" y2="450" stroke="black"/>
+<line x1="80" y1="40" x2="80" y2="450" stroke="black"/>
+<text x="450.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">weak estimated communication GB/s</text>
+<text x="450.0" y="500" text-anchor="middle" font-family="sans-serif" font-size="14">resources = ranks x threads</text>
+<text transform="translate(22,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">estimated communication GB/s</text>
+<line x1="80.0" y1="450" x2="80.0" y2="455" stroke="black"/>
+<text x="80.0" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">1</text>
+<line x1="132.7" y1="450" x2="132.7" y2="455" stroke="black"/>
+<text x="132.7" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">2</text>
+<line x1="185.3" y1="450" x2="185.3" y2="455" stroke="black"/>
+<text x="185.3" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">3</text>
+<line x1="238.0" y1="450" x2="238.0" y2="455" stroke="black"/>
+<text x="238.0" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">4</text>
+<line x1="290.7" y1="450" x2="290.7" y2="455" stroke="black"/>
+<text x="290.7" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">5</text>
+<line x1="343.3" y1="450" x2="343.3" y2="455" stroke="black"/>
+<text x="343.3" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">6</text>
+<line x1="396.0" y1="450" x2="396.0" y2="455" stroke="black"/>
+<text x="396.0" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">7</text>
+<line x1="448.7" y1="450" x2="448.7" y2="455" stroke="black"/>
+<text x="448.7" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">8</text>
+<line x1="501.3" y1="450" x2="501.3" y2="455" stroke="black"/>
+<text x="501.3" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">9</text>
+<line x1="554.0" y1="450" x2="554.0" y2="455" stroke="black"/>
+<text x="554.0" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">10</text>
+<line x1="606.7" y1="450" x2="606.7" y2="455" stroke="black"/>
+<text x="606.7" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">11</text>
+<line x1="659.3" y1="450" x2="659.3" y2="455" stroke="black"/>
+<text x="659.3" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">12</text>
+<line x1="712.0" y1="450" x2="712.0" y2="455" stroke="black"/>
+<text x="712.0" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">13</text>
+<line x1="764.7" y1="450" x2="764.7" y2="455" stroke="black"/>
+<text x="764.7" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">14</text>
+<line x1="817.3" y1="450" x2="817.3" y2="455" stroke="black"/>
+<text x="817.3" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">15</text>
+<line x1="870.0" y1="450" x2="870.0" y2="455" stroke="black"/>
+<text x="870.0" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">16</text>
+<line x1="75" y1="450.0" x2="80" y2="450.0" stroke="black"/>
+<text x="70" y="454.0" text-anchor="end" font-family="sans-serif" font-size="12">0</text>
+<line x1="75" y1="368.0" x2="80" y2="368.0" stroke="black"/>
+<text x="70" y="372.0" text-anchor="end" font-family="sans-serif" font-size="12">0.2</text>
+<line x1="75" y1="286.0" x2="80" y2="286.0" stroke="black"/>
+<text x="70" y="290.0" text-anchor="end" font-family="sans-serif" font-size="12">0.4</text>
+<line x1="75" y1="204.0" x2="80" y2="204.0" stroke="black"/>
+<text x="70" y="208.0" text-anchor="end" font-family="sans-serif" font-size="12">0.6</text>
+<line x1="75" y1="122.0" x2="80" y2="122.0" stroke="black"/>
+<text x="70" y="126.0" text-anchor="end" font-family="sans-serif" font-size="12">0.8</text>
+<line x1="75" y1="40.0" x2="80" y2="40.0" stroke="black"/>
+<text x="70" y="44.0" text-anchor="end" font-family="sans-serif" font-size="12">1</text>
+<polyline points="870.0,404.0 870.0,393.7 870.0,344.9 870.0,324.9 870.0,450.0" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<circle cx="870.0" cy="404.0" r="4" fill="#1f77b4"/>
+<circle cx="870.0" cy="393.7" r="4" fill="#1f77b4"/>
+<circle cx="870.0" cy="344.9" r="4" fill="#1f77b4"/>
+<circle cx="870.0" cy="324.9" r="4" fill="#1f77b4"/>
+<circle cx="870.0" cy="450.0" r="4" fill="#1f77b4"/>
+<text x="90" y="60" font-family="sans-serif" font-size="13" fill="#1f77b4">kdk/overlap/direct/exact</text>
+</svg>

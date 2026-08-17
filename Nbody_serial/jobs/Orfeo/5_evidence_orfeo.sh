@@ -4,7 +4,6 @@
 #SBATCH --partition=EPYC
 #SBATCH --qos=normal
 #SBATCH --nodes=1
-#SBATCH --exclusive
 #SBATCH --time=01:30:00
 #SBATCH --output=orfeo_5_evidence_%j.out
 #SBATCH --error=orfeo_5_evidence_%j.err

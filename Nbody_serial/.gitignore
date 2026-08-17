@@ -43,3 +43,23 @@ __pycache__/
 
 # Local benchmark scratch files
 *_input.bin
+
+# HPC generated binaries / temporary files
+nbody_direct_serial
+nbody_direct_hybrid
+nbody_layout_benchmark
+generate_ic
+*.o
+*.bin
+*.sif
+
+# Archives
+*.tar.gz
+*.zip
+
+# Slurm logs
+*.out
+*.err
+
+# Large or temporary preflight files
+preflight_*.bin
