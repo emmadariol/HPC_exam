@@ -1,21 +1,25 @@
 #!/bin/bash
 #SBATCH --job-name=probe_specs_orfeo
 #SBATCH --account=dssc
-#SBATCH --partition=epyc
+#SBATCH --partition=EPYC
 #SBATCH --qos=normal
 #SBATCH --nodes=1
+#SBATCH --ntasks=2
+#SBATCH --cpus-per-task=1
 #SBATCH --time=00:10:00
 #SBATCH --output=orfeo_0_probe_specs_%j.out
 #SBATCH --error=orfeo_0_probe_specs_%j.err
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
+RESULT_DIR="${RESULT_DIR:-.}"
+mkdir -p "$RESULT_DIR"
 
 module purge
 module load openMPI/4.1.6
 module load singularity/4.3.1 2>/dev/null || true
 
-out="orfeo_specs_${SLURM_JOB_ID}.txt"
+out="${RESULT_DIR}/orfeo_specs_${SLURM_JOB_ID}.txt"
 
 {
   echo "# Orfeo allocation probe"

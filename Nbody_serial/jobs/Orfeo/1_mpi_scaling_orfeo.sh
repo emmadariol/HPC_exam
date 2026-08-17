@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=mpi_scale_orfeo
 #SBATCH --account=dssc
-#SBATCH --partition=epyc
+#SBATCH --partition=EPYC
 #SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --exclusive
@@ -11,6 +11,9 @@
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
+RESULT_DIR="${RESULT_DIR:-.}"
+mkdir -p "$RESULT_DIR"
+RESULT_PREFIX="${RESULT_PREFIX:-${RESULT_DIR}/results_1_mpi_orfeo}"
 
 module purge
 module load openMPI/4.1.6
@@ -22,7 +25,7 @@ export OMP_NUM_THREADS=1
 make clean
 make all
 
-bash ./collect_system_info.sh system_info_orfeo_epyc.txt
+bash ./collect_system_info.sh "${RESULT_DIR}/system_info_orfeo_epyc.txt"
 
 RANKS="${RANKS:-1 2 4 8 16 32 64 128}" \
 THREADS=1 \
@@ -38,8 +41,8 @@ INTEGRATOR="${INTEGRATOR:-kdk}" \
 COMM="${COMM:-overlap}" \
 KERNEL=direct \
 RSQRT="${RSQRT:-exact}" \
-OUT="${OUT:-results_1_mpi_orfeo.csv}" \
+OUT="${OUT:-${RESULT_PREFIX}.csv}" \
   bash ./benchmark_scaling.sh
 
-python3 analyze_benchmark.py "${OUT:-results_1_mpi_orfeo.csv}" results_1_mpi_orfeo_summary.csv
-python3 plot_scaling.py results_1_mpi_orfeo_summary.csv results_1_mpi_orfeo
+python3 analyze_benchmark.py "${OUT:-${RESULT_PREFIX}.csv}" "${RESULT_PREFIX}_summary.csv"
+python3 plot_scaling.py "${RESULT_PREFIX}_summary.csv" "$RESULT_PREFIX"

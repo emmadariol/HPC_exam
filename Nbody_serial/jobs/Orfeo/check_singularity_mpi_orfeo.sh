@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=check_mpi_sing
 #SBATCH --account=dssc
-#SBATCH --partition=epyc
+#SBATCH --partition=EPYC
 #SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4

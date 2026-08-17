@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=ablation_orfeo
 #SBATCH --account=dssc
-#SBATCH --partition=epyc
+#SBATCH --partition=EPYC
 #SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --exclusive
@@ -11,6 +11,8 @@
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
+RESULT_DIR="${RESULT_DIR:-.}"
+mkdir -p "$RESULT_DIR"
 
 module purge
 module load openMPI/4.1.6
@@ -23,7 +25,7 @@ export OMP_NUM_THREADS=1
 RANKS="${RANKS:-128}"
 STRONG_N="${STRONG_N:-50000}"
 NSTEPS="${NSTEPS:-50}"
-CSV_OUT="${CSV_OUT:-results_3_ablation_orfeo.csv}"
+CSV_OUT="${CSV_OUT:-${RESULT_DIR}/results_3_ablation_orfeo.csv}"
 
 echo "Test_Type,Config,Time_Sec" > "$CSV_OUT"
 input_strong="ic_ablation_N${STRONG_N}.bin"

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=build_sif_orfeo
 #SBATCH --account=dssc
-#SBATCH --partition=epyc
+#SBATCH --partition=EPYC
 #SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --time=00:45:00

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=hybrid_scale_orfeo
 #SBATCH --account=dssc
-#SBATCH --partition=epyc
+#SBATCH --partition=EPYC
 #SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --exclusive
@@ -11,6 +11,9 @@
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
+RESULT_DIR="${RESULT_DIR:-.}"
+mkdir -p "$RESULT_DIR"
+RESULT_PREFIX="${RESULT_PREFIX:-${RESULT_DIR}/results_2_hybrid_orfeo}"
 
 module purge
 module load openMPI/4.1.6
@@ -21,17 +24,17 @@ export OMP_PROC_BIND=spread
 make clean
 make all
 
-bash ./collect_system_info.sh system_info_orfeo_epyc.txt
+bash ./collect_system_info.sh "${RESULT_DIR}/system_info_orfeo_epyc.txt"
 
-summary="results_2_hybrid_orfeo_summary.csv"
-rm -f results_2_hybrid_orfeo_P*_T*.csv results_2_hybrid_orfeo_P*_T*_summary.csv "$summary"
+summary="${RESULT_PREFIX}_summary.csv"
+rm -f "${RESULT_PREFIX}"_P*_T*.csv "${RESULT_PREFIX}"_P*_T*_summary.csv "$summary"
 
 for pair in ${HYBRID_PAIRS:-128x1 64x2 32x4 16x8 8x16 4x32 2x64}; do
   P="${pair%x*}"
   T="${pair#*x}"
   export OMP_NUM_THREADS="$T"
-  raw="results_2_hybrid_orfeo_P${P}_T${T}.csv"
-  partial="results_2_hybrid_orfeo_P${P}_T${T}_summary.csv"
+  raw="${RESULT_PREFIX}_P${P}_T${T}.csv"
+  partial="${RESULT_PREFIX}_P${P}_T${T}_summary.csv"
 
   RANKS="$P" \
   THREADS="$T" \
@@ -59,4 +62,4 @@ for pair in ${HYBRID_PAIRS:-128x1 64x2 32x4 16x8 8x16 4x32 2x64}; do
   fi
 done
 
-python3 plot_scaling.py "$summary" results_2_hybrid_orfeo
+python3 plot_scaling.py "$summary" "$RESULT_PREFIX"
