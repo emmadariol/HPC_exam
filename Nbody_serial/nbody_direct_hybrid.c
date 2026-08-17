@@ -631,7 +631,7 @@ static void post_source_exchange(dtype *bx, dtype *by, dtype *bz,
 }
 
 static void compute_accelerations_ring(particles_t *local, size_t global_n,
-                                       size_t local_start, dtype g, dtype eps,
+                                       dtype g, dtype eps,
                                        int rank, int nranks, comm_mode_t mode,
                                        kernel_mode_t kernel_mode,
                                        rsqrt_mode_t rsqrt_mode,
@@ -948,7 +948,7 @@ int main(int argc, char **argv)
   if (integrator == INTEGRATOR_KDK)
   {
     t0 = seconds();
-    compute_accelerations_ring(&local, global_n, local_start, g, eps, rank,
+    compute_accelerations_ring(&local, global_n, g, eps, rank,
                                nranks, comm_mode, kernel_mode, rsqrt_mode,
                                &timing.comm_wait,
                                MPI_COMM_WORLD);
@@ -968,7 +968,7 @@ int main(int argc, char **argv)
       timing.drift += seconds() - t0;
 
       t0 = seconds();
-      compute_accelerations_ring(&local, global_n, local_start, g, eps,
+      compute_accelerations_ring(&local, global_n, g, eps,
                                  rank, nranks, comm_mode, kernel_mode,
                                  rsqrt_mode, &timing.comm_wait,
                                  MPI_COMM_WORLD);
@@ -985,7 +985,7 @@ int main(int argc, char **argv)
       timing.drift += seconds() - t0;
 
       t0 = seconds();
-      compute_accelerations_ring(&local, global_n, local_start, g, eps,
+      compute_accelerations_ring(&local, global_n, g, eps,
                                  rank, nranks, comm_mode, kernel_mode,
                                  rsqrt_mode, &timing.comm_wait,
                                  MPI_COMM_WORLD);
