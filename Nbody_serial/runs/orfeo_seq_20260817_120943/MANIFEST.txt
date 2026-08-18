@@ -1,5 +1,5 @@
 # N-body Orfeo results export
-2026-08-17T14:11:50+02:00
+2026-08-17T14:27:30+02:00
 
 ## Run directory
 /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943
@@ -257,4 +257,25 @@ JobID             State ExitCode    Elapsed  AllocCPUS        NodeList
 /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/04_evidence/slurm_1460711.out
 /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/04_evidence/system_info_orfeo.txt
 /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/MANIFEST.txt
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/Makefile
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/README.md
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/REPORT_TEMPLATE.md
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/analyze_benchmark.py
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/analyze_container_overhead.py
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/analyze_energy.py
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/analyze_layout.py
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/benchmark_container.sh
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/benchmark_docker.sh
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/benchmark_energy.sh
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/benchmark_layout.sh
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/benchmark_osu.sh
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/benchmark_scaling.sh
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/collect_system_info.sh
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/generate_ic.c
 /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/jobs.tsv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/nbody_common.h
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/nbody_direct_hybrid.c
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/nbody_direct_serial.c
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/nbody_layout_benchmark.c
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/plot_container_overhead.py
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_seq_20260817_120943/plot_scaling.py
