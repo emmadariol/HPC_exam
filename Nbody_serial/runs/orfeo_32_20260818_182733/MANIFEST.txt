@@ -1,0 +1,286 @@
+# Orfeo 32-rank extended run
+2026-08-18T19:51:43+02:00
+
+RUN32_DIR=/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733
+
+## Jobs
+step	jobid
+01_mpi_32	1466427
+02_hybrid_32	1466428
+03_ablation_32	1466429
+04_evidence	1466430
+
+## Slurm accounting
+JobID             State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- -------- ---------- ---------- --------------- 
+1466427       COMPLETED      0:0   00:09:15         32        genoa011 
+1466427.bat+  COMPLETED      0:0   00:09:15         32        genoa011 
+1466427.ext+  COMPLETED      0:0   00:09:15         32        genoa011 
+1466427.0     COMPLETED      0:0   00:00:32          1        genoa011 
+1466427.1     COMPLETED      0:0   00:00:32          1        genoa011 
+1466427.2     COMPLETED      0:0   00:00:32          1        genoa011 
+1466427.3     COMPLETED      0:0   00:00:31          1        genoa011 
+1466427.4     COMPLETED      0:0   00:00:32          1        genoa011 
+1466427.5     COMPLETED      0:0   00:00:32          1        genoa011 
+1466427.6     COMPLETED      0:0   00:00:16          2        genoa011 
+1466427.7     COMPLETED      0:0   00:00:16          2        genoa011 
+1466427.8     COMPLETED      0:0   00:00:17          2        genoa011 
+1466427.9     COMPLETED      0:0   00:00:16          2        genoa011 
+1466427.10    COMPLETED      0:0   00:00:17          2        genoa011 
+1466427.11    COMPLETED      0:0   00:00:17          2        genoa011 
+1466427.12    COMPLETED      0:0   00:00:08          4        genoa011 
+1466427.13    COMPLETED      0:0   00:00:08          4        genoa011 
+1466427.14    COMPLETED      0:0   00:00:09          4        genoa011 
+1466427.15    COMPLETED      0:0   00:00:09          4        genoa011 
+1466427.16    COMPLETED      0:0   00:00:09          4        genoa011 
+1466427.17    COMPLETED      0:0   00:00:08          4        genoa011 
+1466427.18    COMPLETED      0:0   00:00:05          8        genoa011 
+1466427.19    COMPLETED      0:0   00:00:05          8        genoa011 
+1466427.20    COMPLETED      0:0   00:00:05          8        genoa011 
+1466427.21    COMPLETED      0:0   00:00:04          8        genoa011 
+1466427.22    COMPLETED      0:0   00:00:05          8        genoa011 
+1466427.23    COMPLETED      0:0   00:00:05          8        genoa011 
+1466427.24    COMPLETED      0:0   00:00:03         16        genoa011 
+1466427.25    COMPLETED      0:0   00:00:03         16        genoa011 
+1466427.26    COMPLETED      0:0   00:00:03         16        genoa011 
+1466427.27    COMPLETED      0:0   00:00:02         16        genoa011 
+1466427.28    COMPLETED      0:0   00:00:02         16        genoa011 
+1466427.29    COMPLETED      0:0   00:00:03         16        genoa011 
+1466427.30    COMPLETED      0:0   00:00:03         32        genoa011 
+1466427.31    COMPLETED      0:0   00:00:02         32        genoa011 
+1466427.32    COMPLETED      0:0   00:00:02         32        genoa011 
+1466427.33    COMPLETED      0:0   00:00:02         32        genoa011 
+1466427.34    COMPLETED      0:0   00:00:02         32        genoa011 
+1466427.35    COMPLETED      0:0   00:00:02         32        genoa011 
+1466427.36    COMPLETED      0:0   00:00:01          1        genoa011 
+1466427.37    COMPLETED      0:0   00:00:00          1        genoa011 
+1466427.38    COMPLETED      0:0   00:00:01          1        genoa011 
+1466427.39    COMPLETED      0:0   00:00:01          1        genoa011 
+1466427.40    COMPLETED      0:0   00:00:00          1        genoa011 
+1466427.41    COMPLETED      0:0   00:00:00          1        genoa011 
+1466427.42    COMPLETED      0:0   00:00:01          2        genoa011 
+1466427.43    COMPLETED      0:0   00:00:01          2        genoa011 
+1466427.44    COMPLETED      0:0   00:00:02          2        genoa011 
+1466427.45    COMPLETED      0:0   00:00:01          2        genoa011 
+1466427.46    COMPLETED      0:0   00:00:01          2        genoa011 
+1466427.47    COMPLETED      0:0   00:00:01          2        genoa011 
+1466427.48    COMPLETED      0:0   00:00:02          4        genoa011 
+1466427.49    COMPLETED      0:0   00:00:02          4        genoa011 
+1466427.50    COMPLETED      0:0   00:00:02          4        genoa011 
+1466427.51    COMPLETED      0:0   00:00:02          4        genoa011 
+1466427.52    COMPLETED      0:0   00:00:01          4        genoa011 
+1466427.53    COMPLETED      0:0   00:00:02          4        genoa011 
+1466427.54    COMPLETED      0:0   00:00:04          8        genoa011 
+1466427.55    COMPLETED      0:0   00:00:03          8        genoa011 
+1466427.56    COMPLETED      0:0   00:00:03          8        genoa011 
+1466427.57    COMPLETED      0:0   00:00:04          8        genoa011 
+1466427.58    COMPLETED      0:0   00:00:03          8        genoa011 
+1466427.59    COMPLETED      0:0   00:00:03          8        genoa011 
+1466427.60    COMPLETED      0:0   00:00:06         16        genoa011 
+1466427.61    COMPLETED      0:0   00:00:06         16        genoa011 
+1466427.62    COMPLETED      0:0   00:00:07         16        genoa011 
+1466427.63    COMPLETED      0:0   00:00:06         16        genoa011 
+1466427.64    COMPLETED      0:0   00:00:06         16        genoa011 
+1466427.65    COMPLETED      0:0   00:00:06         16        genoa011 
+1466427.66    COMPLETED      0:0   00:00:12         32        genoa011 
+1466427.67    COMPLETED      0:0   00:00:12         32        genoa011 
+1466427.68    COMPLETED      0:0   00:00:11         32        genoa011 
+1466427.69    COMPLETED      0:0   00:00:11         32        genoa011 
+1466427.70    COMPLETED      0:0   00:00:12         32        genoa011 
+1466427.71    COMPLETED      0:0   00:00:12         32        genoa011 
+
+JobID             State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- -------- ---------- ---------- --------------- 
+1466428       COMPLETED      0:0   00:02:57         32        genoa011 
+1466428.bat+  COMPLETED      0:0   00:02:57         32        genoa011 
+1466428.ext+  COMPLETED      0:0   00:02:57         32        genoa011 
+1466428.0     COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.1     COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.2     COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.3     COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.4     COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.5     COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.6     COMPLETED      0:0   00:00:12         32        genoa011 
+1466428.7     COMPLETED      0:0   00:00:12         32        genoa011 
+1466428.8     COMPLETED      0:0   00:00:12         32        genoa011 
+1466428.9     COMPLETED      0:0   00:00:12         32        genoa011 
+1466428.10    COMPLETED      0:0   00:00:12         32        genoa011 
+1466428.11    COMPLETED      0:0   00:00:12         32        genoa011 
+1466428.12    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.13    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.14    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.15    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.16    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.17    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.18    COMPLETED      0:0   00:00:04         32        genoa011 
+1466428.19    COMPLETED      0:0   00:00:03         32        genoa011 
+1466428.20    COMPLETED      0:0   00:00:04         32        genoa011 
+1466428.21    COMPLETED      0:0   00:00:03         32        genoa011 
+1466428.22    COMPLETED      0:0   00:00:04         32        genoa011 
+1466428.23    COMPLETED      0:0   00:00:03         32        genoa011 
+1466428.24    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.25    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.26    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.27    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.28    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.29    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.30    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.31    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.32    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.33    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.34    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.35    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.36    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.37    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.38    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.39    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.40    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.41    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.42    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.43    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.44    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.45    COMPLETED      0:0   00:00:00         32        genoa011 
+1466428.46    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.47    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.48    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.49    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.50    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.51    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.52    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.53    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.54    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.55    COMPLETED      0:0   00:00:00         32        genoa011 
+1466428.56    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.57    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.58    COMPLETED      0:0   00:00:00         32        genoa011 
+1466428.59    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.60    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.61    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.62    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.63    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.64    COMPLETED      0:0   00:00:02         32        genoa011 
+1466428.65    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.66    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.67    COMPLETED      0:0   00:00:00         32        genoa011 
+1466428.68    COMPLETED      0:0   00:00:00         32        genoa011 
+1466428.69    COMPLETED      0:0   00:00:01         32        genoa011 
+1466428.70    COMPLETED      0:0   00:00:00         32        genoa011 
+1466428.71    COMPLETED      0:0   00:00:01         32        genoa011 
+
+JobID             State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- -------- ---------- ---------- --------------- 
+1466429       COMPLETED      0:0   00:07:43         32        genoa011 
+1466429.bat+  COMPLETED      0:0   00:07:43         32        genoa011 
+1466429.ext+  COMPLETED      0:0   00:07:43         32        genoa011 
+1466429.0     COMPLETED      0:0   00:00:45          1        genoa011 
+1466429.1     COMPLETED      0:0   00:00:44          1        genoa011 
+1466429.2     COMPLETED      0:0   00:00:45          1        genoa011 
+1466429.3     COMPLETED      0:0   00:00:45          1        genoa011 
+1466429.4     COMPLETED      0:0   00:00:44          1        genoa011 
+1466429.5     COMPLETED      0:0   00:00:35          1        genoa011 
+1466429.6     COMPLETED      0:0   00:00:36          1        genoa011 
+1466429.7     COMPLETED      0:0   00:00:35          1        genoa011 
+1466429.8     COMPLETED      0:0   00:00:35          1        genoa011 
+1466429.9     COMPLETED      0:0   00:00:35          1        genoa011 
+1466429.10    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.11    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.12    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.13    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.14    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.15    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.16    COMPLETED      0:0   00:00:04         32        genoa011 
+1466429.17    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.18    COMPLETED      0:0   00:00:04         32        genoa011 
+1466429.19    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.20    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.21    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.22    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.23    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.24    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.25    COMPLETED      0:0   00:00:04         32        genoa011 
+1466429.26    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.27    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.28    COMPLETED      0:0   00:00:03         32        genoa011 
+1466429.29    COMPLETED      0:0   00:00:03         32        genoa011 
+
+JobID             State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- -------- ---------- ---------- --------------- 
+1466430       COMPLETED      0:0   00:49:47          8        genoa001 
+1466430.bat+  COMPLETED      0:0   00:49:47          8        genoa001 
+1466430.ext+  COMPLETED      0:0   00:49:47          8        genoa001 
+1466430.0     COMPLETED      0:0   00:01:50          8        genoa001 
+1466430.1     COMPLETED      0:0   00:01:50          8        genoa001 
+1466430.2     COMPLETED      0:0   00:01:50          8        genoa001 
+1466430.3     COMPLETED      0:0   00:01:50          8        genoa001 
+1466430.4     COMPLETED      0:0   00:01:50          8        genoa001 
+1466430.5     COMPLETED      0:0   00:01:51          8        genoa001 
+1466430.6     COMPLETED      0:0   00:01:49          8        genoa001 
+1466430.7     COMPLETED      0:0   00:01:09          8        genoa001 
+1466430.8     COMPLETED      0:0   00:01:10          8        genoa001 
+1466430.9     COMPLETED      0:0   00:01:09          8        genoa001 
+1466430.10    COMPLETED      0:0   00:01:09          8        genoa001 
+1466430.11    COMPLETED      0:0   00:01:09          8        genoa001 
+1466430.12    COMPLETED      0:0   00:01:10          8        genoa001 
+1466430.13    COMPLETED      0:0   00:01:09          8        genoa001 
+1466430.14    COMPLETED      0:0   00:01:04          8        genoa001 
+1466430.15    COMPLETED      0:0   00:01:04          8        genoa001 
+1466430.16    COMPLETED      0:0   00:01:04          8        genoa001 
+1466430.17    COMPLETED      0:0   00:01:04          8        genoa001 
+1466430.18    COMPLETED      0:0   00:01:04          8        genoa001 
+1466430.19    COMPLETED      0:0   00:01:04          8        genoa001 
+1466430.20    COMPLETED      0:0   00:01:04          8        genoa001 
+1466430.21    COMPLETED      0:0   00:01:00          8        genoa001 
+1466430.22    COMPLETED      0:0   00:01:00          8        genoa001 
+1466430.23    COMPLETED      0:0   00:01:00          8        genoa001 
+1466430.24    COMPLETED      0:0   00:01:00          8        genoa001 
+1466430.25    COMPLETED      0:0   00:01:00          8        genoa001 
+1466430.26    COMPLETED      0:0   00:01:00          8        genoa001 
+1466430.27    COMPLETED      0:0   00:00:59          8        genoa001 
+
+
+## Files
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/01_mpi_32/results_1_mpi_orfeo.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/01_mpi_32/results_1_mpi_orfeo_strong_comm_bandwidth.svg
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/01_mpi_32/results_1_mpi_orfeo_strong_efficiency.svg
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/01_mpi_32/results_1_mpi_orfeo_strong_speedup.svg
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/01_mpi_32/results_1_mpi_orfeo_summary.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/01_mpi_32/results_1_mpi_orfeo_weak_comm_bandwidth.svg
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/01_mpi_32/results_1_mpi_orfeo_weak_efficiency.svg
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/01_mpi_32/results_1_mpi_orfeo_weak_speedup.svg
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/01_mpi_32/slurm_1466427.err
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/01_mpi_32/slurm_1466427.out
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/01_mpi_32/system_info_orfeo_epyc.txt
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_P16_T2.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_P16_T2_summary.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_P1_T32.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_P1_T32_summary.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_P2_T16.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_P2_T16_summary.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_P32_T1.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_P32_T1_summary.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_P4_T8.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_P4_T8_summary.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_P8_T4.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_P8_T4_summary.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_strong_comm_bandwidth.svg
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_strong_efficiency.svg
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_strong_speedup.svg
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_summary.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_weak_comm_bandwidth.svg
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_weak_efficiency.svg
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/results_2_hybrid_orfeo_weak_speedup.svg
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/slurm_1466428.err
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/slurm_1466428.out
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/02_hybrid_32/system_info_orfeo_epyc.txt
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/03_ablation_32/results_3_ablation_orfeo.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/03_ablation_32/slurm_1466429.err
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/03_ablation_32/slurm_1466429.out
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/04_evidence/energy_overhead.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/04_evidence/energy_overhead_summary.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/04_evidence/layout_results.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/04_evidence/layout_summary.csv
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/04_evidence/slurm_1466430.err
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/04_evidence/slurm_1466430.out
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/04_evidence/system_info_orfeo.txt
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/MANIFEST.txt
+/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_32_20260818_182733/jobs.tsv
