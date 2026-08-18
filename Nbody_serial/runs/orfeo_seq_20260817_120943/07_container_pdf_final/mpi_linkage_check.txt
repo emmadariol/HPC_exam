@@ -1,0 +1,10 @@
+=== native ldd ===
+	libmpi.so.40 => /opt/programs/openMPI/4.1.6/lib/libmpi.so.40 (0x00007f08f0bbc000)
+	libopen-rte.so.40 => /opt/programs/openMPI/4.1.6/lib/libopen-rte.so.40 (0x00007f08f08b5000)
+	libopen-pal.so.40 => /opt/programs/openMPI/4.1.6/lib/libopen-pal.so.40 (0x00007f08f07fd000)
+	libhwloc.so.15 => /opt/programs/hwloc/2.12.0/lib/libhwloc.so.15 (0x00007f08f0779000)
+=== container ldd with host MPI bind ===
+	libmpi.so.40 => /opt/programs/openMPI/4.1.6/lib/libmpi.so.40 (0x00007fd9fa00b000)
+	libopen-rte.so.40 => /opt/programs/openMPI/4.1.6/lib/libopen-rte.so.40 (0x00007fd9f9ce7000)
+	libopen-pal.so.40 => /opt/programs/openMPI/4.1.6/lib/libopen-pal.so.40 (0x00007fd9f9c2d000)
+	libhwloc.so.15 => /opt/programs/hwloc/2.12.0/lib/libhwloc.so.15 (0x00007fd9f9bb1000)
