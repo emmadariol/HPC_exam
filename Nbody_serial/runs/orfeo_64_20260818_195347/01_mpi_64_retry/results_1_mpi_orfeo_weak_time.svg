@@ -2,9 +2,9 @@
 <rect width="100%" height="100%" fill="white"/>
 <line x1="80" y1="450" x2="870" y2="450" stroke="black"/>
 <line x1="80" y1="40" x2="80" y2="450" stroke="black"/>
-<text x="450.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">weak relative throughput</text>
+<text x="450.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">weak absolute time</text>
 <text x="450.0" y="500" text-anchor="middle" font-family="sans-serif" font-size="14">resources = ranks x threads</text>
-<text transform="translate(22,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">relative throughput</text>
+<text transform="translate(22,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">median time (s)</text>
 <line x1="80.0" y1="450" x2="80.0" y2="455" stroke="black"/>
 <text x="80.0" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">1</text>
 <line x1="211.7" y1="450" x2="211.7" y2="455" stroke="black"/>
@@ -22,22 +22,24 @@
 <line x1="75" y1="450.0" x2="80" y2="450.0" stroke="black"/>
 <text x="70" y="454.0" text-anchor="end" font-family="sans-serif" font-size="12">0</text>
 <line x1="75" y1="368.0" x2="80" y2="368.0" stroke="black"/>
-<text x="70" y="372.0" text-anchor="end" font-family="sans-serif" font-size="12">0.2</text>
+<text x="70" y="372.0" text-anchor="end" font-family="sans-serif" font-size="12">4.3</text>
 <line x1="75" y1="286.0" x2="80" y2="286.0" stroke="black"/>
-<text x="70" y="290.0" text-anchor="end" font-family="sans-serif" font-size="12">0.4</text>
+<text x="70" y="290.0" text-anchor="end" font-family="sans-serif" font-size="12">8.5</text>
 <line x1="75" y1="204.0" x2="80" y2="204.0" stroke="black"/>
-<text x="70" y="208.0" text-anchor="end" font-family="sans-serif" font-size="12">0.6</text>
+<text x="70" y="208.0" text-anchor="end" font-family="sans-serif" font-size="12">13</text>
 <line x1="75" y1="122.0" x2="80" y2="122.0" stroke="black"/>
-<text x="70" y="126.0" text-anchor="end" font-family="sans-serif" font-size="12">0.8</text>
+<text x="70" y="126.0" text-anchor="end" font-family="sans-serif" font-size="12">17</text>
 <line x1="75" y1="40.0" x2="80" y2="40.0" stroke="black"/>
-<text x="70" y="44.0" text-anchor="end" font-family="sans-serif" font-size="12">1</text>
-<polyline points="80.0,40.0 211.7,252.1 343.3,352.5 475.0,401.5 606.7,425.8 738.3,438.0 870.0,444.0" fill="none" stroke="#1f77b4" stroke-width="2"/>
-<circle cx="80.0" cy="40.0" r="4" fill="#1f77b4"/>
-<circle cx="211.7" cy="252.1" r="4" fill="#1f77b4"/>
-<circle cx="343.3" cy="352.5" r="4" fill="#1f77b4"/>
-<circle cx="475.0" cy="401.5" r="4" fill="#1f77b4"/>
-<circle cx="606.7" cy="425.8" r="4" fill="#1f77b4"/>
-<circle cx="738.3" cy="438.0" r="4" fill="#1f77b4"/>
-<circle cx="870.0" cy="444.0" r="4" fill="#1f77b4"/>
+<text x="70" y="44.0" text-anchor="end" font-family="sans-serif" font-size="12">21</text>
+<polyline points="80.0,444.0 211.7,437.5 343.3,424.7 475.0,399.2 606.7,348.0 738.3,245.5 870.0,40.0" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<circle cx="80.0" cy="444.0" r="4" fill="#1f77b4"/>
+<circle cx="211.7" cy="437.5" r="4" fill="#1f77b4"/>
+<circle cx="343.3" cy="424.7" r="4" fill="#1f77b4"/>
+<circle cx="475.0" cy="399.2" r="4" fill="#1f77b4"/>
+<circle cx="606.7" cy="348.0" r="4" fill="#1f77b4"/>
+<circle cx="738.3" cy="245.5" r="4" fill="#1f77b4"/>
+<circle cx="870.0" cy="40.0" r="4" fill="#1f77b4"/>
+<polyline points="80.0,444.0 211.7,438.0 343.3,426.0 475.0,401.9 606.7,353.9 738.3,257.7 870.0,65.4" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="6,4"/>
 <text x="90" y="60" font-family="sans-serif" font-size="13" fill="#1f77b4">kdk/overlap/direct/exact</text>
+<text x="90" y="100" font-family="sans-serif" font-size="13" fill="#555">dashed: ideal O(P) for direct all-pairs with fixed N/P</text>
 </svg>

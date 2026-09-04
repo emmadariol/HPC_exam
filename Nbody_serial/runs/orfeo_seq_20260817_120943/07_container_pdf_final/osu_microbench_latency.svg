@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="520" viewBox="0 0 920 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="460.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">OSU latency: native vs container</text>
+<line x1="85" y1="430" x2="885" y2="430" stroke="black"/>
+<line x1="85" y1="45" x2="85" y2="430" stroke="black"/>
+<text x="460.0" y="502" text-anchor="middle" font-family="sans-serif" font-size="14">message size (bytes)</text>
+<text transform="translate(24,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">median latency (us)</text>
+<polyline points="85.0,427.3 121.4,427.3 157.7,427.3 194.1,427.3 230.5,427.3 266.8,427.3 303.2,427.3 339.5,427.3 375.9,427.2 412.3,427.2 448.6,427.1 485.0,426.6 521.4,426.3 557.7,425.8 594.1,424.6 630.5,421.8 666.8,411.4 703.2,399.7 739.5,389.0 775.9,373.1 812.3,339.5 848.6,250.1 885.0,75.3" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<circle cx="85.0" cy="427.3" r="3" fill="#1f77b4"/>
+<circle cx="121.4" cy="427.3" r="3" fill="#1f77b4"/>
+<circle cx="157.7" cy="427.3" r="3" fill="#1f77b4"/>
+<circle cx="194.1" cy="427.3" r="3" fill="#1f77b4"/>
+<circle cx="230.5" cy="427.3" r="3" fill="#1f77b4"/>
+<circle cx="266.8" cy="427.3" r="3" fill="#1f77b4"/>
+<circle cx="303.2" cy="427.3" r="3" fill="#1f77b4"/>
+<circle cx="339.5" cy="427.3" r="3" fill="#1f77b4"/>
+<circle cx="375.9" cy="427.2" r="3" fill="#1f77b4"/>
+<circle cx="412.3" cy="427.2" r="3" fill="#1f77b4"/>
+<circle cx="448.6" cy="427.1" r="3" fill="#1f77b4"/>
+<circle cx="485.0" cy="426.6" r="3" fill="#1f77b4"/>
+<circle cx="521.4" cy="426.3" r="3" fill="#1f77b4"/>
+<circle cx="557.7" cy="425.8" r="3" fill="#1f77b4"/>
+<circle cx="594.1" cy="424.6" r="3" fill="#1f77b4"/>
+<circle cx="630.5" cy="421.8" r="3" fill="#1f77b4"/>
+<circle cx="666.8" cy="411.4" r="3" fill="#1f77b4"/>
+<circle cx="703.2" cy="399.7" r="3" fill="#1f77b4"/>
+<circle cx="739.5" cy="389.0" r="3" fill="#1f77b4"/>
+<circle cx="775.9" cy="373.1" r="3" fill="#1f77b4"/>
+<circle cx="812.3" cy="339.5" r="3" fill="#1f77b4"/>
+<circle cx="848.6" cy="250.1" r="3" fill="#1f77b4"/>
+<circle cx="885.0" cy="75.3" r="3" fill="#1f77b4"/>
+<text x="95" y="65" font-family="sans-serif" font-size="13" fill="#1f77b4">native</text>
+<polyline points="85.0,427.3 121.4,427.3 157.7,427.3 194.1,427.3 230.5,427.3 266.8,427.2 303.2,427.2 339.5,427.3 375.9,427.2 412.3,427.2 448.6,427.1 485.0,426.6 521.4,426.3 557.7,425.8 594.1,424.6 630.5,421.7 666.8,411.4 703.2,399.8 739.5,388.8 775.9,372.4 812.3,337.8 848.6,248.9 885.0,73.5" fill="none" stroke="#d62728" stroke-width="2"/>
+<circle cx="85.0" cy="427.3" r="3" fill="#d62728"/>
+<circle cx="121.4" cy="427.3" r="3" fill="#d62728"/>
+<circle cx="157.7" cy="427.3" r="3" fill="#d62728"/>
+<circle cx="194.1" cy="427.3" r="3" fill="#d62728"/>
+<circle cx="230.5" cy="427.3" r="3" fill="#d62728"/>
+<circle cx="266.8" cy="427.2" r="3" fill="#d62728"/>
+<circle cx="303.2" cy="427.2" r="3" fill="#d62728"/>
+<circle cx="339.5" cy="427.3" r="3" fill="#d62728"/>
+<circle cx="375.9" cy="427.2" r="3" fill="#d62728"/>
+<circle cx="412.3" cy="427.2" r="3" fill="#d62728"/>
+<circle cx="448.6" cy="427.1" r="3" fill="#d62728"/>
+<circle cx="485.0" cy="426.6" r="3" fill="#d62728"/>
+<circle cx="521.4" cy="426.3" r="3" fill="#d62728"/>
+<circle cx="557.7" cy="425.8" r="3" fill="#d62728"/>
+<circle cx="594.1" cy="424.6" r="3" fill="#d62728"/>
+<circle cx="630.5" cy="421.7" r="3" fill="#d62728"/>
+<circle cx="666.8" cy="411.4" r="3" fill="#d62728"/>
+<circle cx="703.2" cy="399.8" r="3" fill="#d62728"/>
+<circle cx="739.5" cy="388.8" r="3" fill="#d62728"/>
+<circle cx="775.9" cy="372.4" r="3" fill="#d62728"/>
+<circle cx="812.3" cy="337.8" r="3" fill="#d62728"/>
+<circle cx="848.6" cy="248.9" r="3" fill="#d62728"/>
+<circle cx="885.0" cy="73.5" r="3" fill="#d62728"/>
+<text x="95" y="85" font-family="sans-serif" font-size="13" fill="#d62728">container</text>
+<text x="85.0" y="452" text-anchor="middle" font-family="sans-serif" font-size="11">1</text>
+<text x="448.6" y="452" text-anchor="middle" font-family="sans-serif" font-size="11">1024</text>
+<text x="812.3" y="452" text-anchor="middle" font-family="sans-serif" font-size="11">1048576</text>
+<text x="885.0" y="452" text-anchor="middle" font-family="sans-serif" font-size="11">4194304</text>
+<line x1="80" y1="430.0" x2="85" y2="430.0" stroke="black"/>
+<text x="75" y="434.0" text-anchor="end" font-family="sans-serif" font-size="12">0</text>
+<line x1="80" y1="353.0" x2="85" y2="353.0" stroke="black"/>
+<text x="75" y="357.0" text-anchor="end" font-family="sans-serif" font-size="12">1.3e+02</text>
+<line x1="80" y1="276.0" x2="85" y2="276.0" stroke="black"/>
+<text x="75" y="280.0" text-anchor="end" font-family="sans-serif" font-size="12">2.5e+02</text>
+<line x1="80" y1="199.0" x2="85" y2="199.0" stroke="black"/>
+<text x="75" y="203.0" text-anchor="end" font-family="sans-serif" font-size="12">3.8e+02</text>
+<line x1="80" y1="122.0" x2="85" y2="122.0" stroke="black"/>
+<text x="75" y="126.0" text-anchor="end" font-family="sans-serif" font-size="12">5e+02</text>
+<line x1="80" y1="45.0" x2="85" y2="45.0" stroke="black"/>
+<text x="75" y="49.0" text-anchor="end" font-family="sans-serif" font-size="12">6.3e+02</text>
+</svg>

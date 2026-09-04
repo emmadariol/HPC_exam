@@ -123,7 +123,7 @@ container confrontato con native
 
 | File/cartella | Ruolo |
 |---|---|
-| `FINAL_REPORT.md` | report finale completo |
+| `../FINAL_REPORT.md` | report finale completo |
 | `runs/orfeo_64_20260818_195347` | risultati principali a 64 core su GENOA |
 | `runs/orfeo_seq_20260817_120943/04_evidence` | layout, energia, info sistema |
 | `runs/orfeo_seq_20260817_120943/07_container_pdf_final` | risultati container finali |
@@ -1797,7 +1797,7 @@ The ablation study shows that optimisations must be measured on the actual imple
 
 Prima di consegnare, controllare:
 
-- `FINAL_REPORT.md` contiene tutte le sezioni richieste;
+- `../FINAL_REPORT.md` contiene tutte le sezioni richieste;
 - i grafici referenziati esistono;
 - i CSV finali non contengono `RUN_FAILED`, `PARSE_FAILED`, `nan`;
 - il report non usa cartelle vecchie o tentativi falliti;
