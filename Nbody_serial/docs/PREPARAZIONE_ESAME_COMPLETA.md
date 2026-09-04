@@ -28,7 +28,7 @@ Le fonti principali del progetto sono:
 - `nbody_direct_hybrid.c`: implementazione MPI + OpenMP;
 - `nbody_direct_serial.c`: riferimento seriale;
 - `nbody_layout_benchmark.c`: confronto AoS/SoA;
-- script `benchmark_*.sh`, `analyze_*.py` e `plot_*.py`: pipeline sperimentale.
+- script `run_benchmarks.sh`, `analyze.py` e `analyze.py plot`: pipeline sperimentale.
 
 ---
 

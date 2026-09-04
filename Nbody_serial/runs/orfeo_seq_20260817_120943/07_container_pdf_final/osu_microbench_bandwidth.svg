@@ -3,7 +3,7 @@
 <text x="460.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">OSU bandwidth: native vs container</text>
 <line x1="85" y1="430" x2="885" y2="430" stroke="black"/>
 <line x1="85" y1="45" x2="85" y2="430" stroke="black"/>
-<text x="460.0" y="502" text-anchor="middle" font-family="sans-serif" font-size="14">message size (bytes)</text>
+<text x="460.0" y="502" text-anchor="middle" font-family="sans-serif" font-size="14">message size (bytes, log2 scale)</text>
 <text transform="translate(24,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">median bandwidth (MB/s)</text>
 <polyline points="85.0,430.0 121.4,430.0 157.7,429.9 194.1,429.9 230.5,429.8 266.8,429.5 303.2,429.0 339.5,428.1 375.9,426.6 412.3,423.3 448.6,416.7 485.0,405.4 521.4,385.2 557.7,350.3 594.1,298.3 630.5,229.6 666.8,269.5 703.2,250.7 739.5,198.1 775.9,147.6 812.3,95.5 848.6,84.4 885.0,73.5" fill="none" stroke="#1f77b4" stroke-width="2"/>
 <circle cx="85.0" cy="430.0" r="3" fill="#1f77b4"/>

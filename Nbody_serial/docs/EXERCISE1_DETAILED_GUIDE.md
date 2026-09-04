@@ -54,14 +54,14 @@ I requisiti principali sono:
 |---|---|
 | Solutore N-body diretto | `nbody_direct_serial.c`, `nbody_direct_hybrid.c` |
 | Parallelizzazione MPI + OpenMP | `nbody_direct_hybrid.c` |
-| Strong scaling | `runs/orfeo_64_20260818_195347/01_mpi_64_retry` |
-| Weak scaling | `runs/orfeo_64_20260818_195347/01_mpi_64_retry` |
-| Studio MPI/OpenMP ibrido | `runs/orfeo_64_20260818_195347/02_hybrid_64_retry` |
-| Almeno 5 ripetizioni/statistiche | CSV finali e script `analyze_*.py` |
+| Strong scaling | `results_final/scaling_64_summary.csv` |
+| Weak scaling | `results_final/scaling_64_summary.csv` |
+| Studio MPI/OpenMP ibrido | `results_final/hybrid_64_summary.csv` |
+| Almeno 5 ripetizioni/statistiche | CSV finali e script `analyze.py` |
 | Correttezza numerica | deriva energetica e checksum AoS/SoA |
 | Discussione delle ottimizzazioni | ablation, layout, rsqrt, comunicazione |
-| Container overhead | `runs/orfeo_seq_20260817_120943/07_container_pdf_final` |
-| OSU Micro-Benchmarks native vs container | `benchmark_osu.sh`, CSV OSU finali |
+| Container overhead | `results_final/container_overhead_summary.csv + results_final/osu_microbench_summary.csv` |
+| OSU Micro-Benchmarks native vs container | `run_benchmarks.sh osu`, CSV OSU finali |
 | Verifica host MPI nel container | `mpi_linkage_check.txt` |
 
 Il risultato finale non è solo "il codice gira", ma:
@@ -98,17 +98,17 @@ container confrontato con native
 
 | File | Ruolo |
 |---|---|
-| `benchmark_scaling.sh` | lancia strong e weak scaling |
-| `analyze_benchmark.py` | calcola mediane, speedup, efficiency |
-| `plot_scaling.py` | produce grafici scaling |
-| `plot_hybrid_configs.py` | produce grafici P x T per MPI/OpenMP |
-| `benchmark_layout.sh` | misura AoS vs SoA |
-| `analyze_layout.py` | riassume layout e checksum |
-| `benchmark_energy.sh` | misura costo del controllo energia |
-| `analyze_energy.py` | riassume overhead energia |
-| `benchmark_container.sh` | confronta native e Singularity |
-| `benchmark_osu.sh` | esegue OSU latency/bandwidth |
-| `plot_report_evidence.py` | produce grafici esplicativi per il report |
+| `run_benchmarks.sh scaling` | lancia strong e weak scaling |
+| `analyze.py summarize scaling` | calcola mediane, speedup, efficiency |
+| `analyze.py plot scaling` | produce grafici scaling |
+| `analyze.py plot hybrid` | produce grafici P x T per MPI/OpenMP |
+| `run_benchmarks.sh layout` | misura AoS vs SoA |
+| `analyze.py summarize layout` | riassume layout e checksum |
+| `run_benchmarks.sh energy` | misura costo del controllo energia |
+| `analyze.py summarize energy` | riassume overhead energia |
+| `run_benchmarks.sh container` | confronta native e Singularity |
+| `run_benchmarks.sh osu` | esegue OSU latency/bandwidth |
+| `analyze.py plot evidence` | produce grafici esplicativi per il report |
 
 ### 3.3 Container e job
 
@@ -116,17 +116,16 @@ container confrontato con native
 |---|---|
 | `Dockerfile` | immagine Docker usata per costruire il container |
 | `Singularity.def` | recipe Singularity/Apptainer |
-| `jobs/Orfeo/` | script Slurm per Orfeo |
-| `jobs/Leonardo/` | script Slurm per Leonardo |
+| `jobs/submit.sh` | wrapper Slurm unico per Orfeo e Leonardo |
 
 ### 3.4 Report e risultati
 
 | File/cartella | Ruolo |
 |---|---|
 | `../FINAL_REPORT.md` | report finale completo |
-| `runs/orfeo_64_20260818_195347` | risultati principali a 64 core su GENOA |
-| `runs/orfeo_seq_20260817_120943/04_evidence` | layout, energia, info sistema |
-| `runs/orfeo_seq_20260817_120943/07_container_pdf_final` | risultati container finali |
+| `results_final` | risultati principali a 64 core su GENOA |
+| `results_final/layout_summary.csv + results_final/energy_overhead_summary.csv` | layout, energia, info sistema |
+| `results_final/container_overhead_summary.csv + results_final/osu_microbench_summary.csv` | risultati container finali |
 
 ### 3.5 Dove sono implementati i concetti nel codice
 
@@ -146,9 +145,9 @@ Questa tabella è utile per l'orale: collega il concetto teorico alla parte conc
 | Energia e deriva energetica | `nbody_direct_serial.c`, `nbody_direct_hybrid.c` |
 | Generazione condizioni iniziali | `generate_ic.c` |
 | Layout AoS/SoA | `nbody_layout_benchmark.c` |
-| Analisi speedup/efficiency | `analyze_benchmark.py` |
-| Plot con riferimento ideale | `plot_scaling.py` |
-| Plot evidence/bottleneck | `plot_report_evidence.py` |
+| Analisi speedup/efficiency | `analyze.py summarize scaling` |
+| Plot con riferimento ideale | `analyze.py plot scaling` |
+| Plot evidence/bottleneck | `analyze.py plot evidence` |
 
 ---
 
@@ -1349,7 +1348,7 @@ latency e bandwidth native/container sono molto vicine
 Dataset:
 
 ```text
-runs/orfeo_64_20260818_195347/01_mpi_64_retry
+results_final/scaling_64_summary.csv
 ```
 
 Risultati principali:
@@ -1375,7 +1374,7 @@ lo strong scaling è quasi ideale fino al full node GENOA
 Dataset:
 
 ```text
-runs/orfeo_64_20260818_195347/01_mpi_64_retry
+results_final/scaling_64_summary.csv
 ```
 
 Risultato chiave:
@@ -1396,7 +1395,7 @@ normalizzando rispetto alla crescita O(P) attesa, il comportamento è buono
 Dataset:
 
 ```text
-runs/orfeo_64_20260818_195347/02_hybrid_64_retry
+results_final/hybrid_64_summary.csv
 ```
 
 Risultato:
@@ -1432,7 +1431,7 @@ il collo di bottiglia è il calcolo delle forze
 Dataset:
 
 ```text
-runs/orfeo_seq_20260817_120943/07_container_pdf_final
+results_final/container_overhead_summary.csv + results_final/osu_microbench_summary.csv
 ```
 
 Risultato:
@@ -1459,7 +1458,7 @@ il container è riproducibile e introduce overhead piccolo
 Grafico:
 
 ```text
-runs/orfeo_64_20260818_195347/01_mpi_64_retry/results_1_mpi_orfeo_strong_speedup.svg
+results_final/scaling_64_strong_speedup.svg
 ```
 
 Come leggerlo:
@@ -1474,7 +1473,7 @@ Come leggerlo:
 Grafico:
 
 ```text
-runs/orfeo_64_20260818_195347/01_mpi_64_retry/results_1_mpi_orfeo_strong_efficiency.svg
+results_final/scaling_64_strong_efficiency.svg
 ```
 
 Come leggerlo:
@@ -1488,7 +1487,7 @@ Come leggerlo:
 Grafico:
 
 ```text
-runs/orfeo_64_20260818_195347/01_mpi_64_retry/results_1_mpi_orfeo_weak_time.svg
+results_final/scaling_64_weak_time.svg
 ```
 
 Come leggerlo:
@@ -1502,8 +1501,8 @@ Come leggerlo:
 Grafici:
 
 ```text
-runs/orfeo_64_20260818_195347/02_hybrid_64_retry/results_2_hybrid_orfeo_time_by_config.svg
-runs/orfeo_64_20260818_195347/02_hybrid_64_retry/results_2_hybrid_orfeo_gpairs_by_config.svg
+results_final/hybrid_64_time_by_config.svg
+results_final/hybrid_64_gpairs_by_config.svg
 ```
 
 Come leggerli:
@@ -1517,7 +1516,7 @@ Come leggerli:
 Grafico:
 
 ```text
-runs/orfeo_64_20260818_195347/01_mpi_64_retry/results_1_mpi_orfeo_strong_breakdown.svg
+results_final/scaling_64_strong_breakdown.svg
 ```
 
 Come leggerlo:
@@ -1530,10 +1529,10 @@ Come leggerlo:
 Grafici:
 
 ```text
-runs/orfeo_seq_20260817_120943/07_container_pdf_final/container_overhead_strong.svg
-runs/orfeo_seq_20260817_120943/07_container_pdf_final/container_overhead_weak.svg
-runs/orfeo_seq_20260817_120943/07_container_pdf_final/osu_microbench_latency.svg
-runs/orfeo_seq_20260817_120943/07_container_pdf_final/osu_microbench_bandwidth.svg
+results_final/container_overhead_strong.svg
+results_final/container_overhead_weak.svg
+results_final/osu_microbench_latency.svg
+results_final/osu_microbench_bandwidth.svg
 ```
 
 Come leggerli:
@@ -1621,22 +1620,22 @@ La produzione finale è stata fatta su Orfeo/GENOA perché la disponibilità CPU
 Script utili:
 
 ```text
-jobs/Orfeo/0_probe_specs_orfeo.sh
-jobs/Orfeo/1_mpi_scaling_orfeo.sh
-jobs/Orfeo/2_hybrid_scaling_orfeo.sh
-jobs/Orfeo/3_ablation_orfeo.sh
-jobs/Orfeo/4_container_orfeo.sh
-jobs/Orfeo/5_evidence_orfeo.sh
+jobs/submit.sh --cluster orfeo --bench probe
+jobs/submit.sh --cluster orfeo --bench scaling
+jobs/submit.sh --cluster orfeo --bench hybrid
+jobs/submit.sh --cluster orfeo --bench ablation
+jobs/submit.sh --cluster orfeo --bench container
+jobs/submit.sh --cluster orfeo --bench evidence
 ```
 
-Cartelle finali:
+File finali:
 
 ```text
-runs/orfeo_64_20260818_195347/01_mpi_64_retry
-runs/orfeo_64_20260818_195347/02_hybrid_64_retry
-runs/orfeo_64_20260818_195347/03_ablation_64_retry
-runs/orfeo_seq_20260817_120943/04_evidence
-runs/orfeo_seq_20260817_120943/07_container_pdf_final
+results_final/scaling_64_summary.csv
+results_final/hybrid_64_summary.csv
+results_final/ablation_64.csv
+results_final/layout_summary.csv + results_final/energy_overhead_summary.csv
+results_final/container_overhead_summary.csv + results_final/osu_microbench_summary.csv
 ```
 
 ---
@@ -1801,7 +1800,7 @@ Prima di consegnare, controllare:
 - i grafici referenziati esistono;
 - i CSV finali non contengono `RUN_FAILED`, `PARSE_FAILED`, `nan`;
 - il report non usa cartelle vecchie o tentativi falliti;
-- il container finale è quello in `07_container_pdf_final`;
+- il container finale è quello in `results_final`;
 - i risultati principali sono quelli a 64 core GENOA;
 - la guida non confonde run esplorativi EPYC/128 con dataset ufficiale;
 - i comandi riproducibili sono presenti;
@@ -1810,13 +1809,13 @@ Prima di consegnare, controllare:
 Comando utile per controllare errori nei CSV:
 
 ```bash
-grep -RIn "RUN_FAILED\\|PARSE_FAILED\\|nan" runs/orfeo_64_20260818_195347 runs/orfeo_seq_20260817_120943/04_evidence runs/orfeo_seq_20260817_120943/07_container_pdf_final
+grep -RIn "RUN_FAILED\\|PARSE_FAILED\\|nan" results_final results_final/layout_summary.csv + results_final/energy_overhead_summary.csv results_final/container_overhead_summary.csv + results_final/osu_microbench_summary.csv
 ```
 
 Comando utile per rigenerare grafici esplicativi:
 
 ```bash
-python3 plot_report_evidence.py .
+python3 analyze.py plot evidence .
 ```
 
 ---

@@ -91,19 +91,19 @@ overhead_percent = 100 * (container_time - native_time) / native_time
 Singularity/Apptainer helper:
 
 ```sh
-RANKS="1 2 4" THREADS=1 REPEATS=5 N=1000 NSTEPS=20 bash ./benchmark_container.sh
-python3 analyze_container_overhead.py container_overhead.csv container_overhead_summary.csv
+RANKS="1 2 4" THREADS=1 REPEATS=5 N=1000 NSTEPS=20 bash ./run_benchmarks.sh container
+python3 analyze.py summarize container container_overhead.csv container_overhead_summary.csv
 ```
 
 Additional evidence helpers:
 
 ```sh
-THREADS="1 2 4" REPEATS=5 WARMUPS=2 N=50000 bash ./benchmark_layout.sh
-python3 analyze_layout.py layout_results.csv layout_summary.csv
-RANKS=8 THREADS=1 REPEATS=5 WARMUPS=2 N=50000 NSTEPS=50 bash ./benchmark_energy.sh
-python3 analyze_energy.py energy_overhead.csv energy_overhead_summary.csv
-bash ./benchmark_osu.sh --mode native
-bash ./benchmark_osu.sh --mode both --image nbody.sif --out osu_microbench_container.csv
+THREADS="1 2 4" REPEATS=5 WARMUPS=2 N=50000 bash ./run_benchmarks.sh layout
+python3 analyze.py summarize layout layout_results.csv layout_summary.csv
+RANKS=8 THREADS=1 REPEATS=5 WARMUPS=2 N=50000 NSTEPS=50 bash ./run_benchmarks.sh energy
+python3 analyze.py summarize energy energy_overhead.csv energy_overhead_summary.csv
+bash ./run_benchmarks.sh osu --mode native
+bash ./run_benchmarks.sh osu --mode both --image nbody.sif --out osu_microbench_container.csv
 ```
 
 ## 9. Bottlenecks

@@ -54,6 +54,12 @@ typedef enum rsqrt_mode_e
   RSQRT_APPROX
 } rsqrt_mode_t;
 
+typedef enum accumulator_mode_e
+{
+  ACCUMULATORS_ONE = 1,
+  ACCUMULATORS_FOUR = 4
+} accumulator_mode_t;
+
 static void die(const char *fmt, ...)
 {
   va_list args;
@@ -160,6 +166,21 @@ static rsqrt_mode_t parse_rsqrt_mode(const char *text)
 static const char *rsqrt_mode_name(rsqrt_mode_t mode)
 {
   return mode == RSQRT_APPROX ? "approx" : "exact";
+}
+
+static accumulator_mode_t parse_accumulator_mode(const char *text)
+{
+  if (strcmp(text, "1") == 0)
+    return ACCUMULATORS_ONE;
+  if (strcmp(text, "4") == 0)
+    return ACCUMULATORS_FOUR;
+  die("invalid --accumulators '%s' (expected 1 or 4)", text);
+  return ACCUMULATORS_FOUR;
+}
+
+static const char *accumulator_mode_name(accumulator_mode_t mode)
+{
+  return mode == ACCUMULATORS_ONE ? "1" : "4";
 }
 
 static inline dtype invsqrt_force(dtype r2, rsqrt_mode_t mode)
@@ -435,10 +456,43 @@ static void accumulate_sources(const particles_t *home,
                                const dtype *restrict sz,
                                size_t source_n,
                                dtype g, dtype mass, dtype eps,
-                               rsqrt_mode_t rsqrt_mode)
+                               rsqrt_mode_t rsqrt_mode,
+                               accumulator_mode_t accumulator_mode)
 {
   const dtype eps2 = eps * eps;
   size_t i;
+
+  if (accumulator_mode == ACCUMULATORS_ONE)
+  {
+#pragma omp parallel for schedule(static)
+    for (i = 0u; i < home->n; ++i)
+    {
+      const dtype xi = home->x[i];
+      const dtype yi = home->y[i];
+      const dtype zi = home->z[i];
+      dtype ax = (dtype)0.0, ay = (dtype)0.0, az = (dtype)0.0;
+      size_t j;
+
+#pragma omp simd reduction(+ : ax, ay, az)
+      for (j = 0u; j < source_n; ++j)
+      {
+        const dtype dx = sx[j] - xi;
+        const dtype dy = sy[j] - yi;
+        const dtype dz = sz[j] - zi;
+        const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;
+        const dtype invr = invsqrt_force(r2, rsqrt_mode);
+        const dtype s = g * mass * invr * invr * invr;
+        ax += dx * s;
+        ay += dy * s;
+        az += dz * s;
+      }
+
+      home->ax[i] += ax;
+      home->ay[i] += ay;
+      home->az[i] += az;
+    }
+    return;
+  }
 
 #pragma omp parallel for schedule(static)
   for (i = 0u; i < home->n; ++i)
@@ -635,6 +689,7 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
                                        int rank, int nranks, comm_mode_t mode,
                                        kernel_mode_t kernel_mode,
                                        rsqrt_mode_t rsqrt_mode,
+                                       accumulator_mode_t accumulator_mode,
                                        double *comm_wait,
                                        MPI_Comm comm)
 {
@@ -678,7 +733,8 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
         MPI_Request req[6];
         post_source_exchange(bx, by, bz, rx, ry, rz, buf_n, next_n,
                              rank, nranks, 10, dt, comm, req);
-        accumulate_sources(local, bx, by, bz, buf_n, g, local->mass, eps, rsqrt_mode);
+        accumulate_sources(local, bx, by, bz, buf_n, g, local->mass, eps,
+                           rsqrt_mode, accumulator_mode);
         {
           const double comm_t0 = seconds();
           MPI_Waitall(6, req, MPI_STATUSES_IGNORE);
@@ -687,7 +743,8 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
       }
       else
       {
-        accumulate_sources(local, bx, by, bz, buf_n, g, local->mass, eps, rsqrt_mode);
+        accumulate_sources(local, bx, by, bz, buf_n, g, local->mass, eps,
+                           rsqrt_mode, accumulator_mode);
         {
           const double comm_t0 = seconds();
           exchange_sources_sendrecv(bx, by, bz, rx, ry, rz, buf_n, next_n,
@@ -702,7 +759,8 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
       buf_n = next_n;
     }
     else
-      accumulate_sources(local, bx, by, bz, buf_n, g, local->mass, eps, rsqrt_mode);
+      accumulate_sources(local, bx, by, bz, buf_n, g, local->mass, eps,
+                         rsqrt_mode, accumulator_mode);
   }
 
   free(bx);
@@ -835,6 +893,7 @@ static void print_usage(const char *program)
           "  --comm sendrecv|overlap   ring exchange mode (default: sendrecv)\n"
           "  --kernel direct|newton    force kernel (default: direct; newton is -np 1 only)\n"
           "  --rsqrt exact|approx      force inverse sqrt path (default: exact)\n"
+          "  --accumulators 1|4        direct-kernel accumulator chains (default: 4)\n"
           "  --eps X                   softening length (default: 0.01)\n"
           "  --G X                     gravitational constant (default: 1)\n"
           "  --mass X                  equal particle mass (default: 1)\n"
@@ -855,6 +914,7 @@ int main(int argc, char **argv)
   comm_mode_t comm_mode = COMM_SENDRECV;
   kernel_mode_t kernel_mode = KERNEL_DIRECT;
   rsqrt_mode_t rsqrt_mode = RSQRT_EXACT;
+  accumulator_mode_t accumulator_mode = ACCUMULATORS_FOUR;
   bool quiet = false;
   int rank, nranks, provided;
   particles_t local;
@@ -889,6 +949,8 @@ int main(int argc, char **argv)
       kernel_mode = parse_kernel_mode(value);
     else if ((value = option_value(&argi, argc, argv, "--rsqrt")) != NULL)
       rsqrt_mode = parse_rsqrt_mode(value);
+    else if ((value = option_value(&argi, argc, argv, "--accumulators")) != NULL)
+      accumulator_mode = parse_accumulator_mode(value);
     else if ((value = option_value(&argi, argc, argv, "--eps")) != NULL)
       eps = parse_dtype(value, "--eps");
     else if ((value = option_value(&argi, argc, argv, "--G")) != NULL)
@@ -933,10 +995,11 @@ int main(int argc, char **argv)
     printf("# hybrid MPI+OpenMP direct N-body %s\n",
            integrator_name(integrator));
     printf("# ranks=%d omp_max_threads=%d arithmetic_dtype=%s comm=%s "
-           "kernel=%s rsqrt=%s\n",
+           "kernel=%s rsqrt=%s accumulators=%s\n",
            nranks, omp_get_max_threads(), DTYPE_NAME,
            comm_mode_name(comm_mode), kernel_mode_name(kernel_mode),
-           rsqrt_mode_name(rsqrt_mode));
+           rsqrt_mode_name(rsqrt_mode),
+           accumulator_mode_name(accumulator_mode));
     printf("# N=%zu nsteps=%zu dt=%.17g eps=%.17g G=%.17g mass=%.17g\n",
            global_n, nsteps, (double)dt, (double)eps, (double)g,
            (double)mass);
@@ -950,6 +1013,7 @@ int main(int argc, char **argv)
     t0 = seconds();
     compute_accelerations_ring(&local, global_n, g, eps, rank,
                                nranks, comm_mode, kernel_mode, rsqrt_mode,
+                               accumulator_mode,
                                &timing.comm_wait,
                                MPI_COMM_WORLD);
     timing.force += seconds() - t0;
@@ -970,7 +1034,8 @@ int main(int argc, char **argv)
       t0 = seconds();
       compute_accelerations_ring(&local, global_n, g, eps,
                                  rank, nranks, comm_mode, kernel_mode,
-                                 rsqrt_mode, &timing.comm_wait,
+                                 rsqrt_mode, accumulator_mode,
+                                 &timing.comm_wait,
                                  MPI_COMM_WORLD);
       timing.force += seconds() - t0;
 
@@ -987,7 +1052,8 @@ int main(int argc, char **argv)
       t0 = seconds();
       compute_accelerations_ring(&local, global_n, g, eps,
                                  rank, nranks, comm_mode, kernel_mode,
-                                 rsqrt_mode, &timing.comm_wait,
+                                 rsqrt_mode, accumulator_mode,
+                                 &timing.comm_wait,
                                  MPI_COMM_WORLD);
       timing.force += seconds() - t0;
 
@@ -1055,12 +1121,14 @@ int main(int argc, char **argv)
     const double ginteractions = interactions / (timing.force * 1.0e9);
     printf("# final: N=%zu steps=%zu ranks=%d threads_per_rank=%d "
            "integrator=%s comm=%s kernel=%s rsqrt=%s arithmetic_dtype=%s "
+           "accumulators=%s "
            "max_relative_energy_drift=%.17g "
            "tolerance=%.17g status=%s\n",
            global_n, nsteps, nranks, omp_get_max_threads(),
            integrator_name(integrator), comm_mode_name(comm_mode),
            kernel_mode_name(kernel_mode), rsqrt_mode_name(rsqrt_mode),
-           DTYPE_NAME, max_rel_drift, (double)energy_tol,
+           DTYPE_NAME, accumulator_mode_name(accumulator_mode),
+           max_rel_drift, (double)energy_tol,
            (max_rel_drift <= (double)energy_tol) ? "OK" : "WARNING");
     printf("# timing_max_seconds total=%.6f io=%.6f drift=%.6f "
            "force=%.6f comm_wait=%.6f kick=%.6f energy=%.6f\n",

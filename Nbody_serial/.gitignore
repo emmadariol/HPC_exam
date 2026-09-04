@@ -1,65 +1,39 @@
-
-# 1. Impostazioni IDE locali
+# Local editor state
 .vscode/
-
-# 2. File binari ed eseguibili compilati
-*.o
-nbody_direct_serial
-nbody_direct_hybrid
-generate_ic
-
-# 3. File temporanei, dati e condizioni iniziali
-*.bin
-
-# 4. Output di SLURM e report di calcolo
-*.out
-*.err
-*.log
-*.csv
-system_info*.txt
-vectorization_report.txt
-
-# 5. Immagini container e archivi
-*.sif
-*.tar.gz
-*.tgz
-
-# 6. Materiale didattico o documenti non sorgenti
-*.pdf
-
 
 # Build artifacts
 *.o
 generate_ic
 nbody_direct_serial
 nbody_direct_hybrid
+nbody_layout_benchmark
 
-# Generated particle states
+# Generated particle states and scratch inputs
 *.bin
+*_input.bin
+preflight_*.bin
 
 # Python cache
 __pycache__/
 *.pyc
 
-# Local benchmark scratch files
-*_input.bin
-
-# HPC generated binaries / temporary files
-nbody_direct_serial
-nbody_direct_hybrid
-nbody_layout_benchmark
-generate_ic
-*.o
-*.bin
-*.sif
-
-# Archives
-*.tar.gz
-*.zip
-
-# Slurm logs
+# Slurm and local run logs
 *.out
 *.err
+*.log
+runs/
 
-# Large or temporary preflight files
-preflight_*.bin
+# Container images and compressed exports
+*.sif
+*.tar.gz
+*.tgz
+*.zip
+
+# Generated benchmark tables and figures. Only curated final results are tracked.
+*.csv
+*.svg
+!results_final/
+!results_final/**
+
+# Assignment PDFs are kept outside the code package or ignored locally.
+*.pdf

@@ -6,11 +6,9 @@ High Performance Computing 1 / Introduction to Parallelism - Final project repor
 
 This project implements and evaluates a direct gravitational N-body solver using MPI + OpenMP. The parallel code follows the requested direct all-pairs algorithm with softened gravity, a leapfrog time integrator, a permanent particle ownership model per MPI rank, and a ring-shift communication pattern for exchanging source particle chunks.
 
-The final production measurements used in this report are:
-
-- Main scaling: `runs/orfeo_64_20260818_195347`
-- Optimisation and correctness evidence: `runs/orfeo_seq_20260817_120943/04_evidence`
-- Container layer: `runs/orfeo_seq_20260817_120943/07_container_pdf_final`
+The final production measurements used in this report are stored in the curated
+`results_final/` directory. The original `runs/` directories are treated as local
+execution history and are not required to reproduce the report figures.
 
 The main results are:
 
@@ -31,22 +29,20 @@ The assignment text refers to LEONARDO for the container layer. In practice, the
 | Direct O(N^2) gravitational summation | `nbody_direct_hybrid.c`, `nbody_direct_serial.c` |
 | MPI ring-shift communication | hybrid solver, `--comm sendrecv` and `--comm overlap` |
 | OpenMP force-loop parallelism | hybrid solver force kernel |
-| Strong scaling | `runs/orfeo_64_20260818_195347/01_mpi_64_retry` |
-| Weak scaling | `runs/orfeo_64_20260818_195347/01_mpi_64_retry` |
-| Hybrid process/thread study | `runs/orfeo_64_20260818_195347/02_hybrid_64_retry` |
+| Strong scaling | `results_final/scaling_64_summary.csv` |
+| Weak scaling | `results_final/scaling_64_summary.csv` |
+| Hybrid process/thread study | `results_final/hybrid_64_summary.csv` |
 | Five repetitions and statistics | all final CSV summaries |
 | Correctness check | energy drift and layout checksum evidence |
 | Bottleneck/profiling evidence | force, communication, energy timing columns; ablation tests |
-| AoS vs SoA | `04_evidence/layout_summary.csv` |
-| Newton-third-law comparison | `03_ablation_64_retry/results_3_ablation_orfeo.csv` |
-| Exact vs approximate inverse square root | `03_ablation_64_retry/results_3_ablation_orfeo.csv` |
-| Communication overlap comparison | `03_ablation_64_retry/results_3_ablation_orfeo.csv` |
-| Container overhead table | `07_container_pdf_final/container_overhead_summary.csv` |
-| Launch overhead | `07_container_pdf_final/container_overhead_launch.csv` |
-| OSU latency and bandwidth, native vs container | `07_container_pdf_final/osu_microbench_summary.csv` |
-| Host MPI injection check | `07_container_pdf_final/mpi_linkage_check.txt` |
-
-The old directory `runs/orfeo_seq_20260817_120943/old_container_attempts` contains intermediate failed container attempts and is not used for the final analysis.
+| AoS vs SoA | `results_final/layout_summary.csv` |
+| Newton-third-law comparison | `results_final/ablation_64.csv` |
+| Exact vs approximate inverse square root | `results_final/ablation_64.csv` |
+| Communication overlap comparison | `results_final/ablation_64.csv` |
+| Container overhead table | `results_final/container_overhead_summary.csv` |
+| Launch overhead | `results_final/container_overhead_launch.csv` |
+| OSU latency and bandwidth, native vs container | `results_final/osu_microbench_summary.csv` |
+| Host MPI injection check | `results_final/mpi_linkage_check.txt` |
 
 ## 3. Code structure
 
@@ -58,12 +54,9 @@ The relevant source files are:
 | `nbody_direct_hybrid.c` | MPI + OpenMP production solver |
 | `nbody_layout_benchmark.c` | AoS/SoA force-only benchmark |
 | `generate_ic.c` | Initial-condition generator |
-| `benchmark_scaling.sh` | Strong/weak repeated benchmark driver |
-| `analyze_benchmark.py` | Median, standard deviation, outlier, speedup and efficiency analysis |
-| `benchmark_energy.sh`, `analyze_energy.py` | Energy diagnostic overhead evidence |
-| `benchmark_layout.sh`, `analyze_layout.py` | Layout comparison and checksum evidence |
-| `benchmark_container.sh`, `analyze_container_overhead.py` | Native vs Singularity solver timing |
-| `benchmark_osu.sh` | OSU latency/bandwidth collection |
+| `run_benchmarks.sh` | Unified benchmark driver for scaling, hybrid, ablation, layout, energy, container, OSU and optional perf counters |
+| `analyze.py` | Unified CSV reduction and SVG plotting CLI |
+| `jobs/submit.sh` | Unified Slurm submission wrapper with Orfeo/Leonardo presets |
 | `Dockerfile`, `Singularity.def` | Container recipes |
 
 The solver uses a binary particle file format shared by the generator, serial solver, hybrid solver and layout benchmark. Positions and velocities are stored as six single-precision values per particle in the file, while arithmetic in the benchmarked executable is double precision through `-DNBODY_USE_DOUBLE`.
@@ -191,7 +184,7 @@ Every final timing point uses five measured repetitions. The analysis reports:
 
 The median is preferred over the arithmetic mean because HPC timings can contain occasional scheduler or OS-noise outliers. The raw repetitions are kept in the CSV files, while the summary CSV files contain the statistics used in the report.
 
-No final CSV used in this report contains `RUN_FAILED`, `PARSE_FAILED` or `nan`. Some earlier exploratory container attempts did fail during MPI binding debugging; they are stored under `old_container_attempts` and are intentionally excluded from the final analysis.
+No final CSV used in this report contains `RUN_FAILED`, `PARSE_FAILED` or `nan`. Earlier exploratory container attempts were discarded and are intentionally excluded from the curated `results_final/` dataset.
 
 ## 6. Numerical method and correctness
 
@@ -222,7 +215,9 @@ The energy-diagnostic overhead study also verifies that the measured energy drif
 | 50000 | 50 | 8 | 10 | 62.410 | 9.7% | 6.9% | 4.45e-7 |
 | 50000 | 50 | 8 | 50 | 58.391 | 3.4% | baseline | 3.44e-7 |
 
-![Energy diagnostic overhead](runs/orfeo_seq_20260817_120943/04_evidence/energy_overhead.svg)
+![Energy diagnostic overhead](results_final/energy_overhead.svg)
+
+_Figure comment: evaluating the total energy too frequently is expensive because the potential-energy diagnostic is also pair-based. The plot justifies using sparse energy checks during performance runs._
 
 The conclusion is that frequent full energy evaluation is a useful correctness diagnostic but a significant extra O(N^2) cost. For production timing, energy checks must be sparse enough not to dominate the measured solver runtime.
 
@@ -254,9 +249,13 @@ Each point is summarized by the median over five measured repetitions. The analy
 | 32 | 1.047827 | 0.001708 | 29.76 | 93.0% | 0.006800 | 9.143 |
 | 64 | 0.538247 | 0.004583 | 57.94 | 90.5% | 0.007174 | 18.024 |
 
-![MPI strong-scaling speedup](runs/orfeo_64_20260818_195347/01_mpi_64_retry/results_1_mpi_orfeo_strong_speedup.svg)
+![MPI strong-scaling speedup](results_final/scaling_64_strong_speedup.svg)
 
-![MPI strong-scaling efficiency](runs/orfeo_64_20260818_195347/01_mpi_64_retry/results_1_mpi_orfeo_strong_efficiency.svg)
+_Figure comment: the measured curve remains close to the ideal `S(P)=P` line. The visible gap at high rank count is the parallel overhead: synchronization, communication, finite local work per rank and runtime noise._
+
+![MPI strong-scaling efficiency](results_final/scaling_64_strong_efficiency.svg)
+
+_Figure comment: efficiency stays above 90% up to 64 ranks. This is the clearest visual evidence that overhead does not dominate within the tested single-node range._
 
 The dashed reference line in the strong-scaling speedup plot is the ideal `S(P)=P` behaviour. In the efficiency plot, the dashed reference is ideal unit efficiency. These are the reference curves suggested in the scalability notes and make the gap between measured and ideal scaling visually explicit.
 
@@ -275,6 +274,8 @@ f_eff = (1/S_64 - 1/64) / (1 - 1/64) ~= 0.0017
 This number should not be interpreted as a pure serial code fraction, because the measured deviation from ideal also includes MPI overhead, OpenMP scheduling effects, NUMA effects and timer noise. It is still useful as a compact indicator that the implementation has very little non-scaling overhead in the tested range.
 
 The pair-interaction rate increases from 0.289 Gpairs/s at one rank to 18.024 Gpairs/s at 64 ranks. This is a 62.3x throughput increase, slightly higher than the time-based speedup because the timing summary separates some overheads from the force kernel rate. The important point is that both runtime speedup and kernel throughput point to the same conclusion: the code efficiently uses the full GENOA node for this problem size.
+
+Using an explicit rough model of 20 floating-point operations per pair interaction, this corresponds to about 5.8 estimated GFLOP/s at one rank and about 360.5 estimated GFLOP/s at 64 ranks. This estimate is reported only as a derived operation-count metric; the primary measured kernel rate remains `Gpairs/s`, because it is independent of how one counts `sqrt`, division and fused operations.
 
 The communication wait column also supports this interpretation. At 64 ranks the median communication wait is only 0.007174 s, about 1.3% of the total median runtime. Therefore, the loss of efficiency at high rank count is not caused by communication dominating the run; it is the expected accumulation of small fixed costs as per-rank work decreases.
 
@@ -307,11 +308,13 @@ Therefore, with fixed particles per rank, the direct O(N^2) algorithm has an exp
 | 32 | 64000 | 10.617243 | 0.004137 | 0.041412 | 9.211 |
 | 64 | 128000 | 21.289183 | 0.015332 | 0.118626 | 18.415 |
 
-![MPI weak-scaling speedup](runs/orfeo_64_20260818_195347/01_mpi_64_retry/results_1_mpi_orfeo_weak_speedup.svg)
+![MPI weak-scaling absolute time](results_final/scaling_64_weak_time.svg)
 
-![MPI weak-scaling efficiency](runs/orfeo_64_20260818_195347/01_mpi_64_retry/results_1_mpi_orfeo_weak_efficiency.svg)
+_Figure comment: the absolute time is shown only together with the dashed `O(P)` reference. For direct all-pairs N-body this is the correct algorithm-specific guide, because fixed `N/P` still implies a globally growing source set._
 
-![MPI weak-scaling absolute time](runs/orfeo_64_20260818_195347/01_mpi_64_retry/results_1_mpi_orfeo_weak_time.svg)
+![MPI weak-scaling normalized time](results_final/scaling_64_weak_normalized_time.svg)
+
+_Figure comment: this is the most informative weak-scaling plot for this algorithm. A value near 1 means that the code follows the expected `O(P)` growth; the 64-rank point is only about 6.6% above that reference._
 
 The absolute time increases almost linearly with `P`, as expected for direct all-pairs gravity under fixed `N/P`. The achieved pair-interaction rate also grows nearly linearly, showing that the machine is being used efficiently even though the mathematical weak-scaling definition is unfavorable for this algorithm.
 
@@ -359,9 +362,13 @@ repetitions = 5
 | 2 | 32 | 0.536742 | 0.000805 | 17.991 |
 | 1 | 64 | 0.540497 | 0.002457 | 17.882 |
 
-![Hybrid median time by configuration](runs/orfeo_64_20260818_195347/02_hybrid_64_retry/results_2_hybrid_orfeo_time_by_config.svg)
+![Hybrid median time by configuration](results_final/hybrid_64_time_by_config.svg)
 
-![Hybrid throughput by configuration](runs/orfeo_64_20260818_195347/02_hybrid_64_retry/results_2_hybrid_orfeo_gpairs_by_config.svg)
+_Figure comment: all P x T configurations have almost the same runtime. Since total cores are fixed at 64, this plot should be read as a configuration comparison, not as a scaling curve._
+
+![Hybrid throughput by configuration](results_final/hybrid_64_gpairs_by_config.svg)
+
+_Figure comment: throughput is similarly stable across decompositions. This supports the conclusion that neither MPI rank count nor OpenMP thread count dominates performance in this single-node setting._
 
 All decompositions are close. Since all points use the same total number of cores, speedup and efficiency are not the right visual summaries for this experiment. The meaningful plots are instead median time and achieved pair-interaction rate as a function of the P x T decomposition. The best median is `32x2`, but the differences are small enough that no single P x T layout is overwhelmingly superior on this node for this problem size. This suggests that, once the full node is used, the dominant cost is the arithmetic force kernel and not the rank/thread decomposition itself.
 
@@ -405,9 +412,13 @@ force/total        ~= 86.6%
 comm_wait/total    ~= 1.3%
 ```
 
-![Strong-scaling timing breakdown](runs/orfeo_64_20260818_195347/01_mpi_64_retry/results_1_mpi_orfeo_strong_breakdown.svg)
+![Strong-scaling timing breakdown](results_final/scaling_64_strong_breakdown.svg)
+
+_Figure comment: the force section dominates the stacked bars, while communication wait is visually small. This supports the bottleneck claim with instrumented timings rather than intuition._
 
 The remaining time is mainly integration updates, diagnostics and runtime overhead. This is why the optimisation discussion focuses on force-kernel structure, layout, reciprocal square root and Newton reuse.
+
+The direct kernel exposes `--accumulators 1|4` to isolate the critical-path question in the assignment. The production default is `4`, which uses four independent accumulator chains per component. The Slurm ablation scripts include an `Accumulators` case so a future Orfeo/LEONARDO run can quantify the single-chain versus four-chain variant without changing the main solver path.
 
 ### 10.2 Newton's third law
 
@@ -437,7 +448,9 @@ This is smaller than the theoretical 50% arithmetic reduction because the kernel
 | Math | exact | 5 | 0.943831 | 0.005604 |
 | Math | approx | 5 | 1.166320 | 0.006323 |
 
-![Ablation summary](runs/orfeo_64_20260818_195347/03_ablation_64_retry/results_3_ablation_orfeo.svg)
+![Ablation summary](results_final/ablation_64.svg)
+
+_Figure comment: the ablation plot should be read by pair, not as one single ranking. `direct/newton`, `exact/approx`, and `sendrecv/overlap` answer three different optimisation questions._
 
 In this implementation the approximate path is slower than the exact path. This is counter to the usual expectation that reciprocal-square-root approximations can be faster, but it is a valid measurement: the approximation does not automatically translate into better throughput if the compiler does not generate the desired SIMD sequence or if the extra refinement work and conversions dominate.
 
@@ -481,7 +494,9 @@ The assignment suggests measuring the effect of particle layout. The layout benc
 | AoS | 50000 | 8 | 3.224015 | 2.326 | baseline |
 | SoA | 50000 | 8 | 3.607846 | 2.079 | 1.75e-10 |
 
-![AoS vs SoA layout benchmark](runs/orfeo_seq_20260817_120943/04_evidence/layout_force_time.svg)
+![AoS vs SoA layout benchmark](results_final/layout_force_time.svg)
+
+_Figure comment: SoA is not faster in this implementation, even though it is often expected to help vectorisation. The checksum column is essential: it shows that the layout comparison is numerically consistent._
 
 In this benchmark, SoA is not faster than AoS. This is an empirical result for the implemented kernels and compiler choices, not a correctness problem. The checksum differences are negligible, so the comparison is measuring performance rather than a change in computed forces. A likely explanation is that the specific loop structure and compiler vectorisation did not exploit SoA enough to offset other overheads.
 
@@ -492,7 +507,7 @@ The important reporting point is that the layout experiment includes both perfor
 The container layer was evaluated in the final directory:
 
 ```text
-runs/orfeo_seq_20260817_120943/07_container_pdf_final
+results_final
 ```
 
 The Docker image is self-contained at build time:
@@ -535,9 +550,13 @@ NSTEPS = 100
 | weak | 2000 | 2 | 0.777243 | 0.001278 | 0.803996 | 0.000689 | 3.44% |
 | weak | 4000 | 4 | 1.590182 | 0.002457 | 1.638141 | 0.001570 | 3.02% |
 
-![Container strong overhead](runs/orfeo_seq_20260817_120943/07_container_pdf_final/container_overhead_strong.svg)
+![Container strong overhead](results_final/container_overhead_strong.svg)
 
-![Container weak overhead](runs/orfeo_seq_20260817_120943/07_container_pdf_final/container_overhead_weak.svg)
+_Figure comment: container and native timings are close in all three strong configurations. The small stable gap is the measured container overhead._
+
+![Container weak overhead](results_final/container_overhead_weak.svg)
+
+_Figure comment: the weak container comparison shows the same pattern: the container is slightly slower, but there is no large degradation as the number of ranks increases from 1 to 4._
 
 The measured solver overhead is stable at about 3%. This is within the expected 2-5% range for a compute-bound N-body kernel when host MPI is correctly injected.
 
@@ -577,9 +596,13 @@ OSU Micro-Benchmarks were run with two MPI processes, both natively and inside t
 | bandwidth | 1048576 | 5865.750 MB/s | 5828.470 MB/s | -0.64% |
 | bandwidth | 4194304 | 6251.240 MB/s | 6156.690 MB/s | -1.51% |
 
-![OSU latency native vs container](runs/orfeo_seq_20260817_120943/07_container_pdf_final/osu_microbench_latency.svg)
+![OSU latency native vs container](results_final/osu_microbench_latency.svg)
 
-![OSU bandwidth native vs container](runs/orfeo_seq_20260817_120943/07_container_pdf_final/osu_microbench_bandwidth.svg)
+_Figure comment: latency is almost unchanged between native and container execution. Small positive or negative differences at individual message sizes are measurement noise, not a systematic trend._
+
+![OSU bandwidth native vs container](results_final/osu_microbench_bandwidth.svg)
+
+_Figure comment: bandwidth also remains close between native and container runs. This confirms that host MPI injection avoids a severe communication penalty._
 
 The OSU result supports the solver-level conclusion: once host MPI is bound into the container, MPI latency and bandwidth are very close to native. Remaining differences are small compared with the solver's arithmetic cost.
 
@@ -616,37 +639,33 @@ These are not failures; they are exactly the kind of measurement-driven trade-of
 
 The main limitation of the report is that final production results are single-node results. This was a deliberate choice to keep the analysis homogeneous and robust. Multi-node runs would introduce network topology, queue availability and inter-node MPI transport effects. Those would be interesting follow-up measurements, but they are not required to demonstrate the requested MPI+OpenMP implementation, single-node scaling, bottleneck analysis and container overhead.
 
-Another limitation is that hardware counters were not used. Instead, the code was instrumented internally and reports section timings and pair-interaction rates. This is acceptable for the assignment because the requested bottleneck evidence can be produced by instrumentation; the measured force fraction, communication wait and energy diagnostic cost are enough to identify the dominant costs.
+Another limitation is that hardware counters were not part of the accepted final dataset. Instead, the code was instrumented internally and reports section timings and pair-interaction rates. This is acceptable for the assignment because the requested bottleneck evidence can be produced by instrumentation; the measured force fraction, communication wait and energy diagnostic cost are enough to identify the dominant costs. The unified `run_benchmarks.sh perf` command is available for clusters where `perf stat` events such as packed floating-point instructions and cache misses are available to users.
 
 If more time were available, the next improvements would be:
 
-- inspect compiler vectorisation reports for the force loop;
-- add multiple independent accumulators per component to reduce dependency-chain pressure;
+- add hardware-counter evidence when `perf`/PAPI permissions are available;
+- run the `--accumulators 1|4` ablation on the final cluster allocation;
 - implement a distributed Newton-third-law variant with explicit return of remote force contributions;
 - compare `-march=native` and `-march=x86-64-v3` directly on the same native environment;
 - repeat the main scaling on a multi-node allocation to expose the point where ring communication becomes dominant.
 
 ## 13. Reproducibility
 
-The final accepted runs are:
+The final accepted data files are:
 
 ```text
-runs/orfeo_64_20260818_195347/01_mpi_64_retry
-runs/orfeo_64_20260818_195347/02_hybrid_64_retry
-runs/orfeo_64_20260818_195347/03_ablation_64_retry
-runs/orfeo_seq_20260817_120943/04_evidence
-runs/orfeo_seq_20260817_120943/07_container_pdf_final
+results_final/scaling_64.csv
+results_final/scaling_64_summary.csv
+results_final/hybrid_64_summary.csv
+results_final/ablation_64.csv
+results_final/layout_summary.csv
+results_final/energy_overhead_summary.csv
+results_final/container_overhead_summary.csv
+results_final/osu_microbench_summary.csv
 ```
 
-The 32-rank run in `runs/orfeo_32_20260818_182733` is also valid and can be used as supporting evidence, but the 64-rank run is the main scaling dataset because it covers the full GENOA node.
-
-The old container attempts are intentionally excluded:
-
-```text
-runs/orfeo_seq_20260817_120943/old_container_attempts
-```
-
-They contain intermediate failed experiments from debugging the container MPI binding and should not be used in the final figures or tables.
+The 32-rank and intermediate run directories are intentionally excluded from
+version control. They are useful local history, not report dependencies.
 
 ## 14. Conclusions
 

@@ -17,12 +17,12 @@ else
 $(error PRECISION must be either double or float)
 endif
 
-.PHONY: all clean run-smoke vec-report
+.PHONY: all clean run-smoke vec-report bench-scaling bench-hybrid bench-ablation bench-layout bench-energy bench-container bench-osu bench-perf
 
 all: $(PROGRAMS)
 
 nbody_direct_serial: nbody_direct_serial.c $(HEADERS)
-	$(CC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) -o $@ $< $(LDLIBS)
+	$(CC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -o $@ $< $(LDLIBS)
 
 nbody_direct_hybrid: nbody_direct_hybrid.c $(HEADERS)
 	$(MPICC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -o $@ $< $(LDLIBS)
@@ -44,8 +44,45 @@ run-smoke: all
 	OMP_NUM_THREADS=2 ./nbody_layout_benchmark --input plummer_128.bin --layout both --warmups 1 --inner-repeats 1 >/dev/null
 
 vec-report:
-	$(MPICC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -fopt-info-vec-optimized -fopt-info-vec-missed -c nbody_direct_hybrid.c -o /tmp/nbody_direct_hybrid_vec.o 2> vectorization_report.txt
-	rm -f /tmp/nbody_direct_hybrid_vec.o
+	mkdir -p docs
+	$(CC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -fopt-info-vec-optimized -fopt-info-vec-missed -c nbody_direct_serial.c -o /tmp/nbody_direct_serial_vec.o 2> docs/vectorization_serial_report.txt
+	$(MPICC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -fopt-info-vec-optimized -fopt-info-vec-missed -c nbody_direct_hybrid.c -o /tmp/nbody_direct_hybrid_vec.o 2> docs/vectorization_report.txt
+	rm -f /tmp/nbody_direct_serial_vec.o /tmp/nbody_direct_hybrid_vec.o
+
+bench-scaling: all
+	bash ./run_benchmarks.sh scaling
+	python3 analyze.py summarize scaling benchmark_results.csv benchmark_summary.csv
+	python3 analyze.py plot scaling benchmark_summary.csv scaling
+
+bench-hybrid: all
+	bash ./run_benchmarks.sh hybrid
+
+bench-ablation: all
+	bash ./run_benchmarks.sh ablation
+	python3 analyze.py plot ablation results_ablation.csv results_ablation
+
+bench-layout: all
+	bash ./run_benchmarks.sh layout
+	python3 analyze.py summarize layout layout_results.csv layout_summary.csv
+	python3 analyze.py plot layout layout_summary.csv layout_force_time
+
+bench-energy: all
+	bash ./run_benchmarks.sh energy
+	python3 analyze.py summarize energy energy_overhead.csv energy_overhead_summary.csv
+	python3 analyze.py plot energy energy_overhead_summary.csv energy_overhead
+
+bench-container: all
+	bash ./run_benchmarks.sh container
+	python3 analyze.py summarize container container_overhead.csv container_overhead_summary.csv
+	python3 analyze.py plot container container_overhead_summary.csv container_overhead
+
+bench-osu:
+	bash ./run_benchmarks.sh osu
+	python3 analyze.py summarize osu osu_microbench.csv osu_microbench_summary.csv
+	python3 analyze.py plot osu osu_microbench_summary.csv osu_microbench
+
+bench-perf: all
+	bash ./run_benchmarks.sh perf
 
 clean:
 	rm -f $(PROGRAMS) *.o *.bin

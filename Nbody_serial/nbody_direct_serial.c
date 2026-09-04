@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /* ========================================================================================
 
@@ -62,6 +63,19 @@ typedef struct particles_s
   dtype *az;
 } particles_t;
 
+typedef enum io_check_mode_e
+{
+  IO_CHECKED,
+  IO_FAST
+} io_check_mode_t;
+
+typedef struct io_profile_s
+{
+  double read_seconds;
+  double write_seconds;
+  double conversion_seconds;
+} io_profile_t;
+
 /* ========================================================================================
 
    : ------------------------------------------------------ :
@@ -78,6 +92,15 @@ static void die(const char *format, ...)
   va_end(args);
   fputc('\n', stderr);
   exit(EXIT_FAILURE);
+}
+
+static double wall_seconds(void)
+{
+  struct timespec ts;
+
+  if (timespec_get(&ts, TIME_UTC) != TIME_UTC)
+    die("timespec_get failed");
+  return (double)ts.tv_sec + 1.0e-9 * (double)ts.tv_nsec;
 }
 
 /*
@@ -328,9 +351,11 @@ static float dtype_to_storage_float(dtype value,           // value to store
  * Acceleration arrays are left uninitialised because every force evaluation
  * overwrites them.
  */
-static void particles_read_binary(const char *path, // input file path
-                                  dtype mass,       // mass assigned to each particle
-                                  particles_t *p    // output particle container
+static void particles_read_binary(const char *path,       // input file path
+                                  dtype mass,             // mass assigned to each particle
+                                  io_check_mode_t checks, // validation policy
+                                  particles_t *p,         // output particle container
+                                  io_profile_t *profile   // timing counters
 )
 {
   FILE *fp;
@@ -338,6 +363,9 @@ static void particles_read_binary(const char *path, // input file path
   uint64_t n64;
   size_t n;
   size_t i;
+  float *records;
+  size_t record_values;
+  double started;
 
   fp = fopen(path, "rb");
   if (fp == NULL)
@@ -353,18 +381,27 @@ static void particles_read_binary(const char *path, // input file path
     die("invalid particle count in '%s'", path);
   n = (size_t)n64;
 
-  particles_allocate(p, n, mass);
+  if (n > SIZE_MAX / (NBODY_BINARY_COMPONENTS * sizeof(*records)))
+    die("particle record count is too large");
+  record_values = n * NBODY_BINARY_COMPONENTS;
 
+  particles_allocate(p, n, mass);
+  records = checked_aligned_alloc(record_values * sizeof(*records), NBODY_ALIGNMENT);
+
+  started = wall_seconds();
+  checked_fread(records, sizeof(*records), record_values,
+                fp, path, "particle records");
+  profile->read_seconds += wall_seconds() - started;
+
+  started = wall_seconds();
   for (i = 0u; i < n; ++i)
   {
-    float record[NBODY_BINARY_COMPONENTS];
+    const float *record = records + i * NBODY_BINARY_COMPONENTS;
 
-    checked_fread(record, sizeof record[0], NBODY_BINARY_COMPONENTS,
-                  fp, path, "particle record");
-
-    if (!isfinite((double)record[0]) || !isfinite((double)record[1]) ||
+    if ((checks == IO_CHECKED) &&
+        (!isfinite((double)record[0]) || !isfinite((double)record[1]) ||
         !isfinite((double)record[2]) || !isfinite((double)record[3]) ||
-        !isfinite((double)record[4]) || !isfinite((double)record[5]))
+         !isfinite((double)record[4]) || !isfinite((double)record[5])))
       die("non-finite particle value in '%s' at index %zu", path, i);
 
     p->x[i] = (dtype)record[0];
@@ -374,6 +411,8 @@ static void particles_read_binary(const char *path, // input file path
     p->vy[i] = (dtype)record[4];
     p->vz[i] = (dtype)record[5];
   }
+  profile->conversion_seconds += wall_seconds() - started;
+  free(records);
 
   if (fclose(fp) != 0)
     die("error while closing input file '%s'", path);
@@ -383,17 +422,26 @@ static void particles_read_binary(const char *path, // input file path
  * Write the current particle state in the same binary format accepted by the
  * reader. Conversion to single precision is done record by record.
  */
-static void particles_write_binary(const char *path,    // output file path
-                                   const particles_t *p // particle state to write
+static void particles_write_binary(const char *path,       // output file path
+                                   const particles_t *p,   // particle state to write
+                                   io_check_mode_t checks, // validation policy
+                                   io_profile_t *profile   // timing counters
 )
 {
   FILE *fp;
   const size_t n = p->n;
   uint64_t n64 = (uint64_t)n;
   size_t i;
+  float *records;
+  size_t record_values;
+  double started;
 
   if ((size_t)n64 != n)
     die("particle count cannot be represented in the binary header");
+  if (n > SIZE_MAX / (NBODY_BINARY_COMPONENTS * sizeof(*records)))
+    die("particle record count is too large");
+  record_values = n * NBODY_BINARY_COMPONENTS;
+  records = checked_aligned_alloc(record_values * sizeof(*records), NBODY_ALIGNMENT);
 
   fp = fopen(path, "wb");
   if (fp == NULL)
@@ -403,19 +451,37 @@ static void particles_write_binary(const char *path,    // output file path
                  NBODY_BINARY_MAGIC_SIZE, fp, path, "binary magic");
   checked_fwrite(&n64, sizeof n64, 1u, fp, path, "particle count");
 
+  started = wall_seconds();
   for (i = 0u; i < n; ++i)
   {
-    float record[NBODY_BINARY_COMPONENTS];
+    float *record = records + i * NBODY_BINARY_COMPONENTS;
 
-    record[0] = dtype_to_storage_float(p->x[i], "x", i);
-    record[1] = dtype_to_storage_float(p->y[i], "y", i);
-    record[2] = dtype_to_storage_float(p->z[i], "z", i);
-    record[3] = dtype_to_storage_float(p->vx[i], "vx", i);
-    record[4] = dtype_to_storage_float(p->vy[i], "vy", i);
-    record[5] = dtype_to_storage_float(p->vz[i], "vz", i);
-    checked_fwrite(record, sizeof record[0], NBODY_BINARY_COMPONENTS,
-                   fp, path, "particle record");
+    if (checks == IO_CHECKED)
+    {
+      record[0] = dtype_to_storage_float(p->x[i], "x", i);
+      record[1] = dtype_to_storage_float(p->y[i], "y", i);
+      record[2] = dtype_to_storage_float(p->z[i], "z", i);
+      record[3] = dtype_to_storage_float(p->vx[i], "vx", i);
+      record[4] = dtype_to_storage_float(p->vy[i], "vy", i);
+      record[5] = dtype_to_storage_float(p->vz[i], "vz", i);
+    }
+    else
+    {
+      record[0] = (float)p->x[i];
+      record[1] = (float)p->y[i];
+      record[2] = (float)p->z[i];
+      record[3] = (float)p->vx[i];
+      record[4] = (float)p->vy[i];
+      record[5] = (float)p->vz[i];
+    }
   }
+  profile->conversion_seconds += wall_seconds() - started;
+
+  started = wall_seconds();
+  checked_fwrite(records, sizeof(*records), record_values,
+                 fp, path, "particle records");
+  profile->write_seconds += wall_seconds() - started;
+  free(records);
 
   if (fclose(fp) != 0)
     die("error while closing output file '%s'", path);
@@ -472,7 +538,7 @@ static void compute_accelerations_naive(size_t n,                // number of pa
 
     /* Inner all-pairs loop: mark for vectorization when safe. */
 #if defined(_OPENMP)
-#pragma omp simd
+#pragma omp simd reduction(+ : axi, ayi, azi)
 #endif
     for (j = 0u; j < n; ++j)
     {
@@ -683,6 +749,8 @@ static void print_usage(const char *program // argv[0]
           "  --mass X                  particle mass (default: 1)\n"
           "  --energy-every N          diagnostic period in steps (default: 1)\n"
           "  --energy-tol X            warning tolerance for max relative drift (default: 1e-3)\n"
+          "  --io-mode checked|fast    validate conversions or use direct casts (default: checked)\n"
+          "  --io-profile              print read/write/conversion timings\n"
           "  --quiet                   only print final summary\n"
           "  --help                    show this help message\n",
           program, NBODY_BINARY_VERSION_TEXT);
@@ -702,6 +770,9 @@ int main(int argc, char **argv)
   dtype mass = (dtype)1.0;
   dtype energy_tol = (dtype)1.0e-3;
   bool quiet = false;
+  bool io_profile_enabled = false;
+  io_check_mode_t io_checks = IO_CHECKED;
+  io_profile_t io_profile = {0.0, 0.0, 0.0};
   particles_t particles;
   dtype kinetic0;
   dtype potential0;
@@ -735,6 +806,17 @@ int main(int argc, char **argv)
       mass = parse_dtype(value, "--mass");
     else if ((value = option_value(&argi, argc, argv, "--energy-tol")) != NULL)
       energy_tol = parse_dtype(value, "--energy-tol");
+    else if ((value = option_value(&argi, argc, argv, "--io-mode")) != NULL)
+    {
+      if (strcmp(value, "checked") == 0)
+        io_checks = IO_CHECKED;
+      else if (strcmp(value, "fast") == 0)
+        io_checks = IO_FAST;
+      else
+        die("--io-mode must be checked or fast");
+    }
+    else if (strcmp(argv[argi], "--io-profile") == 0)
+      io_profile_enabled = true;
     else if (strcmp(argv[argi], "--quiet") == 0)
       quiet = true;
     else if (strcmp(argv[argi], "--help") == 0)
@@ -769,7 +851,7 @@ int main(int argc, char **argv)
 
   // ························································
   // read particles from input file
-  particles_read_binary(input_path, mass, &particles);
+  particles_read_binary(input_path, mass, io_checks, &particles, &io_profile);
 
   // ························································
   // get energy baseline
@@ -821,7 +903,13 @@ int main(int argc, char **argv)
   // write final file
 
   if (output_path != NULL)
-    particles_write_binary(output_path, &particles);
+    particles_write_binary(output_path, &particles, io_checks, &io_profile);
+
+  if (io_profile_enabled)
+    printf("# io_profile mode=%s read_seconds=%.9g write_seconds=%.9g conversion_seconds=%.9g\n",
+           (io_checks == IO_CHECKED) ? "checked" : "fast",
+           io_profile.read_seconds, io_profile.write_seconds,
+           io_profile.conversion_seconds);
 
   // ························································
   // say good-bye

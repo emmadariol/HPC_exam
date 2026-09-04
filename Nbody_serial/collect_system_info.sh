@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-out="${1:-system_info.txt}"
+out="${1:-docs/system_info.txt}"
+mkdir -p "$(dirname "$out")"
 
 {
   echo "# system information"

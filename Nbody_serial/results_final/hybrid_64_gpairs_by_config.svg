@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="450.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">hybrid Gpairs/s</text>
+<line x1="82" y1="445" x2="865" y2="445" stroke="black"/>
+<line x1="82" y1="42" x2="82" y2="445" stroke="black"/>
+<text x="450.0" y="502" text-anchor="middle" font-family="sans-serif" font-size="14">configuration</text>
+<text transform="translate(24,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">Gpairs/s</text>
+<polyline points="82.0,54.9 142.2,42.0 202.5,50.7 262.7,44.9 322.9,56.5 383.2,49.7 443.4,54.2 503.6,58.6 563.8,52.6 624.1,79.3 684.3,51.1 744.5,115.9 804.8,53.5 865.0,162.3" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<circle cx="82.0" cy="54.9" r="4" fill="#1f77b4"/>
+<text transform="translate(82.0,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P64xT1</text>
+<circle cx="142.2" cy="42.0" r="4" fill="#1f77b4"/>
+<text transform="translate(142.2,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P64xT1</text>
+<circle cx="202.5" cy="50.7" r="4" fill="#1f77b4"/>
+<text transform="translate(202.5,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P32xT2</text>
+<circle cx="262.7" cy="44.9" r="4" fill="#1f77b4"/>
+<text transform="translate(262.7,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P32xT2</text>
+<circle cx="322.9" cy="56.5" r="4" fill="#1f77b4"/>
+<text transform="translate(322.9,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P16xT4</text>
+<circle cx="383.2" cy="49.7" r="4" fill="#1f77b4"/>
+<text transform="translate(383.2,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P16xT4</text>
+<circle cx="443.4" cy="54.2" r="4" fill="#1f77b4"/>
+<text transform="translate(443.4,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P8xT8</text>
+<circle cx="503.6" cy="58.6" r="4" fill="#1f77b4"/>
+<text transform="translate(503.6,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P8xT8</text>
+<circle cx="563.8" cy="52.6" r="4" fill="#1f77b4"/>
+<text transform="translate(563.8,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P4xT16</text>
+<circle cx="624.1" cy="79.3" r="4" fill="#1f77b4"/>
+<text transform="translate(624.1,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P4xT16</text>
+<circle cx="684.3" cy="51.1" r="4" fill="#1f77b4"/>
+<text transform="translate(684.3,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P2xT32</text>
+<circle cx="744.5" cy="115.9" r="4" fill="#1f77b4"/>
+<text transform="translate(744.5,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P2xT32</text>
+<circle cx="804.8" cy="53.5" r="4" fill="#1f77b4"/>
+<text transform="translate(804.8,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P1xT64</text>
+<circle cx="865.0" cy="162.3" r="4" fill="#1f77b4"/>
+<text transform="translate(865.0,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P1xT64</text>
+</svg>

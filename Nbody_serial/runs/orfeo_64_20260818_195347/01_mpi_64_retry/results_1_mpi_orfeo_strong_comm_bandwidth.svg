@@ -5,39 +5,52 @@
 <text x="450.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">strong estimated communication GB/s</text>
 <text x="450.0" y="500" text-anchor="middle" font-family="sans-serif" font-size="14">resources = ranks x threads</text>
 <text transform="translate(22,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">estimated communication GB/s</text>
+<line x1="80.0" y1="40" x2="80.0" y2="450" stroke="#eeeeee"/>
 <line x1="80.0" y1="450" x2="80.0" y2="455" stroke="black"/>
-<text x="80.0" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">1</text>
-<line x1="211.7" y1="450" x2="211.7" y2="455" stroke="black"/>
-<text x="211.7" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">2</text>
-<line x1="343.3" y1="450" x2="343.3" y2="455" stroke="black"/>
-<text x="343.3" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">4</text>
-<line x1="475.0" y1="450" x2="475.0" y2="455" stroke="black"/>
-<text x="475.0" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">8</text>
-<line x1="606.7" y1="450" x2="606.7" y2="455" stroke="black"/>
-<text x="606.7" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">16</text>
-<line x1="738.3" y1="450" x2="738.3" y2="455" stroke="black"/>
-<text x="738.3" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">32</text>
+<text transform="translate(80.0,478) rotate(-45)" text-anchor="end" font-family="sans-serif" font-size="12">1</text>
+<line x1="92.5" y1="40" x2="92.5" y2="450" stroke="#eeeeee"/>
+<line x1="92.5" y1="450" x2="92.5" y2="455" stroke="black"/>
+<text transform="translate(92.5,478) rotate(-45)" text-anchor="end" font-family="sans-serif" font-size="12">2</text>
+<line x1="117.6" y1="40" x2="117.6" y2="450" stroke="#eeeeee"/>
+<line x1="117.6" y1="450" x2="117.6" y2="455" stroke="black"/>
+<text transform="translate(117.6,478) rotate(-45)" text-anchor="end" font-family="sans-serif" font-size="12">4</text>
+<line x1="167.8" y1="40" x2="167.8" y2="450" stroke="#eeeeee"/>
+<line x1="167.8" y1="450" x2="167.8" y2="455" stroke="black"/>
+<text transform="translate(167.8,478) rotate(-45)" text-anchor="end" font-family="sans-serif" font-size="12">8</text>
+<line x1="268.1" y1="40" x2="268.1" y2="450" stroke="#eeeeee"/>
+<line x1="268.1" y1="450" x2="268.1" y2="455" stroke="black"/>
+<text transform="translate(268.1,478) rotate(-45)" text-anchor="end" font-family="sans-serif" font-size="12">16</text>
+<line x1="468.7" y1="40" x2="468.7" y2="450" stroke="#eeeeee"/>
+<line x1="468.7" y1="450" x2="468.7" y2="455" stroke="black"/>
+<text transform="translate(468.7,478) rotate(-45)" text-anchor="end" font-family="sans-serif" font-size="12">32</text>
+<line x1="870.0" y1="40" x2="870.0" y2="450" stroke="#eeeeee"/>
 <line x1="870.0" y1="450" x2="870.0" y2="455" stroke="black"/>
-<text x="870.0" y="472" text-anchor="middle" font-family="sans-serif" font-size="12">64</text>
+<text transform="translate(870.0,478) rotate(-45)" text-anchor="end" font-family="sans-serif" font-size="12">64</text>
+<line x1="80" y1="450.0" x2="870" y2="450.0" stroke="#eeeeee"/>
 <line x1="75" y1="450.0" x2="80" y2="450.0" stroke="black"/>
 <text x="70" y="454.0" text-anchor="end" font-family="sans-serif" font-size="12">0</text>
+<line x1="80" y1="368.0" x2="870" y2="368.0" stroke="#eeeeee"/>
 <line x1="75" y1="368.0" x2="80" y2="368.0" stroke="black"/>
 <text x="70" y="372.0" text-anchor="end" font-family="sans-serif" font-size="12">0.29</text>
+<line x1="80" y1="286.0" x2="870" y2="286.0" stroke="#eeeeee"/>
 <line x1="75" y1="286.0" x2="80" y2="286.0" stroke="black"/>
 <text x="70" y="290.0" text-anchor="end" font-family="sans-serif" font-size="12">0.57</text>
+<line x1="80" y1="204.0" x2="870" y2="204.0" stroke="#eeeeee"/>
 <line x1="75" y1="204.0" x2="80" y2="204.0" stroke="black"/>
 <text x="70" y="208.0" text-anchor="end" font-family="sans-serif" font-size="12">0.86</text>
+<line x1="80" y1="122.0" x2="870" y2="122.0" stroke="#eeeeee"/>
 <line x1="75" y1="122.0" x2="80" y2="122.0" stroke="black"/>
 <text x="70" y="126.0" text-anchor="end" font-family="sans-serif" font-size="12">1.1</text>
+<line x1="80" y1="40.0" x2="870" y2="40.0" stroke="#eeeeee"/>
 <line x1="75" y1="40.0" x2="80" y2="40.0" stroke="black"/>
 <text x="70" y="44.0" text-anchor="end" font-family="sans-serif" font-size="12">1.4</text>
-<polyline points="80.0,450.0 211.7,414.9 343.3,399.8 475.0,250.7 606.7,257.2 738.3,40.0 870.0,54.5" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<polyline points="80.0,450.0 92.5,414.9 117.6,399.8 167.8,250.7 268.1,257.2 468.7,40.0 870.0,54.5" fill="none" stroke="#1f77b4" stroke-width="2"/>
 <circle cx="80.0" cy="450.0" r="4" fill="#1f77b4"/>
-<circle cx="211.7" cy="414.9" r="4" fill="#1f77b4"/>
-<circle cx="343.3" cy="399.8" r="4" fill="#1f77b4"/>
-<circle cx="475.0" cy="250.7" r="4" fill="#1f77b4"/>
-<circle cx="606.7" cy="257.2" r="4" fill="#1f77b4"/>
-<circle cx="738.3" cy="40.0" r="4" fill="#1f77b4"/>
+<circle cx="92.5" cy="414.9" r="4" fill="#1f77b4"/>
+<circle cx="117.6" cy="399.8" r="4" fill="#1f77b4"/>
+<circle cx="167.8" cy="250.7" r="4" fill="#1f77b4"/>
+<circle cx="268.1" cy="257.2" r="4" fill="#1f77b4"/>
+<circle cx="468.7" cy="40.0" r="4" fill="#1f77b4"/>
 <circle cx="870.0" cy="54.5" r="4" fill="#1f77b4"/>
 <text x="90" y="60" font-family="sans-serif" font-size="13" fill="#1f77b4">kdk/overlap/direct/exact</text>
 </svg>
