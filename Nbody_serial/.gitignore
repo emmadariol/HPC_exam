@@ -37,3 +37,7 @@ runs/
 
 # Assignment PDFs are kept outside the code package or ignored locally.
 *.pdf
+
+# Local run pointers and container cache
+LAST_ORFEO*_RUN.txt
+singularity_cache/

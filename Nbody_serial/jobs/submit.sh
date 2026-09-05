@@ -145,8 +145,10 @@ case "$bench" in
     ;;
   evidence)
     # Non-scaling evidence used by the report: system info, memory layout, and
-    # energy diagnostic overhead.
-    payload='bash ./collect_system_info.sh "$RESULT_DIR/system_info.txt"; OUT="$RESULT_DIR/layout.csv" bash ./run_benchmarks.sh layout; python3 analyze.py summarize layout "$RESULT_DIR/layout.csv" "$RESULT_DIR/layout_summary.csv"; python3 analyze.py plot layout "$RESULT_DIR/layout_summary.csv" "$RESULT_DIR/layout_force_time"; OUT="$RESULT_DIR/energy.csv" bash ./run_benchmarks.sh energy; python3 analyze.py summarize energy "$RESULT_DIR/energy.csv" "$RESULT_DIR/energy_summary.csv"; python3 analyze.py plot energy "$RESULT_DIR/energy_summary.csv" "$RESULT_DIR/energy_overhead"'
+    # energy diagnostic overhead.  Layout may sweep several OpenMP thread counts,
+    # but energy must receive one scalar THREADS value because srun uses it as
+    # --cpus-per-task.
+    payload='bash ./collect_system_info.sh "$RESULT_DIR/system_info.txt"; LAYOUT_THREADS="${LAYOUT_THREADS:-${THREADS:-1 2 4 8}}"; OUT="$RESULT_DIR/layout.csv" THREADS="$LAYOUT_THREADS" bash ./run_benchmarks.sh layout; python3 analyze.py summarize layout "$RESULT_DIR/layout.csv" "$RESULT_DIR/layout_summary.csv"; python3 analyze.py plot layout "$RESULT_DIR/layout_summary.csv" "$RESULT_DIR/layout_force_time"; OUT="$RESULT_DIR/energy.csv" THREADS="${ENERGY_THREADS:-1}" RANKS="${ENERGY_RANKS:-8}" bash ./run_benchmarks.sh energy; python3 analyze.py summarize energy "$RESULT_DIR/energy.csv" "$RESULT_DIR/energy_summary.csv"; python3 analyze.py plot energy "$RESULT_DIR/energy_summary.csv" "$RESULT_DIR/energy_overhead"'
     ;;
   container)
     # Pull the SIF from Docker Hub if it is missing, then measure native vs
@@ -216,7 +218,8 @@ sbatch_args=(
 # directory.  LAST_<CLUSTER>_RUN.txt is a convenience pointer for follow-up
 # checks and archiving.
 job_id="$(sbatch --parsable "${sbatch_args[@]}" "$job_script")"
-printf "%s\t%s\t%s\n" "$bench" "$job_id" "$result_dir" | tee -a "$result_dir/jobs.tsv"
+printf "%s	%s	%s
+" "$bench" "$job_id" "$result_dir" | tee -a "$result_dir/jobs.tsv"
 if [[ "$result_dir_explicit" == "0" ]]; then
   echo "$result_dir" > "LAST_${cluster^^}_RUN.txt"
 fi
