@@ -1,3 +1,13 @@
+/*
+ * nbody_layout_benchmark.c
+ *
+ * OpenMP-only microbenchmark used to isolate memory-layout effects in the force
+ * kernel.  It reads one binary initial-condition file, materializes it in both
+ * AoS (Array of Structures) and SoA (Structure of Arrays) form, then times the
+ * same direct O(N^2) acceleration calculation for each layout.  The checksum is
+ * reported so faster timings can be tied back to equivalent computed results.
+ */
+
 #include "nbody_common.h"
 
 #include <errno.h>
@@ -11,6 +21,9 @@
 
 typedef struct particle_aos_s
 {
+  /* Array-of-Structures layout: each particle owns all its fields together.
+   * This is intuitive, but the inner force loop must stride through x/y/z with
+   * unused velocity/acceleration fields in between. */
   dtype x, y, z;
   dtype vx, vy, vz;
   dtype ax, ay, az;
@@ -18,6 +31,8 @@ typedef struct particle_aos_s
 
 typedef struct particles_soa_s
 {
+  /* Structure-of-Arrays layout: each physical component is contiguous.  This is
+   * friendlier to vector loads and cache prefetching in the all-pairs kernel. */
   size_t n;
   dtype mass;
   dtype *x, *y, *z;
@@ -27,6 +42,7 @@ typedef struct particles_soa_s
 
 typedef enum layout_e
 {
+  /* Benchmark one layout or both from the same input file. */
   LAYOUT_SOA,
   LAYOUT_AOS,
   LAYOUT_BOTH
@@ -34,6 +50,8 @@ typedef enum layout_e
 
 typedef enum rsqrt_mode_e
 {
+  /* Keep the same exact/approx inverse-square-root choice as the hybrid solver
+   * so layout results can be interpreted alongside the ablation study. */
   RSQRT_EXACT,
   RSQRT_APPROX
 } rsqrt_mode_t;
@@ -127,6 +145,8 @@ static const char *rsqrt_mode_name(rsqrt_mode_t mode)
 
 static inline dtype invsqrt_force(dtype r2, rsqrt_mode_t mode)
 {
+  /* Exact mode is the numerical reference; approximate mode uses the same
+   * low-precision seed plus Newton refinement strategy as the hybrid solver. */
   if (mode == RSQRT_EXACT)
     return (dtype)1.0 / dtype_sqrt(r2);
   else
@@ -142,6 +162,8 @@ static inline dtype invsqrt_force(dtype r2, rsqrt_mode_t mode)
 
 static void *checked_aligned_alloc(size_t nbytes)
 {
+  /* Align both AoS and SoA storage so the comparison does not accidentally favor
+   * one layout because of a different base-address alignment. */
   const size_t alignment = NBODY_ALIGNMENT;
   const size_t padded = ((nbytes + alignment - 1u) / alignment) * alignment;
   void *ptr;
@@ -168,6 +190,7 @@ static void particles_soa_init(particles_soa_t *p)
 
 static void particles_soa_allocate(particles_soa_t *p, size_t n, dtype mass)
 {
+  /* Allocate the SoA representation used by the optimized/reference layout. */
   const size_t bytes = n * sizeof(dtype);
   particles_soa_init(p);
   p->n = n;
@@ -199,6 +222,7 @@ static void particles_soa_free(particles_soa_t *p)
 
 static particle_aos_t *particles_aos_allocate(size_t n)
 {
+  /* Allocate the AoS representation used as the contrast case. */
   particle_aos_t *p = checked_aligned_alloc(n * sizeof(*p));
   memset(p, 0, n * sizeof(*p));
   return p;
@@ -207,6 +231,8 @@ static particle_aos_t *particles_aos_allocate(size_t n)
 static void read_particles(const char *path, dtype mass, particles_soa_t *soa,
                            particle_aos_t **aos_out)
 {
+  /* Read once and populate both layouts with identical values.  This removes
+   * input-generation noise from the AoS-vs-SoA comparison. */
   FILE *fp = fopen(path, "rb");
   unsigned char magic[NBODY_BINARY_MAGIC_SIZE];
   uint64_t n64;
@@ -246,6 +272,8 @@ static void read_particles(const char *path, dtype mass, particles_soa_t *soa,
 static void compute_soa(particles_soa_t *p, dtype g, dtype eps,
                         rsqrt_mode_t rsqrt_mode)
 {
+  /* SoA force kernel: source x/y/z arrays are contiguous, which helps SIMD and
+   * cache-line utilization in the innermost loop. */
   const dtype eps2 = eps * eps;
   const dtype gm = g * p->mass;
   size_t i;
@@ -278,6 +306,8 @@ static void compute_soa(particles_soa_t *p, dtype g, dtype eps,
 static void compute_aos(particle_aos_t *p, size_t n, dtype g, dtype mass,
                         dtype eps, rsqrt_mode_t rsqrt_mode)
 {
+  /* AoS force kernel: source coordinates are interleaved with the other particle
+   * fields, making the memory stream less compact for the same arithmetic. */
   const dtype eps2 = eps * eps;
   const dtype gm = g * mass;
   size_t i;
@@ -308,6 +338,7 @@ static void compute_aos(particle_aos_t *p, size_t n, dtype g, dtype mass,
 
 static double checksum_soa(const particles_soa_t *p)
 {
+  /* Lightweight correctness fingerprint for the SoA acceleration field. */
   double sum = 0.0;
   size_t i;
 #pragma omp parallel for reduction(+ : sum) schedule(static)
@@ -318,6 +349,7 @@ static double checksum_soa(const particles_soa_t *p)
 
 static double checksum_aos(const particle_aos_t *p, size_t n)
 {
+  /* Lightweight correctness fingerprint for the AoS acceleration field. */
   double sum = 0.0;
   size_t i;
 #pragma omp parallel for reduction(+ : sum) schedule(static)
@@ -331,6 +363,9 @@ static void run_one_layout(layout_t layout, particles_soa_t *soa,
                            dtype eps, size_t warmups, size_t repeats,
                            rsqrt_mode_t rsqrt_mode, bool header)
 {
+  /* Time a selected layout after warmup iterations.  The reported force time is
+   * the total time for `repeats` force evaluations, and Gpairs/s normalizes it
+   * by the number of pair interactions. */
   double t0, elapsed, checksum;
   size_t r;
 
@@ -380,6 +415,8 @@ static void print_usage(const char *program)
 
 int main(int argc, char **argv)
 {
+  /* Parse benchmark parameters, build both memory layouts, run the requested
+   * layout comparison, then release all temporary arrays. */
   const char *input_path = NULL;
   layout_t layout = LAYOUT_BOTH;
   rsqrt_mode_t rsqrt_mode = RSQRT_EXACT;

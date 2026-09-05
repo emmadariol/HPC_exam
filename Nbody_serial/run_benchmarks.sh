@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Unified benchmark driver for the project.  All benchmark families share the
+# same command-line convention (`--key value` -> environment variable), the same
+# failure policy, and the same CSV-producing style.  This avoids duplicated
+# Slurm scripts with subtly different parsing or append/overwrite behavior.
 usage() {
   cat <<'EOF'
 usage: ./run_benchmarks.sh COMMAND [options]
@@ -23,6 +27,8 @@ Examples:
 EOF
 }
 
+# The first positional argument selects the benchmark family.  Everything after
+# it is interpreted as generic key/value configuration.
 cmd="${1:-}"
 if [[ -z "$cmd" || "$cmd" == "--help" || "$cmd" == "-h" ]]; then
   usage
@@ -30,6 +36,9 @@ if [[ -z "$cmd" || "$cmd" == "--help" || "$cmd" == "-h" ]]; then
 fi
 shift
 
+# Convert CLI options to exported uppercase variables.  Example:
+#   --strong-n 50000  -> STRONG_N=50000
+# This makes the script easy to call from Make, Slurm, or an interactive shell.
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --*=*)
@@ -54,17 +63,22 @@ while [[ $# -gt 0 ]]; do
   export "$key=$val"
 done
 
+# Common defaults.  Every value can be overridden either as an environment
+# variable or via the command-line conversion above.
 launcher="${LAUNCHER:-srun}"
 cpu_bind="${CPU_BIND:---cpu-bind=verbose,cores}"
 model="${MODEL:-0}"
 dt="${DT:-1e-4}"
 eps="${EPS:-0.05}"
-nsteps="${NSTEPS:-50}"
+nsteps="${NSTEPS:-5}"
 repeats="${REPEATS:-5}"
 warmups="${WARMUPS:-1}"
 energy_every="${ENERGY_EVERY:-10}"
 
 detect_runtime() {
+  # Container engines are treated as interchangeable execution backends.  The
+  # benchmark logic only needs to know how to prefix a command for the selected
+  # runtime; Docker is useful locally, Singularity/Apptainer on clusters.
   if [[ -n "${RUNTIME:-}" ]]; then
     printf "%s" "$RUNTIME"
   elif command -v singularity >/dev/null 2>&1; then
@@ -80,6 +94,8 @@ detect_runtime() {
 
 parse_solver_csv() {
   local prefix="$1"
+  # Parse solver summaries with awk instead of spawning Python inside timing
+  # loops.  This keeps per-run overhead low and prevents measurement pollution.
   awk -v prefix="$prefix" '
     BEGIN {
       FS = "[ =]+";
@@ -122,6 +138,8 @@ parse_solver_csv() {
 
 parse_total_only_csv() {
   local prefix="$1"
+  # Lightweight parser for benchmarks that only need total runtime, final
+  # status, and energy drift.
   awk -v prefix="$prefix" '
     BEGIN { FS = "[ =]+"; OFS = ","; total = status = drift = "" }
     /^# final:/ {
@@ -144,6 +162,9 @@ run_mpi_solver() {
   local ranks="$1"
   local threads="$2"
   shift 2
+  # Slurm's srun is the default launcher on HPC systems.  The CPU binding
+  # string is intentionally configurable because different clusters expose
+  # different binding policies and verbosity.
   OMP_NUM_THREADS="$threads" "$launcher" $cpu_bind --ntasks="$ranks" \
     --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" "$@"
 }
@@ -156,11 +177,16 @@ run_container_mpi() {
   shift 4
   case "$runtime" in
     singularity|apptainer)
+      # For Singularity/Apptainer, Slurm launches the MPI ranks and each rank
+      # enters the same SIF image.  Cluster-specific MPI bind paths can be
+      # injected through SINGULARITY_BINDPATH/SINGULARITYENV_* by the caller.
       OMP_NUM_THREADS="$threads" "$launcher" $cpu_bind --ntasks="$ranks" \
         --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" \
         "$runtime" exec "$image" "$@"
       ;;
     docker)
+      # Docker is mainly for local image validation.  It uses mpirun inside the
+      # container because Slurm is not present on a laptop/WSL Docker runtime.
       docker run --rm \
         -e "OMP_NUM_THREADS=$threads" \
         -e OMPI_ALLOW_RUN_AS_ROOT=1 \
@@ -194,11 +220,17 @@ run_container_single() {
 }
 
 write_failed_scaling_row() {
-  printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,nan,nan,nan,nan,nan,nan,nan,nan,RUN_FAILED,nan\n" "$@"
+  # Failed solver runs are recorded as CSV rows instead of aborting the whole
+  # sweep.  This preserves partial evidence and makes transient Slurm/MPI
+  # failures visible in post-processing.
+  printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,unknown,nan,nan,nan,nan,nan,nan,nan,nan,RUN_FAILED,nan\n" "$@"
 }
 
 bench_scaling() {
-  local strong_n="${STRONG_N:-100000}"
+  # Strong scaling keeps N fixed while resources grow; weak scaling grows N
+  # proportionally to ranks.  Both are produced by the same loop so the report
+  # can compare behavior without changing code paths.
+  local strong_n="${STRONG_N:-10000}"
   local weak_per_rank="${WEAK_PER_RANK:-10000}"
   local ranks_list="${RANKS:-1 2 4 8 16 32 64}"
   local threads_list="${THREADS:-1}"
@@ -220,6 +252,9 @@ bench_scaling() {
   printf "kind,N,nsteps,ranks,threads,repeat,integrator,comm,kernel,rsqrt,accumulators,dtype,total,io,drift,force,comm_wait,kick,energy,gpairs,status,max_rel_drift\n" > "$out"
 
   run_case() {
+    # One measured solver execution.  It creates a deterministic input, runs
+    # native or container mode, parses the concise solver summary, and removes
+    # the temporary binary input afterwards.
     local kind="$1" n="$2" ranks="$3" threads="$4" rep="$5" record="${6:-1}"
     local input="${kind}_N${n}_P${ranks}_T${threads}_seed${rep}.bin"
     local log rc prefix
@@ -228,6 +263,8 @@ bench_scaling() {
       return 0
     fi
     ./generate_ic --model "$model" --n "$n" --seed "$((1000 + rep))" --output "$input" >/dev/null
+    # Temporarily disable `set -e` around the launched job: one failed run must
+    # become a RUN_FAILED CSV row, not kill the entire benchmark sweep.
     set +e
     if [[ "$use_container" == "1" ]]; then
       log="$(run_container_mpi "$runtime" "$image" "$ranks" "$threads" \
@@ -257,6 +294,8 @@ bench_scaling() {
     rm -f "$input"
   }
 
+  # Warmups are executed but not recorded; repeated measurements are recorded
+  # and later summarized with medians/outlier handling in analyze.py.
   for kind in strong weak; do
     for ranks in $ranks_list; do
       local n="$strong_n"
@@ -271,9 +310,12 @@ bench_scaling() {
 }
 
 bench_hybrid() {
+  # Hybrid scaling compares several MPI-rank x OpenMP-thread decompositions at a
+  # fixed total core budget.  Each pair gets its own raw CSV, while the summary
+  # file is merged once so plotting remains simple.
   local prefix="${RESULT_PREFIX:-results_hybrid}"
   local summary="${SUMMARY:-${prefix}_summary.csv}"
-  local pairs="${HYBRID_PAIRS:-64x1 32x2 16x4 8x8 4x16 2x32 1x64}"
+  local pairs="${HYBRID_PAIRS:-64x1 32x2 16x4 8x8 4x16}"
   rm -f "${prefix}"_P*_T*.csv "${prefix}"_P*_T*_summary.csv "$summary"
   for pair in $pairs; do
     local ranks="${pair%x*}"
@@ -288,8 +330,11 @@ bench_hybrid() {
 }
 
 bench_ablation() {
+  # Ablation isolates one optimization dimension at a time: algorithmic kernel,
+  # inverse-square-root implementation, communication mode, and per-thread
+  # accumulator count.  The output is intentionally simple for bar-plotting.
   local ranks="${RANKS:-64}"
-  local n="${N:-50000}"
+  local n="${N:-10000}"
   local out="${OUT:-results_ablation.csv}"
   local input="ic_ablation_N${n}.bin"
   make nbody_direct_hybrid generate_ic >/dev/null
@@ -297,6 +342,8 @@ bench_ablation() {
   printf "Test_Type,Config,Time_Sec\n" > "$out"
 
   ablation_case() {
+    # Record median-ready total times for one variant.  Failures are written as
+    # NaN so the plotter can skip them while the raw CSV still documents them.
     local test_type="$1" config="$2" ranks="$3"
     shift 3
     local log rc time_sec
@@ -326,7 +373,10 @@ bench_ablation() {
 }
 
 bench_layout() {
-  local n="${N:-50000}"
+  # Memory-layout evidence: compare Array-of-Structures (AoS) and
+  # Structure-of-Arrays (SoA) force kernels over a thread sweep, including
+  # checksums to show that the layouts compute equivalent accelerations.
+  local n="${N:-10000}"
   local threads_list="${THREADS:-1 2 4 8}"
   local inner_repeats="${INNER_REPEATS:-3}"
   local rsqrt="${RSQRT:-exact}"
@@ -348,15 +398,24 @@ bench_layout() {
 }
 
 bench_energy() {
-  local n="${N:-50000}"
+  # Energy diagnostics are scientifically useful but expensive because they add
+  # an O(N^2) potential-energy pass.  This sweep quantifies how often the report
+  # can afford to compute the diagnostic.
+  local n="${N:-10000}"
   local ranks="${RANKS:-8}"
   local threads="${THREADS:-1}"
-  local list="${ENERGY_LIST:-1 5 10 $nsteps}"
+  local list="${ENERGY_LIST:-}"
   local out="${OUT:-energy_overhead.csv}"
   local input="${INPUT:-energy_N${n}.bin}"
   make nbody_direct_hybrid generate_ic >/dev/null
   ./generate_ic --model "$model" --n "$n" --seed "${SEED:-5151}" --output "$input" >/dev/null
   printf "N,nsteps,ranks,threads,repeat,energy_every,total,force,energy,status,max_rel_drift\n" > "$out"
+  if [[ -z "$list" ]]; then
+    list="1 5 10 $nsteps"
+  fi
+  # Values larger than nsteps are equivalent to "final step only"; normalize and
+  # de-duplicate them to avoid wasting allocations on repeated energy settings.
+  list="$(for ee in $list; do if (( ee > nsteps )); then echo "$nsteps"; else echo "$ee"; fi; done | awk '!seen[$0]++')"
   for ee in $list; do
     for rep in $(seq 1 "$warmups"); do
       run_mpi_solver "$ranks" "$threads" ./nbody_direct_hybrid --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" --energy-every "$ee" --quiet >/dev/null 2>&1 || true
@@ -384,6 +443,9 @@ bench_energy() {
 }
 
 bench_container() {
+  # Solver container overhead benchmark required by the container part of the
+  # assignment.  It compares native and container executions for the same
+  # deterministic inputs, plus a separate launch-only overhead measurement.
   local image="${IMAGE:-nbody.sif}"
   local out="${OUT:-container_overhead.csv}"
   local launch_out="${LAUNCH_OUT:-container_launch_overhead.csv}"
@@ -398,6 +460,8 @@ bench_container() {
   make nbody_direct_hybrid generate_ic >/dev/null
   printf "kind,mode,N,ranks,threads,repeat,total,status,max_rel_drift\n" > "$out"
   container_case() {
+    # Pair native/container timings as closely as possible: same N, same rank
+    # count, same repeat index, same generated input seed.
     local kind="$1" mode="$2" n="$3" ranks="$4" rep="$5"
     local input="container_${kind}_N${n}_P${ranks}_seed${rep}.bin"
     local log rc prefix
@@ -437,6 +501,8 @@ bench_container() {
 
 parse_osu() {
   local mode_name="$1" bench="$2" metric="$3"
+  # OSU tools print whitespace-separated tables after comment/header lines; only
+  # numeric rows become CSV records.
   awk -v mode="$mode_name" -v bench="$bench" -v metric="$metric" '
     BEGIN { OFS="," }
     /^[[:space:]]*[0-9]+[[:space:]]+/ { print mode, bench, metric, $1, $2 }
@@ -444,6 +510,9 @@ parse_osu() {
 }
 
 bench_osu() {
+  # OSU Micro-Benchmarks provide a direct MPI communication comparison
+  # independent of the N-body code.  The Docker/SIF image includes OSU binaries
+  # so native-vs-container latency and bandwidth can be reported.
   local mode="${MODE:-both}"
   local image="${IMAGE:-nbody.sif}"
   local out="${OUT:-osu_microbench.csv}"
@@ -455,6 +524,8 @@ bench_osu() {
   runtime="$(detect_runtime 2>/dev/null || true)"
   printf "mode,benchmark,metric,bytes,value\n" > "$out"
   run_osu_one() {
+    # Run one OSU executable in native or container mode.  Warnings go to stderr;
+    # successful numeric rows are appended to the shared CSV.
     local mode_name="$1" bench="$2" metric="$3" tool="$4"
     local log rc
     set +e
@@ -486,6 +557,9 @@ bench_osu() {
 }
 
 bench_perf() {
+  # Optional hardware-counter snapshot.  It is not required for the main report
+  # but can help discuss bottlenecks such as instruction count, cache misses, or
+  # branch misses when the cluster allows `perf`.
   local input="${INPUT:-perf_counter_input.bin}"
   local n="${N:-20000}"
   local ranks="${RANKS:-1}"

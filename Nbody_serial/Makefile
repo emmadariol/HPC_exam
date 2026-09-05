@@ -1,3 +1,5 @@
+# Compiler knobs are intentionally overridable from the command line so that the
+# same repository can be built on a laptop, Orfeo, Leonardo, or inside Docker.
 CC        ?= gcc
 MPICC     ?= mpicc
 STD       ?= -std=c11
@@ -6,9 +8,16 @@ OMPFLAGS  ?= -fopenmp
 LDLIBS    ?= -lm
 PRECISION ?= double
 
+# The four maintained executables:
+#   generate_ic              creates reproducible binary inputs
+#   nbody_direct_serial      serial reference solver
+#   nbody_direct_hybrid      MPI + OpenMP production solver
+#   nbody_layout_benchmark   AoS-vs-SoA memory-layout evidence
 PROGRAMS := nbody_direct_serial nbody_direct_hybrid nbody_layout_benchmark generate_ic
 HEADERS  := nbody_common.h
 
+# Compile-time precision is selected through preprocessor symbols consumed by
+# nbody_common.h.  File storage remains float in both cases.
 ifeq ($(PRECISION),float)
 PRECISION_CPPFLAGS := -DNBODY_USE_FLOAT
 else ifeq ($(PRECISION),double)
@@ -21,21 +30,29 @@ endif
 
 all: $(PROGRAMS)
 
+# The serial executable is also built with OpenMP flags because it contains
+# optional SIMD pragmas guarded by _OPENMP; it remains a single-process solver.
 nbody_direct_serial: nbody_direct_serial.c $(HEADERS)
 	$(CC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -o $@ $< $(LDLIBS)
 
+# The hybrid solver links with MPI and enables OpenMP inside each rank.
 nbody_direct_hybrid: nbody_direct_hybrid.c $(HEADERS)
 	$(MPICC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -o $@ $< $(LDLIBS)
 
+# The layout benchmark is OpenMP-only: it compares memory layout effects without
+# MPI communication noise.
 nbody_layout_benchmark: nbody_layout_benchmark.c $(HEADERS)
 	$(CC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -o $@ $< $(LDLIBS)
 
+# Initial-condition generation is serial and deterministic.
 generate_ic: generate_ic.c $(HEADERS)
 	$(CC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) -o $@ $< $(LDLIBS)
 
-# Variabile per il launcher MPI, sovrascrivibile da riga di comando
+# MPI launcher used by the smoke test; override it on systems that require srun.
 MPI_RUN ?= mpirun -np 2
 
+# Fast correctness/build smoke test.  It is deliberately small enough to run on
+# a login node or short allocation, before spending cluster queue time.
 run-smoke: all
 	./generate_ic --model 0 --n 128 --seed 42 --output plummer_128.bin
 	./nbody_direct_serial --input plummer_128.bin --nsteps 5 --dt 1e-4 --eps 0.05 --energy-every 1 --output plummer_128_final.bin --quiet
@@ -43,12 +60,16 @@ run-smoke: all
 	OMP_NUM_THREADS=2 $(MPI_RUN) ./nbody_direct_hybrid --input plummer_128.bin --nsteps 5 --dt 1e-4 --eps 0.05 --energy-every 1 --integrator dkd --comm overlap --quiet
 	OMP_NUM_THREADS=2 ./nbody_layout_benchmark --input plummer_128.bin --layout both --warmups 1 --inner-repeats 1 >/dev/null
 
+# Ask GCC/MPICC which loops were vectorised or missed; the reports are useful
+# when discussing compiler assistance and remaining scalar bottlenecks.
 vec-report:
 	mkdir -p docs
 	$(CC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -fopt-info-vec-optimized -fopt-info-vec-missed -c nbody_direct_serial.c -o /tmp/nbody_direct_serial_vec.o 2> docs/vectorization_serial_report.txt
 	$(MPICC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -fopt-info-vec-optimized -fopt-info-vec-missed -c nbody_direct_hybrid.c -o /tmp/nbody_direct_hybrid_vec.o 2> docs/vectorization_report.txt
 	rm -f /tmp/nbody_direct_serial_vec.o /tmp/nbody_direct_hybrid_vec.o
 
+# Convenience targets wrap the unified benchmark orchestrator and the unified
+# analysis CLI.  Cluster submission is handled separately by jobs/submit.sh.
 bench-scaling: all
 	bash ./run_benchmarks.sh scaling
 	python3 analyze.py summarize scaling benchmark_results.csv benchmark_summary.csv

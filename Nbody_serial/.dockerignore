@@ -1,12 +1,31 @@
+# Git metadata is not needed inside the build context.
 .git
+
+# Native build outputs are rebuilt inside the image.
 *.o
+generate_ic
+nbody_direct_serial
+nbody_direct_hybrid
+nbody_layout_benchmark
+
+# Temporary particle states and local smoke-test inputs can be large.
 *.bin
+test_*
+
+# Do not nest container images or compressed exports inside the Docker context.
 *.sif
-benchmark_results.csv
-benchmark_summary.csv
-container_overhead.csv
-docker_overhead.csv
+*.tar.gz
+*.tgz
+*.zip
+
+# Benchmark outputs are generated outside the image and curated separately.
+runs/
+*.csv
+*.svg
+*.out
+*.err
+*.log
+
+# Local report/build scratch files are not required to compile the executables.
 system_info.txt
 vectorization_report.txt
-scaling_*.svg
-test_*

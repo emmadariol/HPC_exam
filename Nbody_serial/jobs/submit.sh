@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Single Slurm submission entry point for the project.  Cluster differences are
+# encoded as defaults below, while benchmark logic stays in run_benchmarks.sh.
+# This prevents maintaining parallel Orfeo/Leonardo copies of the same job.
 usage() {
   cat <<'EOF'
 usage: jobs/submit.sh --cluster orfeo|leonardo --bench BENCH [options]
@@ -33,6 +36,8 @@ Examples:
 EOF
 }
 
+# Parsed command-line state.  Empty values are filled by cluster/benchmark
+# defaults after validation.
 cluster=""
 bench=""
 partition=""
@@ -44,9 +49,12 @@ time_limit=""
 exclusive="0"
 dependency=""
 result_dir=""
+result_dir_explicit="0"
 job_name=""
 extra_env=()
 
+# Parse wrapper options until `--`; anything after `--` must be VAR=VALUE and is
+# exported into the generated Slurm job script.
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --cluster) cluster="$2"; shift 2 ;;
@@ -59,7 +67,7 @@ while [[ $# -gt 0 ]]; do
     --time) time_limit="$2"; shift 2 ;;
     --exclusive) exclusive="1"; shift ;;
     --afterok) dependency="$2"; shift 2 ;;
-    --result-dir) result_dir="$2"; shift 2 ;;
+    --result-dir) result_dir="$2"; result_dir_explicit="1"; shift 2 ;;
     --name) job_name="$2"; shift 2 ;;
     --help|-h) usage; exit 0 ;;
     --) shift; extra_env=("$@"); break ;;
@@ -71,12 +79,18 @@ done
 
 case "$cluster" in
   orfeo)
+    # Orfeo CPU runs in this project used the dssc account and GENOA/EPYC
+    # partitions.  The Singularity module is optional because some tests do not
+    # need containers.
     account="${account:-dssc}"
     partition="${partition:-GENOA}"
     qos="${qos:-normal}"
     module_block='module purge; module load openMPI/4.1.6; module load singularity/4.3.1 2>/dev/null || true'
     ;;
   leonardo)
+    # Leonardo DCGP defaults are kept here for portability, even though the
+    # final successful campaign was executed on Orfeo.  Account/partition/qos can
+    # always be overridden on the command line.
     account="${account:-uTS26_Tornator_0}"
     partition="${partition:-dcgp_usr_prod}"
     qos="${qos:-dcgp_qos_bprod}"
@@ -89,9 +103,11 @@ case "$cluster" in
 esac
 
 case "$bench" in
+  # Conservative defaults keep jobs small enough for interactive iteration.
+  # Heavier experiments can override --cpus and --time explicitly.
   probe) default_time="00:10:00"; default_cpus="2" ;;
-  scaling) default_time="02:00:00"; default_cpus="64" ;;
-  hybrid) default_time="02:00:00"; default_cpus="64" ;;
+  scaling) default_time="01:59:00"; default_cpus="64" ;;
+  hybrid) default_time="01:59:00"; default_cpus="64" ;;
   ablation) default_time="01:30:00"; default_cpus="64" ;;
   evidence) default_time="01:30:00"; default_cpus="8" ;;
   container) default_time="01:00:00"; default_cpus="4" ;;
@@ -102,6 +118,8 @@ esac
 time_limit="${time_limit:-$default_time}"
 cpus="${cpus:-$default_cpus}"
 job_name="${job_name:-${bench}_${cluster}}"
+# Each submission writes into its own timestamped directory unless the caller
+# provides --result-dir.  This avoids overwriting previous campaigns.
 timestamp="$(date +%Y%m%d_%H%M%S)"
 result_dir="${result_dir:-runs/${cluster}_${bench}_${timestamp}}"
 
@@ -109,28 +127,41 @@ mkdir -p "$result_dir"
 
 case "$bench" in
   probe)
+    # Hardware/software provenance for the node that actually executes the job.
     payload='bash ./collect_system_info.sh "$RESULT_DIR/system_info.txt"'
     ;;
   scaling)
+    # Raw scaling CSV, summarized CSV, and SVG plots in one self-contained job.
     payload='OUT="${RESULT_DIR}/scaling.csv" bash ./run_benchmarks.sh scaling; python3 analyze.py summarize scaling "$RESULT_DIR/scaling.csv" "$RESULT_DIR/scaling_summary.csv"; python3 analyze.py plot scaling "$RESULT_DIR/scaling_summary.csv" "$RESULT_DIR/scaling"'
     ;;
   hybrid)
+    # Hybrid internally calls the scaling driver for each P x T pair and merges
+    # summaries before plotting.
     payload='RESULT_PREFIX="${RESULT_DIR}/hybrid" bash ./run_benchmarks.sh hybrid'
     ;;
   ablation)
+    # Optimization ablation: one raw CSV plus one bar chart.
     payload='OUT="${RESULT_DIR}/ablation.csv" bash ./run_benchmarks.sh ablation; python3 analyze.py plot ablation "$RESULT_DIR/ablation.csv" "$RESULT_DIR/ablation"'
     ;;
   evidence)
+    # Non-scaling evidence used by the report: system info, memory layout, and
+    # energy diagnostic overhead.
     payload='bash ./collect_system_info.sh "$RESULT_DIR/system_info.txt"; OUT="$RESULT_DIR/layout.csv" bash ./run_benchmarks.sh layout; python3 analyze.py summarize layout "$RESULT_DIR/layout.csv" "$RESULT_DIR/layout_summary.csv"; python3 analyze.py plot layout "$RESULT_DIR/layout_summary.csv" "$RESULT_DIR/layout_force_time"; OUT="$RESULT_DIR/energy.csv" bash ./run_benchmarks.sh energy; python3 analyze.py summarize energy "$RESULT_DIR/energy.csv" "$RESULT_DIR/energy_summary.csv"; python3 analyze.py plot energy "$RESULT_DIR/energy_summary.csv" "$RESULT_DIR/energy_overhead"'
     ;;
   container)
+    # Pull the SIF from Docker Hub if it is missing, then measure native vs
+    # container solver overhead.
     payload='if [[ ! -f "${IMAGE:-nbody.sif}" && -n "${IMAGE_URI:-docker://memid01/nbody-hpc:latest}" ]]; then singularity pull --force "${IMAGE:-nbody.sif}" "${IMAGE_URI:-docker://memid01/nbody-hpc:latest}"; fi; OUT="$RESULT_DIR/container_overhead.csv" LAUNCH_OUT="$RESULT_DIR/container_overhead_launch.csv" bash ./run_benchmarks.sh container; python3 analyze.py summarize container "$RESULT_DIR/container_overhead.csv" "$RESULT_DIR/container_overhead_summary.csv"; python3 analyze.py plot container "$RESULT_DIR/container_overhead_summary.csv" "$RESULT_DIR/container_overhead"'
     ;;
   osu)
+    # Pull the SIF if needed, then compare native/container OSU latency and
+    # bandwidth.  Native OSU paths can be overridden via OSU_LATENCY/OSU_BW.
     payload='if [[ ! -f "${IMAGE:-nbody.sif}" && -n "${IMAGE_URI:-docker://memid01/nbody-hpc:latest}" ]]; then singularity pull --force "${IMAGE:-nbody.sif}" "${IMAGE_URI:-docker://memid01/nbody-hpc:latest}"; fi; OUT="$RESULT_DIR/osu_microbench_native_vs_container.csv" bash ./run_benchmarks.sh osu --mode both; python3 analyze.py summarize osu "$RESULT_DIR/osu_microbench_native_vs_container.csv" "$RESULT_DIR/osu_microbench_summary.csv"; python3 analyze.py plot osu "$RESULT_DIR/osu_microbench_summary.csv" "$RESULT_DIR/osu_microbench"'
     ;;
 esac
 
+# Shell-quote the result directory and all VAR=VALUE overrides before embedding
+# them into the generated job script.
 printf -v quoted_result_dir "%q" "$result_dir"
 env_block="RESULT_DIR=$quoted_result_dir"
 for item in "${extra_env[@]}"; do
@@ -146,6 +177,8 @@ done
 
 printf -v quoted_pwd "%q" "$PWD"
 job_script="$result_dir/job_${bench}.sh"
+# Generate a small, inspectable Slurm payload script.  The generated script is
+# stored beside the results so each campaign remains reproducible.
 cat > "$job_script" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
@@ -154,10 +187,14 @@ cd $quoted_pwd
 $module_block
 export OMP_PLACES=cores
 export OMP_PROC_BIND=spread
-$env_block
+# Export benchmark parameters so child scripts such as run_benchmarks.sh and
+# analyze.py receive the values passed after -- to jobs/submit.sh.
+export $env_block
 $payload
 EOF
 
+# Build sbatch arguments as an array to avoid word-splitting bugs in account,
+# partition, qos, and path values.
 sbatch_args=(
   --account="$account"
   --partition="$partition"
@@ -175,6 +212,11 @@ sbatch_args=(
 [[ -n "$dependency" ]] && sbatch_args+=(--dependency="afterok:$dependency")
 [[ "$cluster" == "leonardo" ]] && sbatch_args+=(--gres=tmpfs:10g)
 
+# Record the submitted job id together with the benchmark name and result
+# directory.  LAST_<CLUSTER>_RUN.txt is a convenience pointer for follow-up
+# checks and archiving.
 job_id="$(sbatch --parsable "${sbatch_args[@]}" "$job_script")"
 printf "%s\t%s\t%s\n" "$bench" "$job_id" "$result_dir" | tee -a "$result_dir/jobs.tsv"
-echo "$result_dir" > "LAST_${cluster^^}_RUN.txt"
+if [[ "$result_dir_explicit" == "0" ]]; then
+  echo "$result_dir" > "LAST_${cluster^^}_RUN.txt"
+fi

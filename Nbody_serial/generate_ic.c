@@ -1,5 +1,5 @@
 /*
- * gen_plummer_sphere.c
+ * generate_ic.c
  *
  * Stand-alone C11 generator for equal-mass Plummer-sphere initial conditions.
  * The output is the native-endian binary format read by nbody_direct_serial.c:
@@ -15,7 +15,9 @@
  *
  * The generated coordinates and velocities use dtype internally.  Select it at
  * compile time with -DNBODY_USE_DOUBLE or -DNBODY_USE_FLOAT; the file is always
- * stored as float32 records.
+ * stored as float32 records.  This reproducibility is important for HPC
+ * benchmarking: native, MPI, OpenMP, and container runs must start from the same
+ * physical state if their timings and energy drift are to be compared fairly.
  */
 
 #include "nbody_common.h"
@@ -641,6 +643,8 @@ int main(int argc, char **argv)
   rng_t rng;
   int argi;
 
+  /* Parse long options manually to keep this small utility dependency-free on
+   * clusters where extra argument-parsing libraries are not installed. */
   for (argi = 1; argi < argc; ++argi)
   {
     const char *value;
@@ -709,6 +713,8 @@ int main(int argc, char **argv)
   if (!(sigma >= (dtype)0.0) || !dtype_isfinite(sigma))
     die("--sigma must be non-negative and finite, or negative to request the auto value");
 
+  /* Allocate one array per physical component.  This mirrors the solver's SoA
+   * layout and avoids an AoS-to-SoA conversion before writing the binary file. */
   x = allocate_array(n, "x");
   y = allocate_array(n, "y");
   z = allocate_array(n, "z");
@@ -716,6 +722,8 @@ int main(int argc, char **argv)
   vy = allocate_array(n, "vy");
   vz = allocate_array(n, "vz");
 
+  /* Every dataset is reproducible from (model, n, seed); this matters when
+   * comparing native vs container or rerunning failed Slurm jobs. */
   rng.state = seed;
   rng.has_spare = false;
   rng.spare = (dtype)0.0;
@@ -726,6 +734,8 @@ int main(int argc, char **argv)
   else
     generate_ball_maxwell(n, ball_radius, sigma, &rng, x, y, z, vx, vy, vz);
 
+  /* write_particles_binary performs the final finite-value/storage check, then
+   * emits the compact float32 input consumed by every solver benchmark. */
   write_particles_binary(output_path, n, x, y, z, vx, vy, vz);
 
   free(x);

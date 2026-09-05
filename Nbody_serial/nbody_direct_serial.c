@@ -592,7 +592,7 @@ static void drift(particles_t *p, // particle positions are modified in place
 }
 
 /*
- * Kick all velocities using the current accelerations.  his is the K in DKD
+ * Kick all velocities using the current accelerations.  This is the K in DKD.
  */
 static void kick(particles_t *p, // particle velocities are modified in place
                  dtype dt        // full kick interval
@@ -760,6 +760,10 @@ static void print_usage(const char *program // argv[0]
 
 int main(int argc, char **argv)
 {
+  /* Serial driver used as the correctness/reference baseline.  It intentionally
+   * keeps the execution path simple: parse options, read a full particle set,
+   * compute the initial energy, run DKD steps, optionally write the final state,
+   * and emit summary lines that the benchmark scripts can parse. */
   const char *input_path = NULL;
   const char *output_path = NULL;
   size_t nsteps = 10u;
@@ -778,12 +782,12 @@ int main(int argc, char **argv)
   dtype potential0;
   dtype energy0;
 
-  // ·························································
-  // allocate particles container to an empty state
+  /* Start from an empty container so cleanup is safe even if parsing or input
+   * reading fails before all arrays are allocated. */
   particles_init_empty(&particles);
 
-  // ························································
-  // parse CLI
+  /* Parse all command-line options before touching the input file.  This keeps
+   * invalid benchmark configurations from producing partial output. */
   for (int argi = 1; argi < argc; ++argi)
   {
     const char *value;
@@ -849,12 +853,12 @@ int main(int argc, char **argv)
   if (!(energy_tol > (dtype)0.0))
     die("--energy-tol must be positive");
 
-  // ························································
-  // read particles from input file
+  /* Read the whole dataset in the serial baseline.  Parallel decomposition is
+   * introduced only in nbody_direct_hybrid.c. */
   particles_read_binary(input_path, mass, io_checks, &particles, &io_profile);
 
-  // ························································
-  // get energy baseline
+  /* Initial energy is the reference used to report relative energy drift after
+   * the integration. */
   energy0 = total_energy(&particles, g, eps, &kinetic0, &potential0);
 
   if (!quiet)

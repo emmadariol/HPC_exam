@@ -1,3 +1,14 @@
+/*
+ * nbody_direct_hybrid.c
+ *
+ * Production solver used for the scaling experiments.  It combines MPI across
+ * ranks with OpenMP inside each rank and keeps the same direct O(N^2)
+ * gravitational algorithm as the serial reference.  The point of this file is
+ * not to change the physics, but to expose the parallelization choices that the
+ * report evaluates: rank decomposition, communication mode, force-kernel
+ * variants, inverse-square-root approximation, and diagnostic overhead.
+ */
+
 #include "nbody_common.h"
 
 #include <errno.h>
@@ -12,6 +23,8 @@
 
 typedef struct particles_s
 {
+  /* Local particle block owned by one MPI rank, stored in Structure-of-Arrays
+   * form so the innermost force loop reads contiguous x/y/z source arrays. */
   size_t n;
   dtype mass;
   dtype *x, *y, *z;
@@ -21,6 +34,8 @@ typedef struct particles_s
 
 typedef struct timings_s
 {
+  /* Timings are accumulated by phase and later reduced with MPI_MAX.  Reporting
+   * the slowest rank is the correct wall-clock cost of a parallel step. */
   double drift;
   double force;
   double comm_wait;
@@ -32,36 +47,50 @@ typedef struct timings_s
 
 typedef enum integrator_e
 {
+  /* KDK and DKD are two equivalent leapfrog orderings.  Keeping both available
+   * makes the integrator choice explicit in benchmark metadata. */
   INTEGRATOR_KDK,
   INTEGRATOR_DKD
 } integrator_t;
 
 typedef enum comm_mode_e
 {
+  /* SENDRECV measures a simple blocking ring exchange.  OVERLAP posts
+   * non-blocking communication before computing on the current source block, so
+   * communication can be partially hidden by useful force work. */
   COMM_SENDRECV,
   COMM_OVERLAP
 } comm_mode_t;
 
 typedef enum kernel_mode_e
 {
+  /* DIRECT evaluates all source/target pairs.  NEWTON exploits action-reaction
+   * symmetry but is implemented only for one rank because cross-rank symmetric
+   * updates would require a different communication/reduction scheme. */
   KERNEL_DIRECT,
   KERNEL_NEWTON
 } kernel_mode_t;
 
 typedef enum rsqrt_mode_e
 {
+  /* EXACT uses the selected dtype sqrt.  APPROX uses a float seed plus Newton
+   * refinement, trading numerical path changes for speed experiments. */
   RSQRT_EXACT,
   RSQRT_APPROX
 } rsqrt_mode_t;
 
 typedef enum accumulator_mode_e
 {
+  /* Multiple accumulator chains reduce loop-carried dependencies in the direct
+   * kernel and can expose more instruction-level parallelism to the compiler. */
   ACCUMULATORS_ONE = 1,
   ACCUMULATORS_FOUR = 4
 } accumulator_mode_t;
 
 static void die(const char *fmt, ...)
 {
+  /* Abort every rank on fatal errors; otherwise one failed rank could leave the
+   * rest of the MPI job hanging inside collectives. */
   va_list args;
   va_start(args, fmt);
   vfprintf(stderr, fmt, args);
@@ -72,6 +101,8 @@ static void die(const char *fmt, ...)
 
 static MPI_Datatype mpi_dtype(void)
 {
+  /* MPI communication must match the compile-time dtype selected in
+   * nbody_common.h. */
 #if defined(NBODY_USE_FLOAT)
   return MPI_FLOAT;
 #else
@@ -217,6 +248,8 @@ static const char *option_value(int *i, int argc, char **argv, const char *key)
 
 static void *checked_aligned_alloc(size_t nbytes)
 {
+  /* Cache-line aligned allocation helps vector loads/stores and avoids
+   * accidental misalignment when OpenMP threads touch contiguous blocks. */
   const size_t alignment = NBODY_ALIGNMENT;
   const size_t padded = ((nbytes + alignment - 1u) / alignment) * alignment;
   void *ptr;
@@ -250,6 +283,8 @@ static void particles_init_empty(particles_t *p)
 
 static void particles_allocate(particles_t *p, size_t n, dtype mass)
 {
+  /* Allocate every coordinate/velocity/acceleration component separately.  This
+   * SoA layout is the primary memory-layout optimization for the force kernel. */
   const size_t bytes = n * sizeof(dtype);
   particles_init_empty(p);
   p->n = n;
@@ -282,6 +317,8 @@ static void particles_free(particles_t *p)
 static void block_bounds(size_t n, int rank, int nranks,
                          size_t *start, size_t *count)
 {
+  /* Block distribution with the remainder assigned to lower ranks.  Local
+   * counts differ by at most one, which keeps the O(N^2/P) work balanced. */
   const size_t base = n / (size_t)nranks;
   const size_t rem = n % (size_t)nranks;
   *count = base + ((size_t)rank < rem ? 1u : 0u);
@@ -299,6 +336,9 @@ static void read_local_particles(const char *path, dtype mass, int rank,
                                  int nranks, particles_t *local,
                                  size_t *global_n, size_t *local_start)
 {
+  /* Each rank reads the compact input file but keeps only its assigned block.
+   * This is simple and reproducible for the problem sizes used here, avoiding
+   * extra MPI-IO complexity in the assignment code. */
   FILE *fp = fopen(path, "rb");
   unsigned char magic[NBODY_BINARY_MAGIC_SIZE];
   uint64_t n64;
@@ -348,6 +388,9 @@ static void write_output_root(const char *path, const particles_t *local,
                               size_t global_n, int rank, int nranks,
                               MPI_Comm comm)
 {
+  /* Optional final-state output is gathered on rank 0 and written in the same
+   * binary format as the input.  Benchmark runs normally omit this to avoid I/O
+   * contaminating timing data. */
   int *counts = NULL, *displs = NULL;
   dtype *x = NULL, *y = NULL, *z = NULL, *vx = NULL, *vy = NULL, *vz = NULL;
   size_t r;
@@ -428,6 +471,8 @@ static void write_output_root(const char *path, const particles_t *local,
 
 static void drift(particles_t *p, dtype dt)
 {
+  /* Drift step: update positions using current velocities.  Particles are
+   * independent here, so OpenMP static scheduling is deterministic and cheap. */
   size_t i;
 #pragma omp parallel for schedule(static)
   for (i = 0u; i < p->n; ++i)
@@ -440,6 +485,8 @@ static void drift(particles_t *p, dtype dt)
 
 static void kick(particles_t *p, dtype dt)
 {
+  /* Kick step: update velocities using the acceleration field from the latest
+   * force evaluation. */
   size_t i;
 #pragma omp parallel for schedule(static)
   for (i = 0u; i < p->n; ++i)
@@ -459,6 +506,9 @@ static void accumulate_sources(const particles_t *home,
                                rsqrt_mode_t rsqrt_mode,
                                accumulator_mode_t accumulator_mode)
 {
+  /* Core direct force kernel.  `home` is the local target block; sx/sy/sz is the
+   * current source block, which may belong to this rank or may have arrived from
+   * a neighbor in the MPI ring. */
   const dtype eps2 = eps * eps;
   size_t i;
 
@@ -578,6 +628,9 @@ static void compute_accelerations_newton_private(particles_t *local, dtype g,
                                                  dtype eps,
                                                  rsqrt_mode_t rsqrt_mode)
 {
+  /* Single-rank Newton kernel.  Thread-private acceleration buffers avoid races
+   * when applying equal-and-opposite pair contributions, then a reduction pass
+   * merges those buffers into the real acceleration arrays. */
   const size_t n = local->n;
   const dtype eps2 = eps * eps;
   const int nthreads = omp_get_max_threads();
@@ -654,6 +707,8 @@ static void exchange_sources_sendrecv(dtype *bx, dtype *by, dtype *bz,
                                       int rank, int nranks, int tag_base,
                                       MPI_Datatype dt, MPI_Comm comm)
 {
+  /* Blocking ring exchange: send the current source block clockwise and receive
+   * the previous rank's block counter-clockwise, component by component. */
   const int send_to = (rank + 1) % nranks;
   const int recv_from = (rank + nranks - 1) % nranks;
   MPI_Sendrecv(bx, (int)buf_n, dt, send_to, tag_base + 0,
@@ -674,6 +729,9 @@ static void post_source_exchange(dtype *bx, dtype *by, dtype *bz,
                                  MPI_Datatype dt, MPI_Comm comm,
                                  MPI_Request req[6])
 {
+  /* Non-blocking ring exchange used by COMM_OVERLAP.  Receives are posted before
+   * sends to avoid ordering hazards; the caller computes on the current block
+   * before waiting for completion. */
   const int send_to = (rank + 1) % nranks;
   const int recv_from = (rank + nranks - 1) % nranks;
   MPI_Irecv(rx, (int)next_n, dt, recv_from, tag_base + 0, comm, &req[0]);
@@ -693,6 +751,10 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
                                        double *comm_wait,
                                        MPI_Comm comm)
 {
+  /* MPI ring algorithm for all-pairs direct summation.  Each rank starts with
+   * its own local particles as sources, computes their contribution to local
+   * targets, then circulates source blocks until every rank has seen every
+   * particle. */
   const size_t max_n = max_block_count(global_n, nranks);
   dtype *bx = checked_aligned_alloc(max_n * sizeof(dtype));
   dtype *by = checked_aligned_alloc(max_n * sizeof(dtype));
@@ -722,6 +784,8 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
 
   for (int step = 0; step < nranks; ++step)
   {
+    /* Step 0 computes the local source block; later steps compute blocks that
+     * have traveled around the ring. */
     if (nranks > 1)
     {
       const int next_owner = (owner + nranks - 1) % nranks;
@@ -773,6 +837,8 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
 
 static long double kinetic_energy_local(const particles_t *p)
 {
+  /* Kinetic energy is local to each rank and then summed globally.  Long double
+   * accumulation reduces diagnostic roundoff without changing simulation dtype. */
   long double sum = 0.0L;
   size_t i;
 #pragma omp parallel for reduction(+ : sum) schedule(static)
@@ -822,6 +888,8 @@ static dtype total_energy_ring(const particles_t *local, size_t global_n,
                                int rank, int nranks, MPI_Comm comm,
                                dtype *kinetic, dtype *potential)
 {
+  /* Potential energy uses a second ring traversal.  It is expensive O(N^2), so
+   * production runs sample it periodically and report the measured overhead. */
   const size_t max_n = max_block_count(global_n, nranks);
   dtype *bx = checked_aligned_alloc(max_n * sizeof(dtype));
   dtype *by = checked_aligned_alloc(max_n * sizeof(dtype));
@@ -906,6 +974,9 @@ static void print_usage(const char *program)
 
 int main(int argc, char **argv)
 {
+  /* Main is intentionally linear: initialize MPI, parse configuration, read the
+   * local particle block, run the selected leapfrog scheme, reduce timings, and
+   * print machine-readable summary lines for run_benchmarks.sh. */
   const char *input_path = NULL, *output_path = NULL;
   size_t nsteps = 10u, energy_every = 1u, global_n = 0u, local_start = 0u;
   dtype dt = (dtype)1.0e-3, eps = (dtype)1.0e-2;
@@ -923,6 +994,8 @@ int main(int argc, char **argv)
   double max_rel_drift = 0.0;
   double t0, t1;
 
+  /* MPI_THREAD_FUNNELED is enough because MPI calls are made by the main thread
+   * while OpenMP is used only inside compute loops. */
   MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nranks);
@@ -979,6 +1052,8 @@ int main(int argc, char **argv)
       (energy_tol <= (dtype)0.0))
     die("invalid non-positive physical or diagnostic parameter");
 
+  /* Initial energy is computed before integration so every run reports a
+   * relative energy-drift correctness metric. */
   timing.total = seconds();
   t0 = seconds();
   read_local_particles(input_path, mass, rank, nranks, &local,
@@ -1008,6 +1083,7 @@ int main(int argc, char **argv)
            (double)kinetic0, (double)potential0, (double)energy0, 0.0);
   }
 
+  /* KDK needs an initial force field before the first half-kick. */
   if (integrator == INTEGRATOR_KDK)
   {
     t0 = seconds();
@@ -1066,6 +1142,8 @@ int main(int argc, char **argv)
       timing.drift += seconds() - t0;
     }
 
+    /* Diagnostic energy is sampled periodically and always at the final step.
+     * This balances correctness evidence against diagnostic overhead. */
     if (((step % energy_every) == 0u) || (step == nsteps))
     {
       dtype kinetic, potential, energy;

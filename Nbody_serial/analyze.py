@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Unified CSV analysis and SVG plotting CLI for the N-body project."""
+"""Unified CSV analysis and SVG plotting CLI for the N-body project.
+
+The script deliberately avoids external plotting dependencies so that it can run
+on restrictive login nodes and batch allocations.  Its job is to turn raw CSVs
+from ``run_benchmarks.sh`` into compact summaries and simple SVG figures used by
+the final report.
+"""
 
 from __future__ import annotations
 
@@ -12,11 +18,13 @@ from pathlib import Path
 
 
 def read_csv(path: str | Path) -> list[dict[str, str]]:
+    """Read a CSV file as dictionaries, preserving column names from the header."""
     with Path(path).open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
 
 
 def write_csv(path: str | Path, fields: list[str], rows: list[dict[str, object]]) -> None:
+    """Write a deterministic CSV and print a short message for Slurm logs."""
     with Path(path).open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
@@ -25,11 +33,18 @@ def write_csv(path: str | Path, fields: list[str], rows: list[dict[str, object]]
 
 
 def median_absolute_deviation(values: list[float]) -> float:
+    """Robust dispersion estimator used to identify timing outliers."""
     med = statistics.median(values)
     return statistics.median(abs(v - med) for v in values)
 
 
 def keep_non_outliers(rows: list[dict[str, object]]) -> tuple[list[dict[str, object]], int, float]:
+    """Remove 3-sigma-equivalent outliers using MAD, falling back to all rows.
+
+    Runtime measurements on shared clusters can show occasional noise from the
+    system or scheduler.  Median + MAD is less sensitive to those spikes than
+    mean + standard deviation, so the reported summary remains defensible.
+    """
     totals = [float(r["total"]) for r in rows]
     med = statistics.median(totals)
     mad = median_absolute_deviation(totals)
@@ -41,14 +56,17 @@ def keep_non_outliers(rows: list[dict[str, object]]) -> tuple[list[dict[str, obj
 
 
 def dtype_size(dtype: str) -> int:
+    """Return the byte size used to estimate communication volume."""
     return 4 if dtype == "float" else 8
 
 
 def finite(row: dict[str, object], keys: tuple[str, ...]) -> bool:
+    """Check that all requested numeric fields are finite."""
     return all(math.isfinite(float(row[k])) for k in keys)
 
 
 def summarize_scaling(src: str, dst: str) -> None:
+    """Summarize raw strong/weak scaling rows into one row per configuration."""
     rows: list[dict[str, object]] = []
     for row in read_csv(src):
         for key in ("N", "nsteps", "ranks", "threads"):
@@ -59,6 +77,9 @@ def summarize_scaling(src: str, dst: str) -> None:
             row[key] = float(row.get(key, "nan") or "nan")
         rows.append(row)
 
+    # Group repeated runs by the complete experimental configuration.  Keeping
+    # algorithmic options in the key prevents mixing, for example, sendrecv and
+    # overlap communication measurements.
     groups: dict[tuple[object, ...], list[dict[str, object]]] = defaultdict(list)
     for row in rows:
         key = (
@@ -72,6 +93,8 @@ def summarize_scaling(src: str, dst: str) -> None:
     summary: list[dict[str, object]] = []
     for key, values in sorted(groups.items()):
         kind, n, ranks, threads, integrator, comm, kernel, rsqrt, accumulators = key
+        # Only successful finite runs contribute to medians; failed rows remain
+        # counted so the report can disclose reliability.
         valid = [
             v for v in values
             if v.get("status") in ("OK", "WARNING")
@@ -85,6 +108,9 @@ def summarize_scaling(src: str, dst: str) -> None:
         comm_waits = [float(v["comm_wait"]) for v in kept]
         gpairs = [float(v["gpairs"]) for v in kept]
         nsteps = max(int(v["nsteps"]) for v in values)
+        # KDK uses one force evaluation before the loop and one per step; DKD
+        # needs one per step.  The estimate is used only for communication-rate
+        # context, not for correctness.
         force_evals = nsteps + (1 if integrator == "kdk" else 0)
         bytes_per_rank = (
             force_evals * max(0, int(ranks) - 1) *
@@ -119,6 +145,9 @@ def summarize_scaling(src: str, dst: str) -> None:
             "all_ok": all(v["status"] == "OK" for v in valid) and len(valid) == len(values),
         })
 
+    # Baselines are the smallest-resource rows available for each comparable
+    # configuration.  Strong scaling fixes N; weak scaling normalizes by the
+    # resource ratio because N grows with P.
     baselines: dict[tuple[object, ...], dict[str, object]] = {}
     for row in summary:
         if row["kind"] == "strong":
@@ -146,15 +175,21 @@ def summarize_scaling(src: str, dst: str) -> None:
                 row["kernel"], row["rsqrt"], row["accumulators"],
             )
         base = baselines[base_key]
-        resource_ratio = float(row["resources"]) / float(base["resources"])
-        speedup = float(base["total_median"]) / float(row["total_median"])
-        row["speedup"] = speedup
-        row["efficiency"] = speedup / resource_ratio
         if row["kind"] == "weak":
-            row["weak_normalized_time"] = float(row["total_median"]) / (
-                resource_ratio * float(base["total_median"])
-            )
+            # Weak scaling grows the problem with the resources.  The
+            # throughput speedup is therefore P * T1 / TP, and weak efficiency
+            # is T1 / TP.  Normalized time TP/T1 should stay close to 1 for an
+            # ideal weak-scaling experiment.
+            resource_ratio = float(row["resources"]) / float(base["resources"])
+            weak_efficiency = float(base["total_median"]) / float(row["total_median"])
+            row["speedup"] = resource_ratio * weak_efficiency
+            row["efficiency"] = weak_efficiency
+            row["weak_normalized_time"] = float(row["total_median"]) / float(base["total_median"])
         else:
+            resource_ratio = float(row["resources"]) / float(base["resources"])
+            speedup = float(base["total_median"]) / float(row["total_median"])
+            row["speedup"] = speedup
+            row["efficiency"] = speedup / resource_ratio
             row["weak_normalized_time"] = ""
 
     fields = [
@@ -169,6 +204,7 @@ def summarize_scaling(src: str, dst: str) -> None:
 
 
 def summarize_layout(src: str, dst: str) -> None:
+    """Summarize AoS/SoA timings and preserve checksum comparability."""
     groups: dict[tuple[object, ...], list[dict[str, object]]] = defaultdict(list)
     for row in read_csv(src):
         row["N"] = int(row["N"])
@@ -190,6 +226,9 @@ def summarize_layout(src: str, dst: str) -> None:
             "gpairs_median": statistics.median(float(v["gpairs"]) for v in values),
             "checksum_median": statistics.median(float(v["checksum"]) for v in values),
         })
+    # Compare SoA against the matching AoS case.  The checksum difference is a
+    # lightweight correctness guard: faster layout results are only meaningful if
+    # both layouts compute the same acceleration field up to rounding.
     by_case = {(r["N"], r["threads"], r["rsqrt"], r["layout"]): r for r in rows}
     for row in rows:
         aos = by_case.get((row["N"], row["threads"], row["rsqrt"], "aos"))
@@ -213,6 +252,7 @@ def summarize_layout(src: str, dst: str) -> None:
 
 
 def summarize_energy(src: str, dst: str) -> None:
+    """Summarize the overhead of computing energy diagnostics periodically."""
     groups: dict[tuple[int, int, int, int, int], list[dict[str, object]]] = defaultdict(list)
     for row in read_csv(src):
         for key in ("N", "nsteps", "ranks", "threads", "energy_every"):
@@ -242,6 +282,8 @@ def summarize_energy(src: str, dst: str) -> None:
             "max_rel_drift": max(float(v["max_rel_drift"]) for v in valid),
             "all_ok": all(v["status"] == "OK" for v in valid) and len(valid) == len(values),
         })
+    # The sparsest diagnostic interval is used as the baseline because it spends
+    # the least time in the additional energy calculation.
     base: dict[tuple[int, int, int, int], dict[str, object]] = {}
     for row in rows:
         key = (int(row["N"]), int(row["nsteps"]), int(row["ranks"]), int(row["threads"]))
@@ -259,6 +301,7 @@ def summarize_energy(src: str, dst: str) -> None:
 
 
 def summarize_container(src: str, dst: str) -> None:
+    """Pair native/container solver timings and report percentage overhead."""
     groups: dict[tuple[object, ...], list[float]] = defaultdict(list)
     failures: dict[tuple[object, ...], int] = defaultdict(int)
     for row in read_csv(src):
@@ -304,6 +347,7 @@ def summarize_container(src: str, dst: str) -> None:
 
 
 def summarize_osu(src: str, dst: str) -> None:
+    """Summarize OSU latency/bandwidth tables by mode, benchmark, and size."""
     groups: dict[tuple[str, str, str, int], list[float]] = defaultdict(list)
     for row in read_csv(src):
         groups[(row["mode"], row["benchmark"], row["metric"], int(row["bytes"]))].append(float(row["value"]))
@@ -322,6 +366,7 @@ def summarize_osu(src: str, dst: str) -> None:
 
 
 def add_gflops(src: str, dst: str, flops_per_pair: float) -> None:
+    """Add a model-based GFLOP/s estimate from measured pair-interaction rates."""
     with Path(src).open(newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
         rows = list(reader)
@@ -346,16 +391,19 @@ def add_gflops(src: str, dst: str, flops_per_pair: float) -> None:
 
 
 def palette(i: int) -> str:
+    """Small deterministic color palette for dependency-free SVG plots."""
     return ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf"][i % 6]
 
 
 def write_svg(path: str | Path, parts: list[str]) -> None:
+    """Finalize and write an SVG assembled as text fragments."""
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text("\n".join(parts + ["</svg>"]), encoding="utf-8")
     print(f"wrote {path}")
 
 
 def axes(title: str, xlabel: str, ylabel: str, width: int = 900, height: int = 520) -> tuple[list[str], int, int, int, int, int, int]:
+    """Create a common blank SVG canvas with title and axes."""
     left, top, right, bottom = 82, 42, 35, 75
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
@@ -379,6 +427,7 @@ def plot_xy(
     ideal: str | None = None,
     xlabel: str = "resources = ranks x threads",
 ) -> None:
+    """Plot a single x/y curve, optionally with the ideal scaling reference."""
     rows = sorted(rows, key=lambda r: int(r[x_field]))
     if len(rows) < 2:
         print(f"skipping {path}: only one x value")
@@ -421,6 +470,7 @@ def plot_xy(
 
 
 def plot_scaling(src: str, prefix: str) -> None:
+    """Generate the report figures for strong and weak scaling."""
     rows = read_csv(src)
     for r in rows:
         r["resources"] = int(r["resources"])
@@ -437,6 +487,7 @@ def plot_scaling(src: str, prefix: str) -> None:
 
 
 def plot_hybrid(src: str, prefix: str) -> None:
+    """Plot hybrid MPI-rank/OpenMP-thread configurations at fixed resources."""
     rows = read_csv(src)
     for row in rows:
         row["label"] = f'P{row["ranks"]}xT{row["threads"]}'
@@ -462,6 +513,7 @@ def plot_hybrid(src: str, prefix: str) -> None:
 
 
 def plot_container(src: str, prefix: str) -> None:
+    """Plot native-vs-container median solver times and overhead labels."""
     groups: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in read_csv(src):
         groups[row.get("kind", "strong")].append(row)
@@ -487,6 +539,7 @@ def plot_container(src: str, prefix: str) -> None:
 
 
 def plot_ablation(src: str, prefix: str) -> None:
+    """Plot optimization ablation medians as a compact bar chart."""
     raw = read_csv(src)
     groups: dict[tuple[str, str], list[float]] = defaultdict(list)
     for row in raw:
@@ -522,6 +575,7 @@ def plot_ablation(src: str, prefix: str) -> None:
 
 
 def plot_layout(src: str, prefix: str) -> None:
+    """Plot AoS and SoA force-kernel timing versus OpenMP threads."""
     rows = read_csv(src)
     if not rows:
         return
@@ -552,6 +606,7 @@ def plot_layout(src: str, prefix: str) -> None:
 
 
 def plot_energy(src: str, prefix: str) -> None:
+    """Plot diagnostic overhead as a function of energy sampling interval."""
     rows = read_csv(src)
     for row in rows:
         row["energy_every"] = int(row["energy_every"])
@@ -569,6 +624,7 @@ def plot_energy(src: str, prefix: str) -> None:
 
 
 def plot_osu(src: str, prefix: str) -> None:
+    """Plot OSU latency and bandwidth for native and container modes."""
     rows = read_csv(src)
     for row in rows:
         row["bytes"] = int(row["bytes"])
@@ -604,6 +660,7 @@ def plot_osu(src: str, prefix: str) -> None:
 
 
 def plot_evidence(root: str) -> None:
+    """Regenerate all final-report figures from the curated results_final data."""
     base = Path(root)
     plot_scaling(str(base / "results_final/scaling_64_summary.csv"), str(base / "results_final/scaling_64"))
     plot_hybrid(str(base / "results_final/hybrid_64_summary.csv"), str(base / "results_final/hybrid_64"))
@@ -615,6 +672,7 @@ def plot_evidence(root: str) -> None:
 
 
 def main() -> None:
+    """CLI entry point: dispatch summarize/plot subcommands."""
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="section", required=True)
 
