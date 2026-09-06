@@ -158,7 +158,7 @@ case "$bench" in
   osu)
     # Pull the SIF if needed, then compare native/container OSU latency and
     # bandwidth.  Native OSU paths can be overridden via OSU_LATENCY/OSU_BW.
-    payload='if [[ ! -f "${IMAGE:-nbody.sif}" && -n "${IMAGE_URI:-docker://memid01/nbody-hpc:latest}" ]]; then singularity pull --force "${IMAGE:-nbody.sif}" "${IMAGE_URI:-docker://memid01/nbody-hpc:latest}"; fi; OUT="$RESULT_DIR/osu_microbench_native_vs_container.csv" bash ./run_benchmarks.sh osu --mode both; python3 analyze.py summarize osu "$RESULT_DIR/osu_microbench_native_vs_container.csv" "$RESULT_DIR/osu_microbench_summary.csv"; python3 analyze.py plot osu "$RESULT_DIR/osu_microbench_summary.csv" "$RESULT_DIR/osu_microbench"'
+    payload='if [[ ! -f "${IMAGE:-nbody.sif}" && -n "${IMAGE_URI:-docker://memid01/nbody-hpc:latest}" ]]; then singularity pull --force "${IMAGE:-nbody.sif}" "${IMAGE_URI:-docker://memid01/nbody-hpc:latest}"; fi; OUT="$RESULT_DIR/osu_microbench_native_vs_container.csv" bash ./run_benchmarks.sh osu; python3 analyze.py summarize osu "$RESULT_DIR/osu_microbench_native_vs_container.csv" "$RESULT_DIR/osu_microbench_summary.csv"; python3 analyze.py plot osu "$RESULT_DIR/osu_microbench_summary.csv" "$RESULT_DIR/osu_microbench"'
     ;;
 esac
 
