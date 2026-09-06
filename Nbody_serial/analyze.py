@@ -176,15 +176,23 @@ def summarize_scaling(src: str, dst: str) -> None:
             )
         base = baselines[base_key]
         if row["kind"] == "weak":
-            # Weak scaling grows the problem with the resources.  The
-            # throughput speedup is therefore P * T1 / TP, and weak efficiency
-            # is T1 / TP.  Normalized time TP/T1 should stay close to 1 for an
-            # ideal weak-scaling experiment.
+            # Weak scaling grows the problem with the resources.  For a direct
+            # all-pairs N-body kernel with N/P fixed, each rank still interacts
+            # with the full global N, so the ideal per-step time grows
+            # proportionally to P.  We therefore normalize by P*T1: values close
+            # to 1 mean that the measured time follows the expected algorithmic
+            # growth, while values above 1 expose parallel overhead.
             resource_ratio = float(row["resources"]) / float(base["resources"])
-            weak_efficiency = float(base["total_median"]) / float(row["total_median"])
-            row["speedup"] = resource_ratio * weak_efficiency
+            weak_efficiency = (
+                resource_ratio * float(base["total_median"]) /
+                float(row["total_median"])
+            )
+            row["speedup"] = weak_efficiency
             row["efficiency"] = weak_efficiency
-            row["weak_normalized_time"] = float(row["total_median"]) / float(base["total_median"])
+            row["weak_normalized_time"] = (
+                float(row["total_median"]) /
+                (resource_ratio * float(base["total_median"]))
+            )
         else:
             resource_ratio = float(row["resources"]) / float(base["resources"])
             speedup = float(base["total_median"]) / float(row["total_median"])
@@ -624,7 +632,7 @@ def plot_energy(src: str, prefix: str) -> None:
 
 
 def plot_osu(src: str, prefix: str) -> None:
-    """Plot OSU latency and bandwidth for native and container modes."""
+    """Plot OSU latency and bandwidth for the modes present in the CSV."""
     rows = read_csv(src)
     for row in rows:
         row["bytes"] = int(row["bytes"])
@@ -637,12 +645,14 @@ def plot_osu(src: str, prefix: str) -> None:
         if not selected:
             continue
         sizes = sorted({int(r["bytes"]) for r in selected})
-        parts, width, height, left, top, right, bottom = axes(f"OSU {bench}: native vs container", "message size (bytes, log2 scale)", ylabel)
+        modes = [m for m in ("native", "container") if any(r["mode"] == m for r in selected)]
+        title = f"OSU {bench}: native vs container" if len(modes) > 1 else f"OSU {bench}: {modes[0]}"
+        parts, width, height, left, top, right, bottom = axes(title, "message size (bytes, log2 scale)", ylabel)
         pw, ph = width - left - right, height - top - bottom
         max_y = max(float(r["median"]) for r in selected) * 1.08
         def x_of(size: int) -> float: return left + pw * sizes.index(size) / max(1, len(sizes) - 1)
         def y_of(v: float) -> float: return top + ph * (1.0 - v / max_y)
-        for mi, mode in enumerate(["native", "container"]):
+        for mi, mode in enumerate(modes):
             by_size = {int(r["bytes"]): r for r in selected if r["mode"] == mode}
             if not by_size:
                 continue
@@ -662,13 +672,16 @@ def plot_osu(src: str, prefix: str) -> None:
 def plot_evidence(root: str) -> None:
     """Regenerate all final-report figures from the curated results_final data."""
     base = Path(root)
+    osu_summary = base / "results_final/osu_microbench_summary.csv"
+    if not osu_summary.exists():
+        osu_summary = base / "results_final/osu_microbench_container_summary.csv"
     plot_scaling(str(base / "results_final/scaling_64_summary.csv"), str(base / "results_final/scaling_64"))
     plot_hybrid(str(base / "results_final/hybrid_64_summary.csv"), str(base / "results_final/hybrid_64"))
     plot_container(str(base / "results_final/container_overhead_summary.csv"), str(base / "results_final/container_overhead"))
     plot_ablation(str(base / "results_final/ablation_64.csv"), str(base / "results_final/ablation_64"))
     plot_layout(str(base / "results_final/layout_summary.csv"), str(base / "results_final/layout_force_time"))
     plot_energy(str(base / "results_final/energy_overhead_summary.csv"), str(base / "results_final/energy_overhead"))
-    plot_osu(str(base / "results_final/osu_microbench_summary.csv"), str(base / "results_final/osu_microbench"))
+    plot_osu(str(osu_summary), str(base / "results_final/osu_microbench"))
 
 
 def main() -> None:

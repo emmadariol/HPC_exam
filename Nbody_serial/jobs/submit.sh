@@ -22,7 +22,7 @@ Common options:
   --account NAME        override account
   --qos NAME            override qos
   --nodes N             default: 1
-  --cpus N              Slurm --cpus-per-task/--ntasks total budget helper
+  --cpus N              total CPU budget reserved as Slurm --ntasks=N
   --time HH:MM:SS       override time limit
   --exclusive           request full node
   --afterok JOBID       add dependency afterok:JOBID
@@ -173,6 +173,10 @@ for item in "${extra_env[@]}"; do
   fi
   env_key="${item%%=*}"
   env_val="${item#*=}"
+  if [[ ! "$env_key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+    echo "invalid environment variable name: $env_key" >&2
+    exit 2
+  fi
   printf -v quoted_env_val "%q" "$env_val"
   env_block="$env_block $env_key=$quoted_env_val"
 done

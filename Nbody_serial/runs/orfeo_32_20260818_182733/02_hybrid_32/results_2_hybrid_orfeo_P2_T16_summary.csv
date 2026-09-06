@@ -1,3 +1,0 @@
-kind,N,nsteps,ranks,threads,resources,integrator,comm,kernel,rsqrt,dtype,runs,failed_runs,used_runs,outliers,total_mad,total_median,total_stdev,force_median,comm_wait_median,comm_bandwidth_GBps,gpairs_median,speedup,efficiency,all_ok
-strong,20000,20,2,16,32,kdk,overlap,direct,exact,double,5,0,5,0,0.0006399999999999739,1.047924,0.0008598563833570938,0.91795,0.003162,1.5939278937381405,9.15037,1.0,1.0,True
-weak,4000,20,2,16,32,kdk,overlap,direct,exact,double,5,0,4,1,7.299999999999668e-05,0.047196,0.00010084476519218475,0.039399500000000004,0.000698,1.4441260744985673,8.525873,1.0,1.0,True

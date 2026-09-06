@@ -16,7 +16,7 @@ The main results are:
 - Hybrid MPI+OpenMP configurations at 64 cores are very close to each other, with the best measured median at 32 MPI ranks x 2 OpenMP threads.
 - The force computation dominates runtime; communication wait remains small in the tested single-node regime.
 - The measured Singularity overhead is about 3.0-3.4% for the solver runs, and launch overhead is about 0.09-0.11 s.
-- OSU latency/bandwidth measurements show native and container performance within a few percent when host MPI is injected into the container.
+- OSU latency/bandwidth measurements confirm that the final Singularity image contains working MPI micro-benchmarks; the quantitative native-vs-container overhead is reported with the N-body solver timings.
 - Correctness is verified through relative energy drift and AoS/SoA checksum comparison.
 
 The assignment text refers to LEONARDO for the container layer. In practice, the CPU allocation available during the measurements did not permit LEONARDO DCGP submissions, so the final production measurements were run on Orfeo. The same Singularity/host-MPI mechanism required by the assignment was used and explicitly verified with `ldd`.
@@ -41,7 +41,7 @@ The assignment text refers to LEONARDO for the container layer. In practice, the
 | Communication overlap comparison | `results_final/ablation_64.csv` |
 | Container overhead table | `results_final/container_overhead_summary.csv` |
 | Launch overhead | `results_final/container_overhead_launch.csv` |
-| OSU latency and bandwidth, native vs container | `results_final/osu_microbench_summary.csv` |
+| OSU latency and bandwidth inside the final container | `results_final/osu_microbench_container_summary.csv` |
 | Host MPI injection check | `results_final/mpi_linkage_check.txt` |
 
 ## 3. Code structure
@@ -560,7 +560,7 @@ _Figure comment: the weak container comparison shows the same pattern: the conta
 
 The measured solver overhead is stable at about 3%. This is within the expected 2-5% range for a compute-bound N-body kernel when host MPI is correctly injected.
 
-The overhead decreases slightly with rank count in the strong case, from 3.42% at one rank to 2.93% at four ranks. This is consistent with a mostly fixed container/runtime cost being amortized by the computation. The weak cases show a similar 3.0-3.4% overhead range. Since the `ldd` check confirms host MPI binding and OSU shows near-native latency/bandwidth, the remaining gap is most plausibly due to the combination of container startup/runtime cost, library path indirection, FUSE image mounting and the portable `x86-64-v3` compilation target.
+The overhead decreases slightly with rank count in the strong case, from 3.42% at one rank to 2.93% at four ranks. This is consistent with a mostly fixed container/runtime cost being amortized by the computation. The weak cases show a similar 3.0-3.4% overhead range. Since the `ldd` check confirms host MPI binding and the OSU binaries run successfully inside the final image, the remaining solver-level gap is most plausibly due to the combination of container startup/runtime cost, library path indirection, FUSE image mounting and the portable `x86-64-v3` compilation target.
 
 ### 11.2 Launch overhead
 
@@ -583,31 +583,31 @@ The startup cost is a fixed cost and is negligible for the long strong-scaling c
 
 This is why container launch overhead is reported separately from solver overhead. For a long compute-bound run, startup is amortized. For a tiny benchmark, the same 0.09-0.11 s fixed cost can be a large fraction of total time and would distort the interpretation if mixed into the solver scaling discussion.
 
-### 11.3 OSU native vs container
+### 11.3 OSU container micro-benchmarks
 
-OSU Micro-Benchmarks were run with two MPI processes, both natively and inside the Singularity image, with five repetitions. Selected median values are:
+OSU Micro-Benchmarks were also run with two MPI processes inside the final Singularity image. This is not used as the main native-vs-container overhead metric; that role is played by the solver-level table above, because it measures the actual application workload required by the exercise. The OSU run is instead a communication sanity check showing that the container provides working `osu_latency` and `osu_bw` binaries and that MPI execution inside the image is functional.
 
-| benchmark | bytes | native median | container median | relative difference |
-|---|---|---|---|---|
-| latency | 1 | 4.420 us | 4.360 us | -1.36% |
-| latency | 1024 | 4.640 us | 4.660 us | 0.43% |
-| latency | 1048576 | 147.050 us | 149.710 us | 1.81% |
-| bandwidth | 1024 | 233.980 MB/s | 234.390 MB/s | 0.18% |
-| bandwidth | 1048576 | 5865.750 MB/s | 5828.470 MB/s | -0.64% |
-| bandwidth | 4194304 | 6251.240 MB/s | 6156.690 MB/s | -1.51% |
+Selected container median values are:
 
-![OSU latency native vs container](results_final/osu_microbench_latency.svg)
+| benchmark | bytes | container median |
+|---|---:|---:|
+| latency | 1 | 10.06 us |
+| latency | 1024 | 11.16 us |
+| latency | 1048576 | 694.42 us |
+| latency | 4194304 | 2500.20 us |
+| bandwidth | 1024 | 115.25 MB/s |
+| bandwidth | 1048576 | 1564.19 MB/s |
+| bandwidth | 4194304 | 1504.60 MB/s |
 
-_Figure comment: latency is almost unchanged between native and container execution. Small positive or negative differences at individual message sizes are measurement noise, not a systematic trend._
+![OSU latency inside container](results_final/osu_microbench_latency.svg)
 
-![OSU bandwidth native vs container](results_final/osu_microbench_bandwidth.svg)
+_Figure comment: latency increases with message size, as expected. The small-message latency is about 10 us for the tested two-rank container execution._
 
-_Figure comment: bandwidth also remains close between native and container runs. This confirms that host MPI injection avoids a severe communication penalty._
+![OSU bandwidth inside container](results_final/osu_microbench_bandwidth.svg)
 
-The OSU result supports the solver-level conclusion: once host MPI is bound into the container, MPI latency and bandwidth are very close to native. Remaining differences are small compared with the solver's arithmetic cost.
+_Figure comment: bandwidth grows with message size and then reaches a plateau around 1.5 GB/s for the largest tested messages. These values are used as a qualitative communication check, not as the primary application-overhead result._
 
-The small positive and negative differences in the OSU table should not be overinterpreted individually. They are within the noise level expected for short two-process microbenchmarks. The important observation is the absence of a systematic large latency increase or bandwidth collapse inside the container. That supports the claim that the MPI binding is correct.
-
+The important point is that OSU runs successfully from the final image. The application-level container overhead remains the more relevant metric for the report: it compares the same N-body executable natively and through Singularity, and it shows a stable overhead of about 3%.
 ## 12. Discussion
 
 The strongest result is the near-linear single-node strong scaling. This happens because the direct force kernel has enough arithmetic work to amortize MPI and OpenMP overhead. At 64 ranks, the code still reaches 90.5% efficiency.
@@ -661,7 +661,7 @@ results_final/ablation_64.csv
 results_final/layout_summary.csv
 results_final/energy_overhead_summary.csv
 results_final/container_overhead_summary.csv
-results_final/osu_microbench_summary.csv
+results_final/osu_microbench_container_summary.csv
 ```
 
 The 32-rank and intermediate run directories are intentionally excluded from
@@ -676,6 +676,6 @@ The project satisfies the Exercise 1 requirements:
 - It includes five-repetition statistics with medians and standard deviations.
 - It validates correctness through energy conservation and force checksum comparison.
 - It studies relevant optimisation choices and bottlenecks.
-- It includes a Singularity container layer with native-vs-container timings, launch overhead, OSU latency/bandwidth, and explicit host-MPI linkage verification.
+- It includes a Singularity container layer with native-vs-container solver timings, launch overhead, OSU latency/bandwidth inside the image, and explicit host-MPI linkage verification.
 
 The final performance result is a 57.94x speedup at 64 MPI ranks on one Orfeo GENOA node, with 90.5% efficiency. The final container result shows a stable overhead around 3%, which is consistent with a compute-bound solver where MPI binding is correctly configured.
