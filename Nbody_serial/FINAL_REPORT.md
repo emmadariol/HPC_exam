@@ -12,11 +12,11 @@ execution history and are not required to reproduce the report figures.
 
 The main results are:
 
-- Strong scaling on one Orfeo GENOA node reaches a speedup of 57.94x at 64 MPI ranks, with 90.5% parallel efficiency.
+- Strong scaling on one Orfeo GENOA node reaches a speedup of 51.95x at 64 MPI ranks, with 81.2% parallel efficiency.
 - Hybrid MPI+OpenMP configurations at 64 cores are very close to each other, with the best measured median at 32 MPI ranks x 2 OpenMP threads.
 - The force computation dominates runtime; communication wait remains small in the tested single-node regime.
 - The measured Singularity overhead is about 3.0-3.4% for the solver runs, and launch overhead is about 0.09-0.11 s.
-- OSU latency/bandwidth measurements confirm that the final Singularity image contains working MPI micro-benchmarks; the quantitative native-vs-container overhead is reported with the N-body solver timings.
+- OSU latency/bandwidth measurements compare native and Singularity execution; bandwidth remains close, while the largest-message latency is more sensitive to the container/MPI launch path.
 - Correctness is verified through relative energy drift and AoS/SoA checksum comparison.
 
 The assignment text refers to LEONARDO for the container layer. In practice, the CPU allocation available during the measurements did not permit LEONARDO DCGP submissions, so the final production measurements were run on Orfeo. The same Singularity/host-MPI mechanism required by the assignment was used and explicitly verified with `ldd`.
@@ -41,7 +41,7 @@ The assignment text refers to LEONARDO for the container layer. In practice, the
 | Communication overlap comparison | `results_final/ablation_64.csv` |
 | Container overhead table | `results_final/container_overhead_summary.csv` |
 | Launch overhead | `results_final/container_overhead_launch.csv` |
-| OSU latency and bandwidth inside the final container | `results_final/osu_microbench_container_summary.csv` |
+| OSU latency and bandwidth, native vs container | `results_final/osu_microbench_summary.csv` |
 | Host MPI injection check | `results_final/mpi_linkage_check.txt` |
 
 ## 3. Code structure
@@ -241,13 +241,13 @@ Each point is summarized by the median over five measured repetitions. The analy
 
 | ranks | median time (s) | stdev (s) | speedup | efficiency | median comm wait (s) | median Gpairs/s |
 |---|---|---|---|---|---|---|
-| 1 | 31.186382 | 0.001985 | 1.00 | 100.0% | 0.000000 | 0.289 |
-| 2 | 16.048572 | 0.002471 | 1.94 | 97.2% | 0.041053 | 0.579 |
-| 4 | 8.147579 | 0.002902 | 3.83 | 95.7% | 0.042992 | 1.158 |
-| 8 | 4.116640 | 0.000316 | 7.58 | 94.7% | 0.012635 | 2.308 |
-| 16 | 2.089044 | 0.000037 | 14.93 | 93.3% | 0.013994 | 4.562 |
-| 32 | 1.047827 | 0.001708 | 29.76 | 93.0% | 0.006800 | 9.143 |
-| 64 | 0.538247 | 0.004583 | 57.94 | 90.5% | 0.007174 | 18.024 |
+| 1 | 31.186823 | 0.003016 | 1.00 | 100.0% | 0.000000 | 0.289 |
+| 2 | 16.038907 | 0.006556 | 1.94 | 97.2% | 0.086697 | 0.579 |
+| 4 | 8.136352 | 0.004001 | 3.83 | 95.8% | 0.039723 | 1.158 |
+| 8 | 4.116069 | 0.001794 | 7.58 | 94.7% | 0.023563 | 2.306 |
+| 16 | 2.101684 | 0.011390 | 14.84 | 92.7% | 0.014187 | 4.560 |
+| 32 | 1.084200 | 0.002154 | 28.76 | 89.9% | 0.007983 | 8.898 |
+| 64 | 0.600278 | 0.007607 | 51.95 | 81.2% | 0.024547 | 16.845 |
 
 ![MPI strong-scaling speedup](results_final/scaling_64_strong_speedup.svg)
 
@@ -255,29 +255,29 @@ _Figure comment: the measured curve remains close to the ideal `S(P)=P` line. Th
 
 ![MPI strong-scaling efficiency](results_final/scaling_64_strong_efficiency.svg)
 
-_Figure comment: efficiency stays above 90% up to 64 ranks. This is the clearest visual evidence that overhead does not dominate within the tested single-node range._
+_Figure comment: efficiency stays high up to 32 ranks and then drops more visibly at 64 ranks. This is the clearest visual evidence of the point where fixed overheads and reduced per-rank work start to matter._
 
 The dashed reference line in the strong-scaling speedup plot is the ideal `S(P)=P` behaviour. In the efficiency plot, the dashed reference is ideal unit efficiency. These are the reference curves suggested in the scalability notes and make the gap between measured and ideal scaling visually explicit.
 
 The scalability notes use nodes on the x-axis in their example because that example scales across nodes. Here the final production dataset is deliberately single-node and homogeneous, so the computational resource on the x-axis is the number of MPI ranks/cores used inside the same GENOA node. The same interpretation still applies: speedup is expected to be linear in the amount of computational resource, and efficiency is expected to stay close to one for ideal scaling.
 
-The strong-scaling result is close to ideal across the full node. Efficiency decreases from 97.2% at two ranks to 90.5% at 64 ranks, which is expected: as the local particle count per rank decreases, fixed overheads, synchronization, ring latency and runtime noise become more visible. The force kernel remains dominant, while communication wait is small compared with total time.
+The strong-scaling result is close to ideal up to 32 ranks and still useful at 64 ranks. Efficiency decreases from 97.2% at two ranks to 81.2% at 64 ranks, which is expected: as the local particle count per rank decreases, fixed overheads, synchronization, ring latency and runtime noise become more visible. The force kernel remains dominant, while communication wait is still small compared with total time.
 
-Using Amdahl's perspective, the non-parallel part and overhead are small but not zero. At 64 ranks the ideal time from the one-rank median would be `31.186382 / 64 = 0.487287 s`; the observed median is `0.538247 s`. The difference is the combined effect of communication, synchronization, finite local work, and measurement overhead.
+Using Amdahl's perspective, the non-parallel part and overhead are small but not zero. At 64 ranks the ideal time from the one-rank median would be `31.186823 / 64 = 0.487294 s`; the observed median is `0.600278 s`. The difference is the combined effect of communication, synchronization, finite local work, and measurement overhead.
 
 The effective Amdahl-style serial/overhead fraction inferred from the 64-rank speedup is approximately:
 
 ```text
-f_eff = (1/S_64 - 1/64) / (1 - 1/64) ~= 0.0017
+f_eff = (1/S_64 - 1/64) / (1 - 1/64) ~= 0.0037
 ```
 
 This number should not be interpreted as a pure serial code fraction, because the measured deviation from ideal also includes MPI overhead, OpenMP scheduling effects, NUMA effects and timer noise. It is still useful as a compact indicator that the implementation has very little non-scaling overhead in the tested range.
 
-The pair-interaction rate increases from 0.289 Gpairs/s at one rank to 18.024 Gpairs/s at 64 ranks. This is a 62.3x throughput increase, slightly higher than the time-based speedup because the timing summary separates some overheads from the force kernel rate. The important point is that both runtime speedup and kernel throughput point to the same conclusion: the code efficiently uses the full GENOA node for this problem size.
+The pair-interaction rate increases from 0.289 Gpairs/s at one rank to 16.845 Gpairs/s at 64 ranks. This is a 58.3x throughput increase, slightly higher than the time-based speedup because the timing summary separates some overheads from the force kernel rate. The important point is that both runtime speedup and kernel throughput point to the same conclusion: the code efficiently uses the full GENOA node for this problem size, although 64 ranks is already beyond the perfectly linear region.
 
-Using an explicit rough model of 20 floating-point operations per pair interaction, this corresponds to about 5.8 estimated GFLOP/s at one rank and about 360.5 estimated GFLOP/s at 64 ranks. This estimate is reported only as a derived operation-count metric; the primary measured kernel rate remains `Gpairs/s`, because it is independent of how one counts `sqrt`, division and fused operations.
+Using an explicit rough model of 20 floating-point operations per pair interaction, this corresponds to about 5.8 estimated GFLOP/s at one rank and about 336.9 estimated GFLOP/s at 64 ranks. This estimate is reported only as a derived operation-count metric; the primary measured kernel rate remains `Gpairs/s`, because it is independent of how one counts `sqrt`, division and fused operations.
 
-The communication wait column also supports this interpretation. At 64 ranks the median communication wait is only 0.007174 s, about 1.3% of the total median runtime. Therefore, the loss of efficiency at high rank count is not caused by communication dominating the run; it is the expected accumulation of small fixed costs as per-rank work decreases.
+The communication wait column also supports this interpretation. At 64 ranks the median communication wait is 0.024547 s, about 4.1% of the total median runtime. Therefore, the loss of efficiency at high rank count is not caused by communication dominating the run; it is the expected accumulation of communication, synchronization and scheduling overheads as per-rank work decreases.
 
 ## 8. Weak scaling
 
@@ -300,13 +300,13 @@ Therefore, with fixed particles per rank, the direct O(N^2) algorithm has an exp
 
 | ranks | total N | median time (s) | stdev (s) | median comm wait (s) | median Gpairs/s |
 |---|---|---|---|---|---|
-| 1 | 2000 | 0.312026 | 0.000092 | 0.000000 | 0.289 |
-| 2 | 4000 | 0.646512 | 0.000332 | 0.003697 | 0.577 |
-| 4 | 8000 | 1.312515 | 0.001080 | 0.004482 | 1.151 |
-| 8 | 16000 | 2.640154 | 0.000985 | 0.012125 | 2.303 |
-| 16 | 32000 | 5.294914 | 0.001564 | 0.018080 | 4.610 |
-| 32 | 64000 | 10.617243 | 0.004137 | 0.041412 | 9.211 |
-| 64 | 128000 | 21.289183 | 0.015332 | 0.118626 | 18.415 |
+| 1 | 2000 | 0.321935 | 0.003562 | 0.000000 | 0.284 |
+| 2 | 4000 | 0.657047 | 0.005018 | 0.006889 | 0.573 |
+| 4 | 8000 | 1.321200 | 0.000501 | 0.012390 | 1.150 |
+| 8 | 16000 | 2.643555 | 0.002256 | 0.014827 | 2.301 |
+| 16 | 32000 | 5.302514 | 0.006716 | 0.021196 | 4.605 |
+| 32 | 64000 | 10.912477 | 0.005657 | 0.038610 | 8.958 |
+| 64 | 128000 | 22.177877 | 0.023922 | 0.110755 | 17.651 |
 
 ![MPI weak-scaling absolute time](results_final/scaling_64_weak_time.svg)
 
@@ -314,7 +314,7 @@ _Figure comment: the absolute time is shown only together with the dashed `O(P)`
 
 ![MPI weak-scaling normalized time](results_final/scaling_64_weak_normalized_time.svg)
 
-_Figure comment: this is the most informative weak-scaling plot for this algorithm. A value near 1 means that the code follows the expected `O(P)` growth; the 64-rank point is only about 6.6% above that reference._
+_Figure comment: this is the most informative weak-scaling plot for this algorithm. A value near 1 means that the code follows the expected `O(P)` growth; the 64-rank point is about 7.6% above that reference._
 
 The absolute time increases almost linearly with `P`, as expected for direct all-pairs gravity under fixed `N/P`. The achieved pair-interaction rate also grows nearly linearly, showing that the machine is being used efficiently even though the mathematical weak-scaling definition is unfavorable for this algorithm.
 
@@ -328,15 +328,15 @@ normalized weak time = T(P) / (P * T(1))
 
 | ranks | measured time (s) | T(P) / (P*T(1)) |
 |---|---|---|
-| 1 | 0.312026 | 1.000 |
-| 2 | 0.646512 | 1.036 |
-| 4 | 1.312515 | 1.052 |
-| 8 | 2.640154 | 1.058 |
-| 16 | 5.294914 | 1.061 |
-| 32 | 10.617243 | 1.063 |
-| 64 | 21.289183 | 1.066 |
+| 1 | 0.321935 | 1.000 |
+| 2 | 0.657047 | 1.020 |
+| 4 | 1.321200 | 1.026 |
+| 8 | 2.643555 | 1.026 |
+| 16 | 5.302514 | 1.029 |
+| 32 | 10.912477 | 1.059 |
+| 64 | 22.177877 | 1.076 |
 
-This normalized view shows that the observed weak scaling is close to the theoretical expectation for a direct all-pairs solver. The extra overhead grows slowly, reaching only about 6.6% above the ideal O(P) trend at 64 ranks. This is a stronger interpretation than simply saying that weak efficiency is low: the conventional flat-time weak-scaling expectation is not the right baseline for a global O(N^2) interaction problem.
+This normalized view shows that the observed weak scaling is close to the theoretical expectation for a direct all-pairs solver. The extra overhead grows slowly, reaching only about 7.6% above the ideal O(P) trend at 64 ranks. This is a stronger interpretation than simply saying that weak efficiency is low: the conventional flat-time weak-scaling expectation is not the right baseline for a global O(N^2) interaction problem.
 
 In Gustafson-style terms, increasing resources lets us solve a proportionally larger physical system: the 64-rank weak run evolves 128000 particles instead of 2000. The total runtime increases, but the delivered pair-interaction throughput also increases almost proportionally with the number of cores.
 
@@ -396,7 +396,7 @@ The solver prints max-rank timing sections:
 total, io, drift, force, comm_wait, kick, energy
 ```
 
-In the main scaling summaries, the force time is the largest section. At 64 ranks, the strong-scaling median total time is `0.538247 s`, with median force time `0.466024 s` and communication wait `0.007174 s`. The bottleneck is therefore the direct force computation, not MPI communication, in the tested single-node regime.
+In the main scaling summaries, the force time is the largest section. At 64 ranks, the strong-scaling median total time is `0.600278 s`, with median force time `0.498629 s` and communication wait `0.024547 s`. The bottleneck is therefore the direct force computation, not MPI communication, in the tested single-node regime.
 
 This matches the expected arithmetic intensity of a direct O(N^2) N-body kernel.
 
@@ -405,16 +405,12 @@ The bottleneck conclusion is based on instrumentation rather than only on wall-c
 For the final 64-rank strong-scaling point:
 
 ```text
-total median       = 0.538247 s
-force median       = 0.466024 s
-comm_wait median   = 0.007174 s
-force/total        ~= 86.6%
-comm_wait/total    ~= 1.3%
+total median       = 0.600278 s
+force median       = 0.498629 s
+comm_wait median   = 0.024547 s
+force/total        ~= 83.1%
+comm_wait/total    ~= 4.1%
 ```
-
-![Strong-scaling timing breakdown](results_final/scaling_64_strong_breakdown.svg)
-
-_Figure comment: the force section dominates the stacked bars, while communication wait is visually small. This supports the bottleneck claim with instrumented timings rather than intuition._
 
 The remaining time is mainly integration updates, diagnostics and runtime overhead. This is why the optimisation discussion focuses on force-kernel structure, layout, reciprocal square root and Newton reuse.
 
@@ -428,15 +424,15 @@ For the 64-rank ablation job:
 
 | Test | Variant | repetitions | median time (s) | stdev (s) |
 |---|---|---|---|---|
-| Kernel | direct | 5 | 44.123917 | 0.081107 |
-| Kernel | newton | 5 | 34.708724 | 0.024313 |
+| Kernel | direct | 5 | 43.943200 | 0.138336 |
+| Kernel | newton | 5 | 34.517259 | 0.023521 |
 
 Newton's third law reduces arithmetic and is faster in this single-rank ablation. However, it is not a free optimisation for the distributed ring solver: in MPI, the opposite force contribution belongs to another rank, so the implementation would need additional communication or buffering.
 
 The measured improvement is:
 
 ```text
-(44.123917 - 34.708724) / 44.123917 ~= 21.3%
+(43.943200 - 34.517259) / 43.943200 ~= 21.5%
 ```
 
 This is smaller than the theoretical 50% arithmetic reduction because the kernel still has overheads that do not vanish, and because memory access, loop structure, compiler vectorisation and accumulation dependencies also influence runtime. The result is nevertheless useful: it shows that Newton reuse has potential, but the distributed implementation cost must be considered before calling it an optimisation for the MPI solver.
@@ -536,19 +532,19 @@ The container solver experiment uses:
 RANKS = 1, 2, 4
 THREADS = 1
 REPEATS = 5
-Strong N = 10000
-Weak N/rank = 1000
-NSTEPS = 100
+Strong N = 20000
+Weak N/rank = 2000
+NSTEPS = 20
 ```
 
 | kind | N | ranks | native median (s) | native stdev (s) | container median (s) | container stdev (s) | overhead |
 |---|---|---|---|---|---|---|---|
-| strong | 10000 | 1 | 37.525304 | 0.092765 | 38.809023 | 0.046655 | 3.42% |
-| strong | 10000 | 2 | 19.275372 | 0.047929 | 19.884248 | 0.013905 | 3.16% |
-| strong | 10000 | 4 | 9.829795 | 0.008260 | 10.117712 | 0.010742 | 2.93% |
-| weak | 1000 | 1 | 0.376323 | 0.000743 | 0.389115 | 0.000338 | 3.40% |
-| weak | 2000 | 2 | 0.777243 | 0.001278 | 0.803996 | 0.000689 | 3.44% |
-| weak | 4000 | 4 | 1.590182 | 0.002457 | 1.638141 | 0.001570 | 3.02% |
+| strong | 20000 | 1 | 16.620636 | 0.002550 | 17.088996 | 0.003346 | 2.82% |
+| strong | 20000 | 2 | 8.630543 | 0.002733 | 8.868701 | 0.004872 | 2.76% |
+| strong | 20000 | 4 | 4.395793 | 0.004364 | 4.517929 | 0.001281 | 2.78% |
+| weak | 2000 | 1 | 0.165921 | 0.000416 | 0.171145 | 0.000114 | 3.15% |
+| weak | 4000 | 2 | 0.346745 | 0.000141 | 0.358137 | 0.000111 | 3.29% |
+| weak | 8000 | 4 | 0.706766 | 0.001919 | 0.727658 | 0.000883 | 2.96% |
 
 ![Container strong overhead](results_final/container_overhead_strong.svg)
 
@@ -560,7 +556,7 @@ _Figure comment: the weak container comparison shows the same pattern: the conta
 
 The measured solver overhead is stable at about 3%. This is within the expected 2-5% range for a compute-bound N-body kernel when host MPI is correctly injected.
 
-The overhead decreases slightly with rank count in the strong case, from 3.42% at one rank to 2.93% at four ranks. This is consistent with a mostly fixed container/runtime cost being amortized by the computation. The weak cases show a similar 3.0-3.4% overhead range. Since the `ldd` check confirms host MPI binding and the OSU binaries run successfully inside the final image, the remaining solver-level gap is most plausibly due to the combination of container startup/runtime cost, library path indirection, FUSE image mounting and the portable `x86-64-v3` compilation target.
+The overhead is very stable in the strong case, from 2.82% at one rank to 2.78% at four ranks. This is consistent with a mostly fixed container/runtime cost being small compared with the computation. The weak cases show a similar 3.0-3.3% overhead range. Since the `ldd` check confirms host MPI binding and the OSU binaries run successfully inside the final image, the remaining solver-level gap is most plausibly due to the combination of container startup/runtime cost, library path indirection, FUSE image mounting and the portable `x86-64-v3` compilation target.
 
 ### 11.2 Launch overhead
 
@@ -568,14 +564,14 @@ The launch overhead was measured with ten repeated `singularity exec nbody.sif t
 
 | repeat | launch time (s) |
 |---|---|
-| 1 | 0.11 |
+| 1 | 0.10 |
 | 2 | 0.09 |
 | 3 | 0.09 |
 | 4 | 0.09 |
 | 5 | 0.09 |
 | 6 | 0.09 |
 | 7 | 0.09 |
-| 8 | 0.09 |
+| 8 | 0.10 |
 | 9 | 0.09 |
 | 10 | 0.09 |
 
@@ -583,34 +579,34 @@ The startup cost is a fixed cost and is negligible for the long strong-scaling c
 
 This is why container launch overhead is reported separately from solver overhead. For a long compute-bound run, startup is amortized. For a tiny benchmark, the same 0.09-0.11 s fixed cost can be a large fraction of total time and would distort the interpretation if mixed into the solver scaling discussion.
 
-### 11.3 OSU container micro-benchmarks
+### 11.3 OSU native-vs-container micro-benchmarks
 
-OSU Micro-Benchmarks were also run with two MPI processes inside the final Singularity image. This is not used as the main native-vs-container overhead metric; that role is played by the solver-level table above, because it measures the actual application workload required by the exercise. The OSU run is instead a communication sanity check showing that the container provides working `osu_latency` and `osu_bw` binaries and that MPI execution inside the image is functional.
+OSU Micro-Benchmarks were also run with two MPI processes both natively and through the final Singularity image. This complements the solver-level overhead table above: the solver timings measure the actual application workload, while OSU isolates point-to-point latency and bandwidth behaviour.
 
-Selected container median values are:
+Selected values are:
 
-| benchmark | bytes | container median |
-|---|---:|---:|
-| latency | 1 | 10.06 us |
-| latency | 1024 | 11.16 us |
-| latency | 1048576 | 694.42 us |
-| latency | 4194304 | 2500.20 us |
-| bandwidth | 1024 | 115.25 MB/s |
-| bandwidth | 1048576 | 1564.19 MB/s |
-| bandwidth | 4194304 | 1504.60 MB/s |
+| benchmark | bytes | native median | container median | container delta |
+|---|---:|---:|---:|---:|
+| latency | 1 | 9.93 us | 9.98 us | +0.5% |
+| latency | 1024 | 11.02 us | 11.22 us | +1.8% |
+| latency | 1048576 | 817.69 us | 1004.79 us | +22.9% |
+| latency | 4194304 | 2483.66 us | 3801.77 us | +53.1% |
+| bandwidth | 1024 | 106.60 MB/s | 104.40 MB/s | -2.1% |
+| bandwidth | 1048576 | 1552.65 MB/s | 1535.15 MB/s | -1.1% |
+| bandwidth | 4194304 | 1641.37 MB/s | 1646.73 MB/s | +0.3% |
 
-![OSU latency inside container](results_final/osu_microbench_latency.svg)
+![OSU native-vs-container latency](results_final/osu_microbench_latency.svg)
 
-_Figure comment: latency increases with message size, as expected. The small-message latency is about 10 us for the tested two-rank container execution._
+_Figure comment: latency increases with message size, as expected. The small-message native and container curves are almost identical, while the largest messages show a visible container penalty._
 
-![OSU bandwidth inside container](results_final/osu_microbench_bandwidth.svg)
+![OSU native-vs-container bandwidth](results_final/osu_microbench_bandwidth.svg)
 
-_Figure comment: bandwidth grows with message size and then reaches a plateau around 1.5 GB/s for the largest tested messages. These values are used as a qualitative communication check, not as the primary application-overhead result._
+_Figure comment: bandwidth grows with message size and reaches the same large-message plateau for native and container execution. This supports the conclusion that host MPI binding is working correctly._
 
-The important point is that OSU runs successfully from the final image. The application-level container overhead remains the more relevant metric for the report: it compares the same N-body executable natively and through Singularity, and it shows a stable overhead of about 3%.
+The important point is that OSU runs successfully from the final image and gives a direct native-vs-container communication comparison. The application-level container overhead remains the more relevant metric for the report because it compares the same N-body executable natively and through Singularity, and it shows a stable overhead of about 3%.
 ## 12. Discussion
 
-The strongest result is the near-linear single-node strong scaling. This happens because the direct force kernel has enough arithmetic work to amortize MPI and OpenMP overhead. At 64 ranks, the code still reaches 90.5% efficiency.
+The strongest result is the near-linear single-node strong scaling up to 32 ranks, followed by a still-useful but visibly less ideal 64-rank point. This happens because the direct force kernel has enough arithmetic work to amortize MPI and OpenMP overhead at moderate rank counts; at 64 ranks the per-rank work is smaller and overhead becomes more visible. At 64 ranks, the code still reaches 81.2% efficiency.
 
 The weak-scaling plot is intentionally not flat. For direct all-pairs N-body, increasing the number of ranks while keeping particles per rank fixed increases the global number of particles. Since every local particle interacts with the global set, work per rank grows with the number of ranks. This differs from stencil-like weak scaling and must be interpreted using the O(N^2) structure of the algorithm.
 
@@ -661,7 +657,10 @@ results_final/ablation_64.csv
 results_final/layout_summary.csv
 results_final/energy_overhead_summary.csv
 results_final/container_overhead_summary.csv
-results_final/osu_microbench_container_summary.csv
+results_final/container_overhead_launch.csv
+results_final/osu_microbench_native_vs_container.csv
+results_final/osu_microbench_summary.csv
+results_final/mpi_linkage_check.txt
 ```
 
 The 32-rank and intermediate run directories are intentionally excluded from
@@ -678,4 +677,4 @@ The project satisfies the Exercise 1 requirements:
 - It studies relevant optimisation choices and bottlenecks.
 - It includes a Singularity container layer with native-vs-container solver timings, launch overhead, OSU latency/bandwidth inside the image, and explicit host-MPI linkage verification.
 
-The final performance result is a 57.94x speedup at 64 MPI ranks on one Orfeo GENOA node, with 90.5% efficiency. The final container result shows a stable overhead around 3%, which is consistent with a compute-bound solver where MPI binding is correctly configured.
+The final performance result is a 51.95x speedup at 64 MPI ranks on one Orfeo GENOA node, with 81.2% efficiency. The final container result shows a stable overhead around 3%, which is consistent with a compute-bound solver where MPI binding is correctly configured.

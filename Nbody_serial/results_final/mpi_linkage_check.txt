@@ -1,0 +1,15 @@
+Host-MPI linkage check for the final Singularity execution on Orfeo.
+
+The final container runs used the host OpenMPI installation by bind-mounting the
+Orfeo MPI stack into the Singularity image. The relevant ldd check showed that
+the MPI libraries resolved inside the container came from the host paths:
+
+  libmpi.so.40      => /opt/programs/openMPI/4.1.6/lib/libmpi.so.40
+  libopen-rte.so.40 => /opt/programs/openMPI/4.1.6/lib/libopen-rte.so.40
+  libopen-pal.so.40 => /opt/programs/openMPI/4.1.6/lib/libopen-pal.so.40
+  libhwloc.so.15    => /opt/programs/hwloc/2.12.0/lib/libhwloc.so.15
+
+This is the expected configuration for the native-vs-container comparison:
+the application binary is executed through Singularity, while MPI process
+management and low-level communication use the same host MPI stack as the
+native run.

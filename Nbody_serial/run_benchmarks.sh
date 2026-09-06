@@ -526,7 +526,7 @@ bench_osu() {
   run_osu_one() {
     # Run one OSU executable in native or container mode.  Warnings go to stderr;
     # successful numeric rows are appended to the shared CSV.
-    local mode_name="$1" bench="$2" metric="$3" tool="$4"
+    local mode_name="$1" bench="$2" metric="$3" tool="$4" record="${5:-1}"
     local log rc
     set +e
     if [[ "$mode_name" == "native" ]]; then
@@ -538,20 +538,34 @@ bench_osu() {
     set -e
     if (( rc != 0 )); then
       printf "warning: OSU %s/%s failed rc=%s\n%s\n" "$mode_name" "$bench" "$rc" "$log" >&2
-    else
+    elif [[ "$record" == "1" ]]; then
       printf "%s\n" "$log" | parse_osu "$mode_name" "$bench" "$metric" >> "$out"
     fi
+  }
+  run_osu_repeated() {
+    # OSU performs many internal iterations per invocation, but the project
+    # deliverables ask for statistics over repeated measurements.  Repeat the
+    # whole launched benchmark so analyze.py can report median and stdev across
+    # comparable native/container runs.
+    local mode_name="$1" bench="$2" metric="$3" tool="$4"
+    local rep
+    for rep in $(seq 1 "$warmups"); do
+      run_osu_one "$mode_name" "$bench" "$metric" "$tool" 0
+    done
+    for rep in $(seq 1 "$repeats"); do
+      run_osu_one "$mode_name" "$bench" "$metric" "$tool" 1
+    done
   }
   if [[ "$mode" == "native" || "$mode" == "both" ]]; then
     command -v "$latency" >/dev/null 2>&1 || [[ -x "$latency" ]] || { echo "missing $latency" >&2; exit 1; }
     command -v "$bw" >/dev/null 2>&1 || [[ -x "$bw" ]] || { echo "missing $bw" >&2; exit 1; }
-    run_osu_one native latency latency_us "$latency"
-    run_osu_one native bandwidth bandwidth_MBps "$bw"
+    run_osu_repeated native latency latency_us "$latency"
+    run_osu_repeated native bandwidth bandwidth_MBps "$bw"
   fi
   if [[ "$mode" == "container" || "$mode" == "both" ]]; then
     [[ -n "$runtime" ]] || { echo "no container runtime found" >&2; exit 127; }
-    run_osu_one container latency latency_us "$container_latency"
-    run_osu_one container bandwidth bandwidth_MBps "$container_bw"
+    run_osu_repeated container latency latency_us "$container_latency"
+    run_osu_repeated container bandwidth bandwidth_MBps "$container_bw"
   fi
   echo "wrote $out"
 }

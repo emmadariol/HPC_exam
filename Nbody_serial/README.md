@@ -207,7 +207,8 @@ python3 analyze.py summarize energy energy_overhead.csv energy_overhead_summary.
 
 bash ./run_benchmarks.sh osu --mode native
 bash ./run_benchmarks.sh osu --mode container --image nbody.sif
-bash ./run_benchmarks.sh osu --mode both --image nbody.sif --out osu_microbench_container.csv
+OUT=osu_microbench_native_vs_container.csv \
+  bash ./run_benchmarks.sh osu --mode both --image nbody.sif
 
 OUT=perf_counters.txt RANKS=1 THREADS=8 N=20000 NSTEPS=20 \
   bash ./run_benchmarks.sh perf
