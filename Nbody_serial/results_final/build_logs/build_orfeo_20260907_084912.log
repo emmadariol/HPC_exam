@@ -1,0 +1,52 @@
+=== date ===
+Mon Sep  7 08:49:12 CEST 2026
+
+=== host ===
+login02.hpc.rd.areasciencepark.it
+
+=== modules ===
+
+Currently Loaded Modules:
+  1) hwloc/2.12.0   2) openMPI/4.1.6
+
+ 
+
+
+=== compilers ===
+/usr/bin/cc
+cc (GCC) 14.3.1 20251022 (Red Hat 14.3.1-4)
+Copyright (C) 2024 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+/opt/programs/openMPI/4.1.6/bin/mpicc
+gcc (GCC) 14.3.1 20251022 (Red Hat 14.3.1-4)
+Copyright (C) 2024 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+
+=== make clean ===
+rm -f nbody_direct_serial nbody_direct_hybrid nbody_layout_benchmark generate_ic *.o *.bin
+
+=== make ===
+cc -std=c11 -DNBODY_USE_DOUBLE -O3 -march=native -Wall -Wextra -Wpedantic -fopenmp -o nbody_direct_serial nbody_direct_serial.c -lm
+mpicc -std=c11 -DNBODY_USE_DOUBLE -O3 -march=native -Wall -Wextra -Wpedantic -fopenmp -o nbody_direct_hybrid nbody_direct_hybrid.c -lm
+cc -std=c11 -DNBODY_USE_DOUBLE -O3 -march=native -Wall -Wextra -Wpedantic -fopenmp -o nbody_layout_benchmark nbody_layout_benchmark.c -lm
+cc -std=c11 -DNBODY_USE_DOUBLE -O3 -march=native -Wall -Wextra -Wpedantic -o generate_ic generate_ic.c -lm
+
+=== produced binaries ===
+-rwxr-xr-x 1 emmadariol emmadariol 30K Sep  7 08:49 generate_ic
+-rwxr-xr-x 1 emmadariol emmadariol 52K Sep  7 08:49 nbody_direct_hybrid
+-rwxr-xr-x 1 emmadariol emmadariol 31K Sep  7 08:49 nbody_direct_serial
+-rwxr-xr-x 1 emmadariol emmadariol 27K Sep  7 08:49 nbody_layout_benchmark
+
+=== ldd hybrid ===
+	linux-vdso.so.1 (0x00007f5c75d44000)
+	libm.so.6 => /lib64/libm.so.6 (0x00007f5c75c47000)
+	libmpi.so.40 => /opt/programs/openMPI/4.1.6/lib/libmpi.so.40 (0x00007f5c75afb000)
+	libgomp.so.1 => /lib64/libgomp.so.1 (0x00007f5c75aa5000)
+	libc.so.6 => /lib64/libc.so.6 (0x00007f5c758b2000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007f5c75d46000)
+	libopen-rte.so.40 => /opt/programs/openMPI/4.1.6/lib/libopen-rte.so.40 (0x00007f5c757f4000)
+	libopen-pal.so.40 => /opt/programs/openMPI/4.1.6/lib/libopen-pal.so.40 (0x00007f5c7573c000)
+	libz.so.1 => /lib64/libz.so.1 (0x00007f5c75718000)
+	libhwloc.so.15 => /opt/programs/hwloc/2.12.0/lib/libhwloc.so.15 (0x00007f5c756b8000)
+	libevent_core-2.1.so.7 => /lib64/libevent_core-2.1.so.7 (0x00007f5c75680000)
+	libevent_pthreads-2.1.so.7 => /lib64/libevent_pthreads-2.1.so.7 (0x00007f5c75679000)
