@@ -120,7 +120,7 @@ a(t+dt)   = force(r(t+dt))           nuova forza
 v(t+dt)   = v(t+dt/2) + a(t+dt)dt/2 secondo kick
 ```
 
-Il codice conserva anche una variante DKD per confronto, ma i run finali usano KDK per aderire alla consegna.
+Il solver hybrid usa esclusivamente KDK, come richiesto dalla consegna.
 
 ### 4.2 Perche leapfrog
 

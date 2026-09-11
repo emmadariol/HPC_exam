@@ -133,7 +133,7 @@ Questa tabella è utile per l'orale: collega il concetto teorico alla parte conc
 
 | Concetto | Dove guardare |
 |---|---|
-| Parsing opzioni `--integrator`, `--comm`, `--kernel`, `--rsqrt` | `nbody_direct_hybrid.c`, funzioni `parse_*` |
+| Parsing opzioni `--comm`, `--kernel`, `--rsqrt` | `nbody_direct_hybrid.c`, funzioni `parse_*`; l'integratore hybrid e KDK |
 | Radice inversa esatta/approssimata | `nbody_direct_hybrid.c`, funzione `invsqrt_force` |
 | Lettura file binario iniziale | `nbody_direct_hybrid.c`, `read_local_particles`; `nbody_direct_serial.c` |
 | Scrittura stato finale | `nbody_direct_hybrid.c`, `write_output_root` |
@@ -1604,7 +1604,6 @@ export OMP_PROC_BIND=close
 mpirun -np 2 ./nbody_direct_hybrid \
   --input test_128.bin \
   --nsteps 5 \
-  --integrator kdk \
   --comm overlap \
   --kernel direct \
   --rsqrt exact \

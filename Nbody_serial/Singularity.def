@@ -1,9 +1,5 @@
-# Native Singularity definition for systems where unprivileged image builds are
-# supported.  On Orfeo/Leonardo this may fail without fakeroot/proot; in that
-# case the Docker image is built locally, pushed to Docker Hub, and pulled as a
-# SIF with `singularity pull docker://...`.
 Bootstrap: docker
-From: ubuntu:24.04
+From: ubuntu:22.04
 
 %files
     # Copy the repository into the container at build time.

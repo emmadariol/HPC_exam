@@ -39,10 +39,13 @@ The assignment text refers to LEONARDO for the container layer. In practice, the
 | Newton-third-law comparison | `results_final/ablation_64.csv` |
 | Exact vs approximate inverse square root | `results_final/ablation_64.csv` |
 | Communication overlap comparison | `results_final/ablation_64.csv` |
+| Accumulator saturation study | `results_final/ablation_64.csv` after rerunning the updated 1/2/4/8 sweep |
+| RAM bandwidth benchmark | `results_final/memory_bandwidth_summary.csv` in the refreshed final campaign |
 | Container overhead table | `results_final/container_overhead_summary.csv` |
 | Launch overhead | `results_final/container_overhead_launch.csv` |
 | OSU latency and bandwidth, native vs container | `results_final/osu_microbench_summary.csv` |
 | Host MPI injection check | `results_final/mpi_linkage_check.txt` |
+| Native architecture target comparison | `results_final/arch_target_comparison_summary.csv` after rerunning the architecture benchmark |
 
 ## 3. Code structure
 
@@ -95,13 +98,13 @@ The final scaling results were run on one Orfeo GENOA node:
 | Total CPUs | 64 |
 | NUMA nodes | 8 |
 | Memory | 503 GiB |
-| Direct RAM bandwidth benchmark | not measured with STREAM in the accepted final dataset |
+| Direct RAM bandwidth benchmark | measured by the project STREAM-style `memory_bandwidth` benchmark in the refreshed final campaign |
 | Kernel | Linux 6.13.12-200.fc41.x86_64 |
 | Compiler | GCC 14.3.1 |
 | MPI | Open MPI 4.1.6rc4 |
 | Container runtime | Singularity CE 4.3.1 |
 
-The NUMA topology is eight NUMA domains, each with eight CPUs. The full `numactl -H` output and node-local memory sizes are preserved in `results_final/system_info_orfeo.txt`. A separate STREAM-like RAM-bandwidth benchmark was not part of the accepted final dataset; instead, the bottleneck section reports application-level throughput through pair-interaction rate, estimated GFLOP/s and measured communication bandwidth. This distinction is important: the hardware memory capacity and NUMA layout are documented directly, while the performance bottleneck evidence is derived from the instrumented N-body runs rather than from a standalone memory-bandwidth microbenchmark.
+The NUMA topology is eight NUMA domains, each with eight CPUs. The full `numactl -H` output and node-local memory sizes are preserved in `results_final/system_info_orfeo.txt`. The refreshed benchmark workflow also includes a standalone STREAM-style RAM-bandwidth benchmark, so the hardware memory-bandwidth deliverable is measured directly rather than inferred from application-level pair-interaction throughput.
 
 The final runs use Slurm binding to cores and OpenMP placement:
 
@@ -164,7 +167,7 @@ The resulting hybrid command line is equivalent to:
 mpicc -std=c11 -DNBODY_USE_DOUBLE -O3 -march=native -Wall -Wextra -Wpedantic -fopenmp -o nbody_direct_hybrid nbody_direct_hybrid.c -lm
 ```
 
-The container image is built from `ubuntu:24.04`, installs OpenMPI and OSU Micro-Benchmarks at build time, and compiles the code with:
+The container image is built from `ubuntu:22.04`, installs OpenMPI and OSU Micro-Benchmarks at build time, and compiles the code with:
 
 ```text
 -O3 -march=x86-64-v3 -Wall -Wextra -Wpedantic
@@ -175,6 +178,18 @@ The container uses `x86-64-v3` instead of `-march=native` to keep the image port
 The native executable uses `-march=native` because the native benchmarks are tied to the measured node. This allows GCC to target the actual CPU features available on GENOA. The container executable instead uses `x86-64-v3` because the image is meant to be portable and reproducible across machines. This is a deliberate asymmetry: native runs represent the best local build, while container runs represent a portable build deployed through Singularity. The measured overhead therefore includes both runtime container overhead and possible compilation-target effects.
 
 All production runs use double-precision arithmetic. The input file stores particle coordinates and velocities as floats to keep files compact, but the force accumulation, integration and energy checks are performed with `dtype=double`. This choice reduces the risk that the correctness discussion is dominated by roundoff noise, especially when comparing the exact and approximate inverse-square-root paths.
+
+The hybrid solver reads the shared initial-condition file with collective
+MPI-IO.  All ranks participate in the header read and then each rank reads only
+its own contiguous particle block with `MPI_File_read_at_all`.  This avoids the
+previous POSIX pattern where every rank scanned the whole input file and could
+create an avoidable metadata/data storm on the parallel filesystem.
+
+The single-rank Newton-third-law ablation uses a pre-allocated thread workspace.
+The force kernel clears this workspace with `memset` at each evaluation instead
+of allocating and freeing thread-private buffers inside the timed loop.  The
+reported Newton timing therefore measures the pair-interaction algorithm rather
+than allocator overhead.
 
 ## 5.1 Statistical treatment
 
@@ -203,7 +218,7 @@ The production runs use the KDK leapfrog form, which is second order and symplec
 max_relative_energy_drift = max_t |E(t) - E(0)| / max(|E(0)|, tiny)
 ```
 
-The tolerance used by the benchmark scripts is `1e-3`. All final scaling, hybrid, evidence and container rows have `all_ok=True` or `status=OK`. No final CSV contains `RUN_FAILED`, `PARSE_FAILED` or `nan`.
+The tolerance used by the benchmark scripts is `1e-4`, matching the stricter value suggested in the assignment for the Plummer validation. All final scaling, hybrid, evidence and container rows have `all_ok=True` or `status=OK`. No final CSV contains `RUN_FAILED`, `PARSE_FAILED` or `nan`.
 
 The softening parameter is part of the physical model, not only a numerical stabilizer. It prevents singular accelerations during close encounters and makes the total-energy diagnostic meaningful for the chosen timestep. The timestep and softening used in the benchmarks are therefore kept fixed across variants so that performance comparisons are not mixed with changes in the simulated dynamics.
 
@@ -417,7 +432,7 @@ comm_wait/total    ~= 4.1%
 
 The remaining time is mainly integration updates, diagnostics and runtime overhead. This is why the optimisation discussion focuses on force-kernel structure, layout, reciprocal square root and Newton reuse.
 
-The direct kernel exposes `--accumulators 1|4` to isolate the critical-path question in the assignment. The production default is `4`, which uses four independent accumulator chains per component. The final ablation CSV includes an `Accumulators` case, so the single-chain and four-chain variants are quantified without changing the main solver path.
+The direct kernel exposes `--accumulators 1|2|4|8` to isolate the critical-path question in the assignment and to identify the saturation point of independent accumulation chains. The production default is `4`, which uses four independent accumulator chains per component. The refreshed ablation CSV includes all four accumulator counts without changing the main solver path.
 
 ### 10.2 Newton's third law
 
@@ -451,7 +466,7 @@ This is smaller than the theoretical 50% arithmetic reduction because the kernel
 
 _Figure comment: the ablation plot should be read by pair, not as one single ranking. `direct/newton`, `exact/approx`, and `sendrecv/overlap` answer three different optimisation questions._
 
-In this implementation the approximate path is slower than the exact path. This is counter to the usual expectation that reciprocal-square-root approximations can be faster, but it is a valid measurement: the approximation does not automatically translate into better throughput if the compiler does not generate the desired SIMD sequence or if the extra refinement work and conversions dominate.
+In the updated implementation, the native AVX-512 build uses `_mm512_rsqrt14_pd` plus Newton-Raphson refinement for the approximate path when `__AVX512F__` is available. Portable builds, including `x86-64-v3` container builds, fall back to a scalar single-precision seed plus Newton-Raphson refinement because AVX-512 is intentionally outside the portable target. This distinction is important when interpreting exact-vs-approximate timings.
 
 The correctness check prevents using an approximate math path blindly: energy drift must remain below tolerance before any speed claim is meaningful.
 
@@ -528,7 +543,7 @@ results_final
 
 The Docker image is self-contained at build time:
 
-- Ubuntu 24.04 base image
+- Ubuntu 22.04 base image
 - build-essential
 - OpenMPI development packages
 - OSU Micro-Benchmarks 7.5.2
@@ -540,7 +555,7 @@ At runtime, the host OpenMPI was injected into the container and verified with `
 
 The container intentionally contains OpenMPI even though the runtime MPI is the host one. The container MPI is needed to compile the MPI executable inside the image and to provide a complete build environment. At runtime, however, the site MPI must be used so that Slurm integration, process launch, transport configuration and host libraries match the cluster environment. This distinction is central to using MPI containers correctly on HPC systems.
 
-Ubuntu 24.04 was chosen as a standard, reproducible base image with recent system packages and straightforward OpenMPI/OSU installation. A vendor HPC image could provide more tuned low-level libraries, but it would also make the image less transparent and more dependent on a specific vendor stack. For this exercise, transparency and reproducibility were preferred.
+Ubuntu 22.04 was chosen to match the assignment text while still providing a standard, reproducible base image with straightforward OpenMPI/OSU installation. A vendor HPC image could provide more tuned low-level libraries, but it would also make the image less transparent and more dependent on a specific vendor stack. For this exercise, transparency and reproducibility were preferred.
 
 The final container benchmark is deliberately limited to 1, 2 and 4 ranks. The assignment requires at least three process/node configurations, and these points are enough to isolate runtime overhead without spending unnecessary allocation time. Larger native scaling is already covered by the main 64-rank GENOA run.
 
@@ -601,7 +616,7 @@ This is why container launch overhead is reported separately from solver overhea
 
 ### 11.3 OSU native-vs-container micro-benchmarks
 
-OSU Micro-Benchmarks were also run with two MPI processes both natively and through the final Singularity image. This complements the solver-level overhead table above: the solver timings measure the actual application workload, while OSU isolates point-to-point latency and bandwidth behaviour.
+OSU Micro-Benchmarks are run with two MPI processes both natively and through the final Singularity image. For strict Exercise-1 compliance, the refreshed final campaign must use two nodes with one MPI process per node, so OSU measures the inter-node communication path rather than an intra-node shared-memory path. This complements the solver-level overhead table above: the solver timings measure the actual application workload, while OSU isolates point-to-point latency and bandwidth behaviour.
 
 Selected values are:
 

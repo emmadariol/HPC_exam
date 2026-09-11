@@ -1,5 +1,3 @@
-# Compiler knobs are intentionally overridable from the command line so that the
-# same repository can be built on a laptop, Orfeo, Leonardo, or inside Docker.
 CC        ?= gcc
 MPICC     ?= mpicc
 STD       ?= -std=c11
@@ -7,13 +5,6 @@ CFLAGS    ?= -O3 -march=native -Wall -Wextra -Wpedantic
 OMPFLAGS  ?= -fopenmp
 LDLIBS    ?= -lm
 PRECISION ?= double
-
-# The four maintained executables:
-#   generate_ic              creates reproducible binary inputs
-#   nbody_direct_serial      serial reference solver
-#   nbody_direct_hybrid      MPI + OpenMP production solver
-#   nbody_layout_benchmark   AoS-vs-SoA memory-layout evidence
-#   memory_bandwidth         STREAM-style RAM-bandwidth benchmark
 PROGRAMS := nbody_direct_serial nbody_direct_hybrid nbody_layout_benchmark generate_ic memory_bandwidth
 HEADERS  := nbody_common.h
 
@@ -27,7 +18,7 @@ else
 $(error PRECISION must be either double or float)
 endif
 
-.PHONY: all clean run-smoke vec-report bench-scaling bench-hybrid bench-ablation bench-layout bench-energy bench-memory bench-container bench-osu bench-perf
+.PHONY: all clean run-smoke vec-report bench-scaling bench-hybrid bench-ablation bench-layout bench-energy bench-memory bench-container bench-osu bench-arch bench-perf
 
 all: $(PROGRAMS)
 
@@ -61,8 +52,8 @@ MPI_RUN ?= mpirun -np 2
 run-smoke: all
 	./generate_ic --model 0 --n 128 --seed 42 --output plummer_128.bin
 	./nbody_direct_serial --input plummer_128.bin --nsteps 5 --dt 1e-4 --eps 0.05 --energy-every 1 --output plummer_128_final.bin --quiet
-	OMP_NUM_THREADS=2 $(MPI_RUN) ./nbody_direct_hybrid --input plummer_128.bin --nsteps 5 --dt 1e-4 --eps 0.05 --energy-every 1 --integrator kdk --comm sendrecv --output plummer_128_hybrid_final.bin --quiet
-	OMP_NUM_THREADS=2 $(MPI_RUN) ./nbody_direct_hybrid --input plummer_128.bin --nsteps 5 --dt 1e-4 --eps 0.05 --energy-every 1 --integrator dkd --comm overlap --quiet
+	OMP_NUM_THREADS=2 $(MPI_RUN) ./nbody_direct_hybrid --input plummer_128.bin --nsteps 5 --dt 1e-4 --eps 0.05 --energy-every 1 --comm sendrecv --output plummer_128_hybrid_final.bin --quiet
+	OMP_NUM_THREADS=2 $(MPI_RUN) ./nbody_direct_hybrid --input plummer_128.bin --nsteps 5 --dt 1e-4 --eps 0.05 --energy-every 1 --comm overlap --quiet
 	OMP_NUM_THREADS=2 ./nbody_layout_benchmark --input plummer_128.bin --layout both --warmups 1 --inner-repeats 1 >/dev/null
 
 # Ask GCC/MPICC which loops were vectorised or missed; the reports are useful
@@ -85,6 +76,7 @@ bench-hybrid: all
 
 bench-ablation: all
 	bash ./run_benchmarks.sh ablation
+	python3 analyze.py summarize ablation results_ablation.csv results_ablation_summary.csv
 	python3 analyze.py plot ablation results_ablation.csv results_ablation
 
 bench-layout: all
@@ -111,6 +103,11 @@ bench-osu:
 	bash ./run_benchmarks.sh osu
 	python3 analyze.py summarize osu osu_microbench.csv osu_microbench_summary.csv
 	python3 analyze.py plot osu osu_microbench_summary.csv osu_microbench
+
+bench-arch:
+	bash ./run_benchmarks.sh arch
+	python3 analyze.py summarize arch arch_target_comparison.csv arch_target_comparison_summary.csv
+	python3 analyze.py plot arch arch_target_comparison_summary.csv arch_target_comparison
 
 bench-perf: all
 	bash ./run_benchmarks.sh perf

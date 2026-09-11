@@ -25,6 +25,9 @@ This directory contains the stand-alone programs for the direct gravitational N-
   STREAM-style RAM bandwidth for the hardware section of the report.
 - `run_benchmarks.sh osu`: collect OSU latency/bandwidth microbenchmarks for the
   MPI stack used by the production runs.
+- `run_benchmarks.sh arch`: compare native `-march=native` and portable
+  `-march=x86-64-v3` builds on the same host, isolating code-generation effects
+  from Singularity runtime overhead.
 - `Dockerfile` and `Singularity.def`: starter container recipes for the
   required native-vs-container comparison. Both images also build OSU
   Micro-Benchmarks so `osu_latency` and `osu_bw` are available inside the
@@ -34,8 +37,8 @@ This directory contains the stand-alone programs for the direct gravitational N-
   medians, standard deviations, and overhead percentages.
 - `docs/REPORT_TEMPLATE.md`: checklist-style report skeleton matching the exam
   deliverables.
-- `generate_ic.c`: initial-condition generator supporting two models:
-  Plummer sphere (`--model 0`) and uniform ball + Maxwellian (`--model 1`).
+- `generate_ic.c`: initial-condition generator used by the project for Plummer
+  sphere initial conditions (`--model 0`).
 
 ## Project layout
 
@@ -60,8 +63,12 @@ Nbody_serial/
 └── runs/                     ignored local run history and Slurm scratch output
 ```
 
-The codes are intended as *almost complete* exam skeletons. The direct force kernel is deliberately correct but naive. It uses an O(N^2) all-pairs loop, scalar `sqrt`, one accumulator per component, and no Newton-third-law reuse.
-The comments in `compute_accelerations_naive` mark this as the kernel whose optimization is part of the assignment, along with the hybrid parallelization.
+The codes are intended as an explicit, inspectable implementation of the N-body
+exercise.  The scalable production path is still the required direct O(N^2)
+all-pairs algorithm, but the hybrid solver now exposes the optimisation choices
+measured in the report: MPI ring decomposition, coordinated MPI-IO input,
+OpenMP/SIMD force loops, 1/2/4/8 accumulator chains, approximate reciprocal
+square root, and the single-rank Newton-third-law ablation.
 
 ## Arithmetic type
 
@@ -128,14 +135,6 @@ Generate a small Plummer sphere and evolve it:
 ./nbody_direct_serial --input plummer_1000.bin --nsteps 100 --dt 1e-4 --eps 0.05 --mass 1.0 --energy-every 10 --output final_state.bin
 ```
 
-Generate a uniform ball with Maxwellian velocities. If `--sigma` is negative or omitted, the generator uses the uniform-sphere virial estimate
-`sigma^2 = G M / (5 R)`.
-
-```sh
-./generate_ic --model 1 --n 1000 --seed 456 --radius 1.0 --mass 1.0 --output ball_1000.bin
-./nbody_direct_serial --input ball_1000.bin --nsteps 100 --dt 1e-4 --eps 0.05 --mass 1.0 --energy-every 10
-```
-
 Run both smoke tests:
 
 ```sh
@@ -148,13 +147,12 @@ Run the hybrid solver directly:
 make nbody_direct_hybrid
 OMP_NUM_THREADS=4 mpirun -np 2 ./nbody_direct_hybrid \
   --input plummer_1000.bin --nsteps 100 --dt 1e-4 --eps 0.05 \
-  --mass 1.0 --energy-every 10 --integrator kdk --comm sendrecv \
+  --mass 1.0 --energy-every 10 --comm sendrecv \
   --output final_state_hybrid.bin
 ```
 
-`--integrator kdk` follows the wording of the exam text. `--integrator dkd`
-keeps the original baseline-compatible Drift-Kick-Drift path available for
-comparison. `--comm sendrecv` uses a simple blocking ring exchange, while
+The hybrid solver uses the KDK leapfrog scheme. `--comm sendrecv` uses a simple
+blocking ring exchange, while
 `--comm overlap` posts `MPI_Irecv`/`MPI_Isend` for the next ring chunk before
 computing the current chunk and waits afterwards, so communication can overlap
 with the OpenMP force loop when the MPI implementation and problem size allow it.
@@ -230,23 +228,26 @@ Optional kernel experiments:
 ```sh
 OMP_NUM_THREADS=4 mpirun -np 1 ./nbody_direct_hybrid \
   --input plummer_1000.bin --nsteps 20 --dt 1e-4 --eps 0.05 \
-  --integrator kdk --kernel newton --rsqrt exact --quiet
+  --kernel newton --rsqrt exact --quiet
 
 OMP_NUM_THREADS=4 mpirun -np 2 ./nbody_direct_hybrid \
   --input plummer_1000.bin --nsteps 20 --dt 1e-4 --eps 0.05 \
-  --integrator kdk --kernel direct --rsqrt approx --quiet
+  --kernel direct --rsqrt approx --quiet
 
 OMP_NUM_THREADS=4 mpirun -np 2 ./nbody_direct_hybrid \
   --input plummer_1000.bin --nsteps 20 --dt 1e-4 --eps 0.05 \
-  --integrator kdk --kernel direct --accumulators 1 --quiet
+  --kernel direct --accumulators 1 --quiet
 ```
 
 `--kernel newton` is intentionally single-rank only: in a distributed ring,
 Newton-third-law reuse also requires returning the opposite force contribution
 to the remote owner rank. The direct MPI ring path is the main scalable solver.
-`--accumulators 1|4` isolates the critical-path experiment requested in the
+The single-rank Newton path uses a pre-allocated thread workspace and clears it
+with `memset` at each force evaluation, so dynamic allocation is not inside the
+timed force kernel.
+`--accumulators 1|2|4|8` isolates the critical-path experiment requested in the
 optimisation discussion; the default remains `4`, matching the production
-kernel.
+kernel, while the wider sweep can identify the saturation point.
 
 Singularity/Apptainer workflow:
 
@@ -322,7 +323,7 @@ The reported verification metric is
 abs(E(t) - E(0)) / max(abs(E(0)), dtype_min_normal)
 ```
 
-A warning is printed if the maximum observed drift exceeds `--energy-tol` (default `1e-3`). This does not terminate the run, because large drift is often an intentional teaching signal: reduce `dt`, increase `eps`, or inspect the initial conditions.
+A warning is printed if the maximum observed drift exceeds `--energy-tol` (default `1e-4`). This does not terminate the run, because large drift is often an intentional teaching signal: reduce `dt`, increase `eps`, or inspect the initial conditions.
 
 ## Intended optimisation path
 

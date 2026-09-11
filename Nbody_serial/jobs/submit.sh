@@ -17,6 +17,8 @@ BENCH:
   memory      STREAM-style RAM-bandwidth benchmark
   container   native-vs-Singularity container overhead
   osu         OSU latency/bandwidth native-vs-container
+  arch        native -march=native vs -march=x86-64-v3 comparison
+  perf        optional hardware-counter snapshot
 
 Common options:
   --partition NAME      override partition
@@ -24,6 +26,7 @@ Common options:
   --qos NAME            override qos
   --nodes N             default: 1
   --cpus N              total CPU budget reserved as Slurm --ntasks=N
+  --ntasks-per-node N   useful for OSU 2-node runs: use N=1 with --nodes 2
   --time HH:MM:SS       override time limit
   --exclusive           request full node
   --afterok JOBID       add dependency afterok:JOBID
@@ -46,6 +49,7 @@ account=""
 qos=""
 nodes="1"
 cpus=""
+ntasks_per_node=""
 time_limit=""
 exclusive="0"
 dependency=""
@@ -65,6 +69,7 @@ while [[ $# -gt 0 ]]; do
     --qos) qos="$2"; shift 2 ;;
     --nodes) nodes="$2"; shift 2 ;;
     --cpus) cpus="$2"; shift 2 ;;
+    --ntasks-per-node) ntasks_per_node="$2"; shift 2 ;;
     --time) time_limit="$2"; shift 2 ;;
     --exclusive) exclusive="1"; shift ;;
     --afterok) dependency="$2"; shift 2 ;;
@@ -113,7 +118,9 @@ case "$bench" in
   evidence) default_time="01:30:00"; default_cpus="8" ;;
   memory) default_time="00:15:00"; default_cpus="64" ;;
   container) default_time="01:00:00"; default_cpus="4" ;;
-  osu) default_time="00:20:00"; default_cpus="2" ;;
+  osu) default_time="00:40:00"; default_cpus="2" ;;
+  arch) default_time="01:59:00"; default_cpus="64" ;;
+  perf) default_time="00:20:00"; default_cpus="1" ;;
   *) echo "unknown bench: $bench" >&2; usage >&2; exit 2 ;;
 esac
 
@@ -143,7 +150,7 @@ case "$bench" in
     ;;
   ablation)
     # Optimization ablation: one raw CSV plus one bar chart.
-    payload='OUT="${RESULT_DIR}/ablation.csv" bash ./run_benchmarks.sh ablation; python3 analyze.py plot ablation "$RESULT_DIR/ablation.csv" "$RESULT_DIR/ablation"'
+    payload='OUT="${RESULT_DIR}/ablation.csv" bash ./run_benchmarks.sh ablation; python3 analyze.py summarize ablation "$RESULT_DIR/ablation.csv" "$RESULT_DIR/ablation_summary.csv"; python3 analyze.py plot ablation "$RESULT_DIR/ablation.csv" "$RESULT_DIR/ablation"'
     ;;
   evidence)
     # Non-scaling solver evidence used by the report: system info, memory layout
@@ -164,7 +171,18 @@ case "$bench" in
   osu)
     # Pull the SIF if needed, then compare native/container OSU latency and
     # bandwidth.  Native OSU paths can be overridden via OSU_LATENCY/OSU_BW.
-    payload='if [[ ! -f "${IMAGE:-nbody.sif}" && -n "${IMAGE_URI:-docker://memid01/nbody-hpc:latest}" ]]; then singularity pull --force "${IMAGE:-nbody.sif}" "${IMAGE_URI:-docker://memid01/nbody-hpc:latest}"; fi; OUT="$RESULT_DIR/osu_microbench_native_vs_container.csv" bash ./run_benchmarks.sh osu; python3 analyze.py summarize osu "$RESULT_DIR/osu_microbench_native_vs_container.csv" "$RESULT_DIR/osu_microbench_summary.csv"; python3 analyze.py plot osu "$RESULT_DIR/osu_microbench_summary.csv" "$RESULT_DIR/osu_microbench"'
+    payload='if [[ ! -f "${IMAGE:-nbody.sif}" && -n "${IMAGE_URI:-docker://memid01/nbody-hpc:latest}" ]]; then singularity pull --force "${IMAGE:-nbody.sif}" "${IMAGE_URI:-docker://memid01/nbody-hpc:latest}"; fi; OUT="$RESULT_DIR/osu_microbench_native_vs_container.csv" OSU_NTASKS_PER_NODE="${OSU_NTASKS_PER_NODE:-1}" bash ./run_benchmarks.sh osu; python3 analyze.py summarize osu "$RESULT_DIR/osu_microbench_native_vs_container.csv" "$RESULT_DIR/osu_microbench_summary.csv"; python3 analyze.py plot osu "$RESULT_DIR/osu_microbench_summary.csv" "$RESULT_DIR/osu_microbench"'
+    ;;
+  arch)
+    # Native compiler-target comparison: separates portable x86-64-v3 codegen
+    # from Singularity runtime overhead.
+    payload='OUT="$RESULT_DIR/arch_target_comparison.csv" bash ./run_benchmarks.sh arch; python3 analyze.py summarize arch "$RESULT_DIR/arch_target_comparison.csv" "$RESULT_DIR/arch_target_comparison_summary.csv"; python3 analyze.py plot arch "$RESULT_DIR/arch_target_comparison_summary.csv" "$RESULT_DIR/arch_target_comparison"'
+    ;;
+  perf)
+    # Optional hardware counters.  Some clusters restrict perf_event access; if
+    # the job fails for permissions, keep the failure log and rely on internal
+    # instrumentation plus the memory benchmark.
+    payload='OUT="$RESULT_DIR/perf_counters.txt" bash ./run_benchmarks.sh perf'
     ;;
 esac
 
@@ -213,6 +231,9 @@ if [[ "$bench" == "memory" ]]; then
   sbatch_ntasks="1"
   sbatch_cpus_per_task="$cpus"
 fi
+if [[ "$bench" == "osu" && "$nodes" -gt 1 && -z "$ntasks_per_node" ]]; then
+  ntasks_per_node="1"
+fi
 
 sbatch_args=(
   --account="$account"
@@ -227,6 +248,7 @@ sbatch_args=(
   --error="$result_dir/slurm_%j.err"
 )
 
+[[ -n "$ntasks_per_node" ]] && sbatch_args+=(--ntasks-per-node="$ntasks_per_node")
 [[ "$exclusive" == "1" ]] && sbatch_args+=(--exclusive)
 [[ -n "$dependency" ]] && sbatch_args+=(--dependency="afterok:$dependency")
 [[ "$cluster" == "leonardo" ]] && sbatch_args+=(--gres=tmpfs:10g)

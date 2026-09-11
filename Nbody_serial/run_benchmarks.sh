@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Unified benchmark driver for the project.  All benchmark families share the
-# same command-line convention (`--key value` -> environment variable), the same
-# failure policy, and the same CSV-producing style.  This avoids duplicated
-# Slurm scripts with subtly different parsing or append/overwrite behavior.
 usage() {
   cat <<'EOF'
 usage: ./run_benchmarks.sh COMMAND [options]
@@ -18,6 +14,7 @@ Commands:
   memory      STREAM-style RAM-bandwidth benchmark
   container   native-vs-container solver overhead plus launch overhead
   osu         OSU latency/bandwidth native, container, or both
+  arch        native build target comparison: -march=native vs x86-64-v3
   perf        optional perf-stat hardware-counter snapshot
 
 Options are passed as --key value and become upper-case environment variables.
@@ -69,157 +66,18 @@ done
 # variable or via the command-line conversion above.
 launcher="${LAUNCHER:-srun}"
 cpu_bind="${CPU_BIND:---cpu-bind=verbose,cores}"
-model="${MODEL:-0}"
+# The benchmark suite uses only the Plummer initial condition (model 0).
+model=0
 dt="${DT:-1e-4}"
 eps="${EPS:-0.05}"
-nsteps="${NSTEPS:-5}"
+nsteps="${NSTEPS:-100}"
 repeats="${REPEATS:-5}"
 warmups="${WARMUPS:-1}"
-energy_every="${ENERGY_EVERY:-10}"
+energy_every="${ENERGY_EVERY:-100}"
 
-detect_runtime() {
-  # Container engines are treated as interchangeable execution backends.  The
-  # benchmark logic only needs to know how to prefix a command for the selected
-  # runtime; Docker is useful locally, Singularity/Apptainer on clusters.
-  if [[ -n "${RUNTIME:-}" ]]; then
-    printf "%s" "$RUNTIME"
-  elif command -v singularity >/dev/null 2>&1; then
-    printf "singularity"
-  elif command -v apptainer >/dev/null 2>&1; then
-    printf "apptainer"
-  elif command -v docker >/dev/null 2>&1; then
-    printf "docker"
-  else
-    return 1
-  fi
-}
-
-parse_solver_csv() {
-  local prefix="$1"
-  # Parse solver summaries with awk instead of spawning Python inside timing
-  # loops.  This keeps per-run overhead low and prevents measurement pollution.
-  awk -v prefix="$prefix" '
-    BEGIN {
-      FS = "[ =]+";
-      OFS = ",";
-      dtype = "unknown";
-      total = io = drift = force = comm_wait = kick = energy = gpairs = max_rel_drift = status = "";
-    }
-    /^# final:/ {
-      for (i = 1; i <= NF; ++i) {
-        if ($i == "arithmetic_dtype") dtype = $(i + 1);
-        else if ($i == "max_relative_energy_drift") max_rel_drift = $(i + 1);
-        else if ($i == "status") status = $(i + 1);
-      }
-    }
-    /^# timing_max_seconds/ {
-      for (i = 1; i <= NF; ++i) {
-        if ($i == "total") total = $(i + 1);
-        else if ($i == "io") io = $(i + 1);
-        else if ($i == "drift") drift = $(i + 1);
-        else if ($i == "force") force = $(i + 1);
-        else if ($i == "comm_wait") comm_wait = $(i + 1);
-        else if ($i == "kick") kick = $(i + 1);
-        else if ($i == "energy") energy = $(i + 1);
-      }
-    }
-    /^# kernel_rate/ {
-      for (i = 1; i <= NF; ++i) {
-        if ($i == "gpair_interactions_per_second") gpairs = $(i + 1);
-      }
-    }
-    END {
-      if (total == "" || force == "" || gpairs == "" || status == "") {
-        print prefix, dtype, "nan", "nan", "nan", "nan", "nan", "nan", "nan", "nan", "PARSE_FAILED", "nan";
-      } else {
-        print prefix, dtype, total, io, drift, force, comm_wait, kick, energy, gpairs, status, max_rel_drift;
-      }
-    }
-  '
-}
-
-parse_total_only_csv() {
-  local prefix="$1"
-  # Lightweight parser for benchmarks that only need total runtime, final
-  # status, and energy drift.
-  awk -v prefix="$prefix" '
-    BEGIN { FS = "[ =]+"; OFS = ","; total = status = drift = "" }
-    /^# final:/ {
-      for (i = 1; i <= NF; ++i) {
-        if ($i == "max_relative_energy_drift") drift = $(i + 1);
-        else if ($i == "status") status = $(i + 1);
-      }
-    }
-    /^# timing_max_seconds/ {
-      for (i = 1; i <= NF; ++i) if ($i == "total") total = $(i + 1);
-    }
-    END {
-      if (total == "" || status == "") print prefix, "nan", "PARSE_FAILED", "nan";
-      else print prefix, total, status, drift;
-    }
-  '
-}
-
-run_mpi_solver() {
-  local ranks="$1"
-  local threads="$2"
-  shift 2
-  # Slurm's srun is the default launcher on HPC systems.  The CPU binding
-  # string is intentionally configurable because different clusters expose
-  # different binding policies and verbosity.
-  OMP_NUM_THREADS="$threads" "$launcher" $cpu_bind --ntasks="$ranks" \
-    --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" "$@"
-}
-
-run_container_mpi() {
-  local runtime="$1"
-  local image="$2"
-  local ranks="$3"
-  local threads="$4"
-  shift 4
-  case "$runtime" in
-    singularity|apptainer)
-      # For Singularity/Apptainer, Slurm launches the MPI ranks and each rank
-      # enters the same SIF image.  Cluster-specific MPI bind paths can be
-      # injected through SINGULARITY_BINDPATH/SINGULARITYENV_* by the caller.
-      OMP_NUM_THREADS="$threads" "$launcher" $cpu_bind --ntasks="$ranks" \
-        --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" \
-        "$runtime" exec "$image" "$@"
-      ;;
-    docker)
-      # Docker is mainly for local image validation.  It uses mpirun inside the
-      # container because Slurm is not present on a laptop/WSL Docker runtime.
-      docker run --rm \
-        -e "OMP_NUM_THREADS=$threads" \
-        -e OMPI_ALLOW_RUN_AS_ROOT=1 \
-        -e OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 \
-        -v "$PWD:/work" -w /work "$image" \
-        mpirun --allow-run-as-root -np "$ranks" "$@"
-      ;;
-    *)
-      echo "unknown runtime: $runtime" >&2
-      return 127
-      ;;
-  esac
-}
-
-run_container_single() {
-  local runtime="$1"
-  local image="$2"
-  shift 2
-  case "$runtime" in
-    singularity|apptainer)
-      "$runtime" exec "$image" "$@"
-      ;;
-    docker)
-      docker run --rm -v "$PWD:/work" -w /work "$image" "$@"
-      ;;
-    *)
-      echo "unknown runtime: $runtime" >&2
-      return 127
-      ;;
-  esac
-}
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Load helpers in the current shell: this adds no process per benchmark run.
+source "$script_dir/benchmark_common.sh"
 
 write_failed_scaling_row() {
   # Failed solver runs are recorded as CSV rows instead of aborting the whole
@@ -232,11 +90,10 @@ bench_scaling() {
   # Strong scaling keeps N fixed while resources grow; weak scaling grows N
   # proportionally to ranks.  Both are produced by the same loop so the report
   # can compare behavior without changing code paths.
-  local strong_n="${STRONG_N:-10000}"
+  local strong_n="${STRONG_N:-100000}"
   local weak_per_rank="${WEAK_PER_RANK:-10000}"
   local ranks_list="${RANKS:-1 2 4 8 16 32 64}"
   local threads_list="${THREADS:-1}"
-  local integrator="${INTEGRATOR:-kdk}"
   local comm="${COMM:-overlap}"
   local kernel="${KERNEL:-direct}"
   local rsqrt="${RSQRT:-exact}"
@@ -269,23 +126,20 @@ bench_scaling() {
     # become a RUN_FAILED CSV row, not kill the entire benchmark sweep.
     set +e
     if [[ "$use_container" == "1" ]]; then
-      log="$(run_container_mpi "$runtime" "$image" "$ranks" "$threads" \
-        /opt/nbody/nbody_direct_hybrid \
-        --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" \
-        --energy-every "$energy_every" --integrator "$integrator" --comm "$comm" \
-        --kernel "$kernel" --rsqrt "$rsqrt" --accumulators "$accumulators" --quiet 2>&1)"
+      log="$(run_hybrid_solver container "$runtime" "$image" "$ranks" "$threads" "$input" \
+        --comm "$comm" --kernel "$kernel" --rsqrt "$rsqrt" \
+        --accumulators "$accumulators" 2>&1)"
     else
-      log="$(run_mpi_solver "$ranks" "$threads" ./nbody_direct_hybrid \
-        --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" \
-        --energy-every "$energy_every" --integrator "$integrator" --comm "$comm" \
-        --kernel "$kernel" --rsqrt "$rsqrt" --accumulators "$accumulators" --quiet 2>&1)"
+      log="$(run_hybrid_solver native "" "" "$ranks" "$threads" "$input" \
+        --comm "$comm" --kernel "$kernel" --rsqrt "$rsqrt" \
+        --accumulators "$accumulators" 2>&1)"
     fi
     rc=$?
     set -e
-    prefix="$kind,$n,$nsteps,$ranks,$threads,$rep,$integrator,$comm,$kernel,$rsqrt,$accumulators"
+    prefix="$kind,$n,$nsteps,$ranks,$threads,$rep,kdk,$comm,$kernel,$rsqrt,$accumulators"
     if (( rc != 0 )); then
       if [[ "$record" == "1" ]]; then
-        write_failed_scaling_row "$kind" "$n" "$nsteps" "$ranks" "$threads" "$rep" "$integrator" "$comm" "$kernel" "$rsqrt" "$accumulators" >> "$out"
+        write_failed_scaling_row "$kind" "$n" "$nsteps" "$ranks" "$threads" "$rep" kdk "$comm" "$kernel" "$rsqrt" "$accumulators" >> "$out"
       fi
       printf "warning: scaling failed kind=%s N=%s P=%s T=%s rep=%s rc=%s\n%s\n" "$kind" "$n" "$ranks" "$threads" "$rep" "$rc" "$log" >&2
     else
@@ -350,7 +204,7 @@ bench_ablation() {
     shift 3
     local log rc time_sec
     set +e
-    log="$(run_mpi_solver "$ranks" "${THREADS:-1}" ./nbody_direct_hybrid --input "$input" --nsteps "$nsteps" --quiet "$@" 2>&1)"
+    log="$(run_hybrid_solver native "" "" "$ranks" "${THREADS:-1}" "$input" "$@" 2>&1)"
     rc=$?
     set -e
     if (( rc != 0 )); then
@@ -369,7 +223,9 @@ bench_ablation() {
   for rep in $(seq 1 "$repeats"); do ablation_case Comm sendrecv "$ranks" --comm sendrecv; done
   for rep in $(seq 1 "$repeats"); do ablation_case Comm overlap "$ranks" --comm overlap; done
   for rep in $(seq 1 "$repeats"); do ablation_case Accumulators 1 "$ranks" --accumulators 1; done
+  for rep in $(seq 1 "$repeats"); do ablation_case Accumulators 2 "$ranks" --accumulators 2; done
   for rep in $(seq 1 "$repeats"); do ablation_case Accumulators 4 "$ranks" --accumulators 4; done
+  for rep in $(seq 1 "$repeats"); do ablation_case Accumulators 8 "$ranks" --accumulators 8; done
   rm -f "$input"
   echo "wrote $out"
 }
@@ -420,11 +276,11 @@ bench_energy() {
   list="$(for ee in $list; do if (( ee > nsteps )); then echo "$nsteps"; else echo "$ee"; fi; done | awk '!seen[$0]++')"
   for ee in $list; do
     for rep in $(seq 1 "$warmups"); do
-      run_mpi_solver "$ranks" "$threads" ./nbody_direct_hybrid --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" --energy-every "$ee" --quiet >/dev/null 2>&1 || true
+      energy_every="$ee" run_hybrid_solver native "" "" "$ranks" "$threads" "$input" >/dev/null 2>&1 || true
     done
     for rep in $(seq 1 "$repeats"); do
       set +e
-      log="$(run_mpi_solver "$ranks" "$threads" ./nbody_direct_hybrid --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" --energy-every "$ee" --quiet 2>&1)"
+      log="$(energy_every="$ee" run_hybrid_solver native "" "" "$ranks" "$threads" "$input" 2>&1)"
       rc=$?
       set -e
       if (( rc != 0 )); then
@@ -491,8 +347,8 @@ bench_container() {
   local launch_out="${LAUNCH_OUT:-container_launch_overhead.csv}"
   local ranks_list="${RANKS:-1 2 4}"
   local threads="${THREADS:-1}"
-  local strong_n="${N:-10000}"
-  local n_per_rank="${N_PER_RANK:-1000}"
+  local strong_n="${N:-100000}"
+  local n_per_rank="${N_PER_RANK:-10000}"
   local launch_repeats="${LAUNCH_REPEATS:-10}"
   local runtime
   runtime="$(detect_runtime)" || { echo "no container runtime found" >&2; exit 127; }
@@ -508,9 +364,9 @@ bench_container() {
     ./generate_ic --model "$model" --n "$n" --seed "$((7700 + rep))" --output "$input" >/dev/null
     set +e
     if [[ "$mode" == "native" ]]; then
-      log="$(run_mpi_solver "$ranks" "$threads" ./nbody_direct_hybrid --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" --energy-every "$energy_every" --integrator kdk --comm sendrecv --quiet 2>&1)"
+      log="$(run_hybrid_solver native "" "" "$ranks" "$threads" "$input" --comm sendrecv 2>&1)"
     else
-      log="$(run_container_mpi "$runtime" "$image" "$ranks" "$threads" /opt/nbody/nbody_direct_hybrid --input "$input" --nsteps "$nsteps" --dt "$dt" --eps "$eps" --energy-every "$energy_every" --integrator kdk --comm sendrecv --quiet 2>&1)"
+      log="$(run_hybrid_solver container "$runtime" "$image" "$ranks" "$threads" "$input" --comm sendrecv 2>&1)"
     fi
     rc=$?
     set -e
@@ -519,7 +375,7 @@ bench_container() {
       printf "%s,nan,RUN_FAILED,nan\n" "$prefix" >> "$out"
       printf "warning: container case failed %s rc=%s\n%s\n" "$prefix" "$rc" "$log" >&2
     else
-      printf "%s\n" "$log" | parse_total_only_csv "$prefix" >> "$out"
+      printf "%s\n" "$log" | parse_solver_csv "$prefix" total >> "$out"
     fi
     rm -f "$input"
   }
@@ -570,9 +426,15 @@ bench_osu() {
     local log rc
     set +e
     if [[ "$mode_name" == "native" ]]; then
-      log="$("$launcher" $cpu_bind -n 2 "$tool" 2>&1)"
+      local distribution_args=()
+      local saved_ntasks_per_node="${SRUN_NTASKS_PER_NODE:-}"
+      SRUN_NTASKS_PER_NODE="${OSU_NTASKS_PER_NODE:-}"
+      mapfile -t distribution_args < <(launcher_distribution_args)
+      SRUN_NTASKS_PER_NODE="$saved_ntasks_per_node"
+      log="$("$launcher" $cpu_bind -n 2 "${distribution_args[@]}" "$tool" 2>&1)"
     else
-      log="$(run_container_mpi "$runtime" "$image" 2 1 "$tool" 2>&1)"
+      log="$(SRUN_NTASKS_PER_NODE="${OSU_NTASKS_PER_NODE:-}" \
+        run_container_mpi "$runtime" "$image" 2 1 "$tool" 2>&1)"
     fi
     rc=$?
     set -e
@@ -610,6 +472,48 @@ bench_osu() {
   echo "wrote $out"
 }
 
+bench_arch() {
+  # Isolate the compilation-target effect requested by the container section:
+  # compare the same native run built with -march=native and -march=x86-64-v3.
+  # This keeps the architectural penalty separate from Singularity runtime
+  # overhead, which is measured by bench_container().
+  local out="${OUT:-arch_target_comparison.csv}"
+  local n="${N:-100000}"
+  local ranks="${RANKS:-64}"
+  local threads="${THREADS:-1}"
+  local base_cflags="${BASE_CFLAGS:--O3 -Wall -Wextra -Wpedantic}"
+  local input="arch_compare_N${n}.bin"
+  printf "target,N,nsteps,ranks,threads,repeat,total,status,max_rel_drift\n" > "$out"
+  for target in native x86-64-v3; do
+    make clean >/dev/null
+    CFLAGS="$base_cflags -march=$target" make nbody_direct_hybrid generate_ic >/dev/null
+    ./generate_ic --model "$model" --n "$n" --seed "${SEED:-5151}" --output "$input" >/dev/null
+    for rep in $(seq 1 "$warmups"); do
+      run_hybrid_solver native "" "" "$ranks" "$threads" "$input" \
+        --comm overlap --kernel direct --rsqrt exact --accumulators 4 >/dev/null 2>&1 || true
+    done
+    for rep in $(seq 1 "$repeats"); do
+      local log rc prefix
+      set +e
+      log="$(run_hybrid_solver native "" "" "$ranks" "$threads" "$input" \
+        --comm overlap --kernel direct --rsqrt exact --accumulators 4 2>&1)"
+      rc=$?
+      set -e
+      prefix="$target,$n,$nsteps,$ranks,$threads,$rep"
+      if (( rc != 0 )); then
+        printf "%s,nan,RUN_FAILED,nan\n" "$prefix" >> "$out"
+        printf "warning: arch target=%s failed rep=%s rc=%s\n%s\n" "$target" "$rep" "$rc" "$log" >&2
+      else
+        printf "%s\n" "$log" | parse_solver_csv "$prefix" total >> "$out"
+      fi
+    done
+  done
+  rm -f "$input"
+  make clean >/dev/null
+  make nbody_direct_hybrid generate_ic >/dev/null
+  echo "wrote $out"
+}
+
 bench_perf() {
   # Optional hardware-counter snapshot.  It is not required for the main report
   # but can help discuss bottlenecks such as instruction count, cache misses, or
@@ -626,7 +530,7 @@ bench_perf() {
   OMP_NUM_THREADS="$threads" perf stat -e "$events" -o "$out" \
     "$launcher" -n "$ranks" ./nbody_direct_hybrid \
     --input "$input" --nsteps "$nsteps" --energy-every "$nsteps" \
-    --integrator kdk --comm sendrecv --kernel direct --rsqrt exact --quiet
+    --comm sendrecv --kernel direct --rsqrt exact --quiet
   rm -f "$input"
 }
 
@@ -639,6 +543,7 @@ case "$cmd" in
   memory) bench_memory ;;
   container) bench_container ;;
   osu) bench_osu ;;
+  arch) bench_arch ;;
   perf) bench_perf ;;
   *) echo "unknown command: $cmd" >&2; usage >&2; exit 2 ;;
 esac

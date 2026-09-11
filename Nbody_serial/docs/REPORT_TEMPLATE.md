@@ -21,7 +21,7 @@
 
 - Compiler flags:
 - Precision:
-- Integrator: `kdk` for the main results; optional `dkd` comparison.
+- Integrator: `kdk`.
 - Communication mode: `sendrecv` and/or `overlap`.
 - Kernel: `direct`; optional single-rank `newton` comparison.
 - Inverse square root: `exact`; optional `approx` comparison.

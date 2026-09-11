@@ -400,7 +400,7 @@ static void particles_read_binary(const char *path,       // input file path
 
     if ((checks == IO_CHECKED) &&
         (!isfinite((double)record[0]) || !isfinite((double)record[1]) ||
-        !isfinite((double)record[2]) || !isfinite((double)record[3]) ||
+         !isfinite((double)record[2]) || !isfinite((double)record[3]) ||
          !isfinite((double)record[4]) || !isfinite((double)record[5])))
       die("non-finite particle value in '%s' at index %zu", path, i);
 
@@ -486,6 +486,12 @@ static void particles_write_binary(const char *path,       // output file path
   if (fclose(fp) != 0)
     die("error while closing output file '%s'", path);
 }
+
+
+
+
+
+
 
 /* ========================================================================================
 
@@ -748,7 +754,7 @@ static void print_usage(const char *program // argv[0]
           "  --G X                     gravitational constant (default: 1)\n"
           "  --mass X                  particle mass (default: 1)\n"
           "  --energy-every N          diagnostic period in steps (default: 1)\n"
-          "  --energy-tol X            warning tolerance for max relative drift (default: 1e-3)\n"
+          "  --energy-tol X            warning tolerance for max relative drift (default: 1e-4)\n"
           "  --io-mode checked|fast    validate conversions or use direct casts (default: checked)\n"
           "  --io-profile              print read/write/conversion timings\n"
           "  --quiet                   only print final summary\n"
@@ -772,7 +778,7 @@ int main(int argc, char **argv)
   dtype eps = (dtype)1.0e-2;
   dtype g = (dtype)1.0;
   dtype mass = (dtype)1.0;
-  dtype energy_tol = (dtype)1.0e-3;
+  dtype energy_tol = (dtype)1.0e-4;
   bool quiet = false;
   bool io_profile_enabled = false;
   io_check_mode_t io_checks = IO_CHECKED;

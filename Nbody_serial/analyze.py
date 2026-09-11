@@ -141,10 +141,9 @@ def summarize_scaling(src: str, dst: str) -> None:
         comm_waits = [float(v["comm_wait"]) for v in kept]
         gpairs = [float(v["gpairs"]) for v in kept]
         nsteps = max(int(v["nsteps"]) for v in values)
-        # KDK uses one force evaluation before the loop and one per step; DKD
-        # needs one per step.  The estimate is used only for communication-rate
-        # context, not for correctness.
-        force_evals = nsteps + (1 if integrator == "kdk" else 0)
+        # KDK uses one force evaluation before the loop and one per step. The
+        # estimate is used only for communication-rate context, not correctness.
+        force_evals = nsteps + 1
         bytes_per_rank = (
             force_evals * max(0, int(ranks) - 1) *
             ((int(n) + int(ranks) - 1) // int(ranks)) * 3 *
@@ -459,6 +458,129 @@ def summarize_container(src: str, dst: str) -> None:
     write_csv(dst, fields, rows)
 
 
+def summarize_ablation(src: str, dst: str) -> None:
+    """Summarize optimization ablation experiments.
+
+    Each ablation family has a natural baseline: direct for the kernel test,
+    exact for inverse square root, sendrecv for communication, and one chain for
+    accumulator dependencies.  The percentage column makes effects such as
+    communication-overlap gain explicit instead of leaving them to be computed
+    manually in the report.
+    """
+    groups: dict[tuple[str, str], list[float]] = defaultdict(list)
+    failures: dict[tuple[str, str], int] = defaultdict(int)
+    for row in read_csv(src):
+        key = (row["Test_Type"], row["Config"])
+        try:
+            value = float(row["Time_Sec"])
+        except ValueError:
+            value = math.nan
+        if math.isfinite(value):
+            groups[key].append(value)
+        else:
+            failures[key] += 1
+
+    baseline_for = {
+        "Kernel": "direct",
+        "Math": "exact",
+        "Comm": "sendrecv",
+        "Accumulators": "1",
+    }
+    medians = {key: statistics.median(values) for key, values in groups.items() if values}
+    rows: list[dict[str, object]] = []
+    for (test_type, config), values in sorted(groups.items()):
+        baseline_config = baseline_for.get(test_type, config)
+        baseline = medians.get((test_type, baseline_config))
+        median_time = statistics.median(values)
+        rows.append({
+            "Test_Type": test_type,
+            "Config": config,
+            "baseline_config": baseline_config,
+            "runs": len(values),
+            "failed_runs": failures.get((test_type, config), 0),
+            "median_time": median_time,
+            "stdev_time": statistics.stdev(values) if len(values) > 1 else 0.0,
+            "delta_vs_baseline_percent": (
+                100.0 * (median_time - baseline) / baseline
+                if baseline and config != baseline_config else 0.0
+            ),
+            "speedup_vs_baseline": (
+                baseline / median_time if baseline and median_time > 0.0 else 1.0
+            ),
+            "all_ok": failures.get((test_type, config), 0) == 0,
+        })
+
+    fields = [
+        "Test_Type", "Config", "baseline_config", "runs", "failed_runs",
+        "median_time", "stdev_time", "delta_vs_baseline_percent",
+        "speedup_vs_baseline", "all_ok",
+    ]
+    write_csv(dst, fields, rows)
+
+
+def summarize_arch(src: str, dst: str) -> None:
+    """Summarize native compiler-target comparison.
+
+    This isolates the code-generation penalty of a portable `x86-64-v3` build
+    from the runtime overhead of executing through Singularity.  Both variants
+    are native executables launched with the same rank/thread configuration.
+    """
+    groups: dict[tuple[str, int, int, int, int], list[float]] = defaultdict(list)
+    failures: dict[tuple[str, int, int, int, int], int] = defaultdict(int)
+    drifts: dict[tuple[str, int, int, int, int], list[float]] = defaultdict(list)
+    for row in read_csv(src):
+        key = (
+            row["target"], int(row["N"]), int(row["nsteps"]),
+            int(row["ranks"]), int(row["threads"]),
+        )
+        try:
+            total = float(row["total"])
+            drift = float(row["max_rel_drift"])
+        except ValueError:
+            total = math.nan
+            drift = math.nan
+        if row.get("status") in ("OK", "WARNING") and math.isfinite(total):
+            groups[key].append(total)
+            if math.isfinite(drift):
+                drifts[key].append(drift)
+        else:
+            failures[key] += 1
+
+    baselines: dict[tuple[int, int, int, int], float] = {}
+    for (target, n, nsteps, ranks, threads), values in groups.items():
+        if target == "native" and values:
+            baselines[(n, nsteps, ranks, threads)] = statistics.median(values)
+
+    rows: list[dict[str, object]] = []
+    for (target, n, nsteps, ranks, threads), values in sorted(groups.items()):
+        median_time = statistics.median(values)
+        base = baselines.get((n, nsteps, ranks, threads))
+        rows.append({
+            "target": target,
+            "N": n,
+            "nsteps": nsteps,
+            "ranks": ranks,
+            "threads": threads,
+            "runs": len(values),
+            "failed_runs": failures.get((target, n, nsteps, ranks, threads), 0),
+            "median_time": median_time,
+            "stdev_time": statistics.stdev(values) if len(values) > 1 else 0.0,
+            "overhead_vs_native_percent": (
+                100.0 * (median_time - base) / base
+                if base and target != "native" else 0.0
+            ),
+            "max_rel_drift": max(drifts.get((target, n, nsteps, ranks, threads), [math.nan])),
+            "all_ok": failures.get((target, n, nsteps, ranks, threads), 0) == 0,
+        })
+
+    fields = [
+        "target", "N", "nsteps", "ranks", "threads", "runs", "failed_runs",
+        "median_time", "stdev_time", "overhead_vs_native_percent",
+        "max_rel_drift", "all_ok",
+    ]
+    write_csv(dst, fields, rows)
+
+
 #                                    # =============================================================================
 #                                    # OSU BENCHMARK ANALYSIS
 #                                    # =============================================================================
@@ -699,7 +821,7 @@ def plot_ablation(src: str, prefix: str) -> None:
 
     The ablation CSV compares algorithmic and implementation choices such as
     direct versus Newton reuse, exact versus approximate inverse square root,
-    sendrecv versus overlap communication, and one versus four accumulator
+    sendrecv versus overlap communication, and one/two/four/eight accumulator
     chains.
     """
     raw = read_csv(src)
@@ -715,7 +837,8 @@ def plot_ablation(src: str, prefix: str) -> None:
         ("Kernel", "direct"), ("Kernel", "newton"),
         ("Math", "exact"), ("Math", "approx"),
         ("Comm", "sendrecv"), ("Comm", "overlap"),
-        ("Accumulators", "1"), ("Accumulators", "4"),
+        ("Accumulators", "1"), ("Accumulators", "2"),
+        ("Accumulators", "4"), ("Accumulators", "8"),
     ]
     rows = [(kind, config, statistics.median(groups[(kind, config)])) for kind, config in order if groups.get((kind, config))]
     if not rows:
@@ -826,6 +949,40 @@ def plot_memory(src: str, prefix: str) -> None:
     write_svg(f"{prefix}.svg", parts)
 
 
+def plot_arch(src: str, prefix: str) -> None:
+    """Plot native compiler target timings.
+
+    The chart is intentionally small: it only answers whether the portable
+    `x86-64-v3` target costs measurable runtime compared with `-march=native`
+    on the same node and with the same MPI/OpenMP configuration.
+    """
+    rows = read_csv(src)
+    if not rows:
+        return
+    order = {"native": 0, "x86-64-v3": 1}
+    rows.sort(key=lambda r: order.get(r["target"], 99))
+
+    parts, width, height, left, top, right, bottom = axes("native compiler target comparison", "target", "median time (s)")
+    pw, ph = width - left - right, height - top - bottom
+    max_y = max(float(r["median_time"]) for r in rows) * 1.15
+    bar_w = pw / len(rows) * 0.50
+
+    def y_of(v: float) -> float:
+        return top + ph * (1.0 - v / max_y)
+
+    for i, row in enumerate(rows):
+        value = float(row["median_time"])
+        x = left + pw * (i + 0.5) / len(rows)
+        y = y_of(value)
+        label = f'{float(row["overhead_vs_native_percent"]):+.1f}%'
+        parts.append(f'<rect x="{x-bar_w/2:.1f}" y="{y:.1f}" width="{bar_w:.1f}" height="{height-bottom-y:.1f}" fill="{palette(i)}"/>')
+        parts.append(f'<text x="{x:.1f}" y="{y-22:.1f}" text-anchor="middle" font-family="sans-serif" font-size="11">{value:.3g}s</text>')
+        parts.append(f'<text x="{x:.1f}" y="{y-8:.1f}" text-anchor="middle" font-family="sans-serif" font-size="11">{label}</text>')
+        parts.append(f'<text x="{x:.1f}" y="{height-bottom+22}" text-anchor="middle" font-family="sans-serif" font-size="12">{row["target"]}</text>')
+
+    write_svg(f"{prefix}.svg", parts)
+
+
 def plot_osu(src: str, prefix: str) -> None:
     """Plot OSU latency and bandwidth curves.
 
@@ -889,6 +1046,9 @@ def plot_evidence(root: str) -> None:
     memory_summary = base / "results_final/memory_bandwidth_summary.csv"
     if memory_summary.exists():
         plot_memory(str(memory_summary), str(base / "results_final/memory_bandwidth"))
+    arch_summary = base / "results_final/arch_target_comparison_summary.csv"
+    if arch_summary.exists():
+        plot_arch(str(arch_summary), str(base / "results_final/arch_target_comparison"))
     plot_osu(str(osu_summary), str(base / "results_final/osu_microbench"))
 
 
@@ -913,7 +1073,7 @@ def main() -> None:
 
     s = sub.add_parser("summarize")
     ssub = s.add_subparsers(dest="kind", required=True)
-    for name in ("scaling", "layout", "energy", "memory", "container", "osu"):
+    for name in ("scaling", "layout", "energy", "memory", "container", "ablation", "arch", "osu"):
         p = ssub.add_parser(name)
         p.add_argument("input")
         p.add_argument("output")
@@ -925,7 +1085,7 @@ def main() -> None:
 
     p = sub.add_parser("plot")
     psub = p.add_subparsers(dest="kind", required=True)
-    for name in ("scaling", "hybrid", "container", "ablation", "layout", "energy", "memory", "osu"):
+    for name in ("scaling", "hybrid", "container", "ablation", "layout", "energy", "memory", "arch", "osu"):
         q = psub.add_parser(name)
         q.add_argument("input")
         q.add_argument("prefix")
@@ -943,6 +1103,8 @@ def main() -> None:
                 "energy": summarize_energy,
                 "memory": summarize_memory,
                 "container": summarize_container,
+                "ablation": summarize_ablation,
+                "arch": summarize_arch,
                 "osu": summarize_osu,
             }[args.kind](args.input, args.output)
     elif args.section == "plot":
@@ -957,6 +1119,7 @@ def main() -> None:
                 "layout": plot_layout,
                 "energy": plot_energy,
                 "memory": plot_memory,
+                "arch": plot_arch,
                 "osu": plot_osu,
             }[args.kind](
                 args.input,
