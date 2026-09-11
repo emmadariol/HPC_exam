@@ -13,7 +13,8 @@ PRECISION ?= double
 #   nbody_direct_serial      serial reference solver
 #   nbody_direct_hybrid      MPI + OpenMP production solver
 #   nbody_layout_benchmark   AoS-vs-SoA memory-layout evidence
-PROGRAMS := nbody_direct_serial nbody_direct_hybrid nbody_layout_benchmark generate_ic
+#   memory_bandwidth         STREAM-style RAM-bandwidth benchmark
+PROGRAMS := nbody_direct_serial nbody_direct_hybrid nbody_layout_benchmark generate_ic memory_bandwidth
 HEADERS  := nbody_common.h
 
 # Compile-time precision is selected through preprocessor symbols consumed by
@@ -26,7 +27,7 @@ else
 $(error PRECISION must be either double or float)
 endif
 
-.PHONY: all clean run-smoke vec-report bench-scaling bench-hybrid bench-ablation bench-layout bench-energy bench-container bench-osu bench-perf
+.PHONY: all clean run-smoke vec-report bench-scaling bench-hybrid bench-ablation bench-layout bench-energy bench-memory bench-container bench-osu bench-perf
 
 all: $(PROGRAMS)
 
@@ -47,6 +48,10 @@ nbody_layout_benchmark: nbody_layout_benchmark.c $(HEADERS)
 # Initial-condition generation is serial and deterministic.
 generate_ic: generate_ic.c $(HEADERS)
 	$(CC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) -o $@ $< $(LDLIBS)
+
+# Standalone STREAM-style OpenMP benchmark used to report RAM bandwidth.
+memory_bandwidth: memory_bandwidth.c
+	$(CC) $(STD) $(CFLAGS) $(OMPFLAGS) -o $@ $< $(LDLIBS)
 
 # MPI launcher used by the smoke test; override it on systems that require srun.
 MPI_RUN ?= mpirun -np 2
@@ -91,6 +96,11 @@ bench-energy: all
 	bash ./run_benchmarks.sh energy
 	python3 analyze.py summarize energy energy_overhead.csv energy_overhead_summary.csv
 	python3 analyze.py plot energy energy_overhead_summary.csv energy_overhead
+
+bench-memory: memory_bandwidth
+	bash ./run_benchmarks.sh memory
+	python3 analyze.py summarize memory memory_bandwidth.csv memory_bandwidth_summary.csv
+	python3 analyze.py plot memory memory_bandwidth_summary.csv memory_bandwidth
 
 bench-container: all
 	bash ./run_benchmarks.sh container

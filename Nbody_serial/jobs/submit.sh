@@ -14,6 +14,7 @@ BENCH:
   hybrid      MPI+OpenMP P x T sweep
   ablation    optimisation ablation study
   evidence    layout + energy evidence
+  memory      STREAM-style RAM-bandwidth benchmark
   container   native-vs-Singularity container overhead
   osu         OSU latency/bandwidth native-vs-container
 
@@ -110,6 +111,7 @@ case "$bench" in
   hybrid) default_time="01:59:00"; default_cpus="64" ;;
   ablation) default_time="01:30:00"; default_cpus="64" ;;
   evidence) default_time="01:30:00"; default_cpus="8" ;;
+  memory) default_time="00:15:00"; default_cpus="64" ;;
   container) default_time="01:00:00"; default_cpus="4" ;;
   osu) default_time="00:20:00"; default_cpus="2" ;;
   *) echo "unknown bench: $bench" >&2; usage >&2; exit 2 ;;
@@ -144,11 +146,15 @@ case "$bench" in
     payload='OUT="${RESULT_DIR}/ablation.csv" bash ./run_benchmarks.sh ablation; python3 analyze.py plot ablation "$RESULT_DIR/ablation.csv" "$RESULT_DIR/ablation"'
     ;;
   evidence)
-    # Non-scaling evidence used by the report: system info, memory layout, and
-    # energy diagnostic overhead.  Layout may sweep several OpenMP thread counts,
-    # but energy must receive one scalar THREADS value because srun uses it as
-    # --cpus-per-task.
+    # Non-scaling solver evidence used by the report: system info, memory layout
+    # and energy diagnostic overhead.  The hardware RAM-bandwidth deliverable is
+    # intentionally a separate full-node `memory` job.
     payload='bash ./collect_system_info.sh "$RESULT_DIR/system_info.txt"; LAYOUT_THREADS="${LAYOUT_THREADS:-${THREADS:-1 2 4 8}}"; OUT="$RESULT_DIR/layout.csv" THREADS="$LAYOUT_THREADS" bash ./run_benchmarks.sh layout; python3 analyze.py summarize layout "$RESULT_DIR/layout.csv" "$RESULT_DIR/layout_summary.csv"; python3 analyze.py plot layout "$RESULT_DIR/layout_summary.csv" "$RESULT_DIR/layout_force_time"; OUT="$RESULT_DIR/energy.csv" THREADS="${ENERGY_THREADS:-1}" RANKS="${ENERGY_RANKS:-8}" bash ./run_benchmarks.sh energy; python3 analyze.py summarize energy "$RESULT_DIR/energy.csv" "$RESULT_DIR/energy_summary.csv"; python3 analyze.py plot energy "$RESULT_DIR/energy_summary.csv" "$RESULT_DIR/energy_overhead"'
+    ;;
+  memory)
+    # Standalone RAM bandwidth job.  Use --cpus 64 on a full GENOA node to
+    # document the memory-bandwidth deliverable independently from the solver.
+    payload='OUT="$RESULT_DIR/memory_bandwidth.csv" THREADS="${MEMORY_THREADS:-${THREADS:-${SLURM_CPUS_PER_TASK:-64}}}" bash ./run_benchmarks.sh memory; python3 analyze.py summarize memory "$RESULT_DIR/memory_bandwidth.csv" "$RESULT_DIR/memory_bandwidth_summary.csv"; python3 analyze.py plot memory "$RESULT_DIR/memory_bandwidth_summary.csv" "$RESULT_DIR/memory_bandwidth"'
     ;;
   container)
     # Pull the SIF from Docker Hub if it is missing, then measure native vs
@@ -201,13 +207,20 @@ EOF
 
 # Build sbatch arguments as an array to avoid word-splitting bugs in account,
 # partition, qos, and path values.
+sbatch_ntasks="$cpus"
+sbatch_cpus_per_task="1"
+if [[ "$bench" == "memory" ]]; then
+  sbatch_ntasks="1"
+  sbatch_cpus_per_task="$cpus"
+fi
+
 sbatch_args=(
   --account="$account"
   --partition="$partition"
   --qos="$qos"
   --nodes="$nodes"
-  --ntasks="$cpus"
-  --cpus-per-task=1
+  --ntasks="$sbatch_ntasks"
+  --cpus-per-task="$sbatch_cpus_per_task"
   --time="$time_limit"
   --job-name="$job_name"
   --output="$result_dir/slurm_%j.out"

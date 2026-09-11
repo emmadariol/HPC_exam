@@ -7,6 +7,7 @@ generate_ic
 nbody_direct_serial
 nbody_direct_hybrid
 nbody_layout_benchmark
+memory_bandwidth
 
 # Generated particle states and scratch inputs
 *.bin

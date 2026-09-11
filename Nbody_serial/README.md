@@ -21,6 +21,8 @@ This directory contains the stand-alone programs for the direct gravitational N-
   AoS-vs-SoA evidence table.
 - `run_benchmarks.sh energy`, `analyze.py summarize energy`: quantify the cost of different
   `--energy-every` diagnostic periods.
+- `run_benchmarks.sh memory`, `analyze.py summarize memory`: measure standalone
+  STREAM-style RAM bandwidth for the hardware section of the report.
 - `run_benchmarks.sh osu`: collect OSU latency/bandwidth microbenchmarks for the
   MPI stack used by the production runs.
 - `Dockerfile` and `Singularity.def`: starter container recipes for the
@@ -44,7 +46,7 @@ root.
 
 ```text
 Nbody_serial/
-├── *.c, *.h                  source code and shared definitions
+├── *.c, *.h                  source code, benchmarks, and shared definitions
 ├── Makefile                  native build, smoke target, vectorization target
 ├── run_benchmarks.sh         unified benchmark driver used by jobs and local runs
 ├── analyze.py                unified CSV post-processing and SVG plotting CLI
@@ -58,7 +60,7 @@ Nbody_serial/
 └── runs/                     ignored local run history and Slurm scratch output
 ```
 
-The codes are intended as *almost complete* exam skeletons. The direct force kernel is deliberately correct but naive. It uses an O(N^2) all-pairs loop, scalar `sqrt`, one accumulator per component, and no Newton-third-law reuse. 
+The codes are intended as *almost complete* exam skeletons. The direct force kernel is deliberately correct but naive. It uses an O(N^2) all-pairs loop, scalar `sqrt`, one accumulator per component, and no Newton-third-law reuse.
 The comments in `compute_accelerations_naive` mark this as the kernel whose optimization is part of the assignment, along with the hybrid parallelization.
 
 ## Arithmetic type
@@ -205,6 +207,10 @@ RANKS=8 THREADS=1 REPEATS=5 WARMUPS=2 N=50000 NSTEPS=50 \
   ENERGY_LIST="1 5 10 50" bash ./run_benchmarks.sh energy
 python3 analyze.py summarize energy energy_overhead.csv energy_overhead_summary.csv
 
+THREADS=64 REPEATS=5 WARMUPS=1 bash ./run_benchmarks.sh memory
+python3 analyze.py summarize memory memory_bandwidth.csv memory_bandwidth_summary.csv
+python3 analyze.py plot memory memory_bandwidth_summary.csv memory_bandwidth
+
 bash ./run_benchmarks.sh osu --mode native
 bash ./run_benchmarks.sh osu --mode container --image nbody.sif
 OUT=osu_microbench_native_vs_container.csv \
@@ -280,6 +286,7 @@ bash jobs/submit.sh --cluster orfeo --bench scaling --partition GENOA --cpus 64 
 bash jobs/submit.sh --cluster orfeo --bench hybrid --partition GENOA --cpus 64
 bash jobs/submit.sh --cluster orfeo --bench ablation --partition GENOA --cpus 64
 bash jobs/submit.sh --cluster orfeo --bench evidence --partition GENOA --cpus 8
+bash jobs/submit.sh --cluster orfeo --bench memory --partition GENOA --cpus 64
 bash jobs/submit.sh --cluster orfeo --bench container --partition GENOA --cpus 4 -- IMAGE=nbody.sif
 bash jobs/submit.sh --cluster orfeo --bench osu --partition GENOA --cpus 2 -- IMAGE=nbody.sif
 
@@ -325,7 +332,7 @@ The baseline is serial on purpose. Natural extensions are:
 
 - convert `compute_accelerations_naive` into an OpenMP loop without inner-loop
   atomics;
-- compare Newton-third-law reuse against thread-private force buffers;  
+- compare Newton-third-law reuse against thread-private force buffers;
   when is it convenient, against the price of using atomics for a non-local write?
 - split accumulators to shorten the floating-point dependency chain;
 - compare scalar `sqrt` with an approximate reciprocal-square-root path and

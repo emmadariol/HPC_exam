@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""Unified CSV analysis and SVG plotting CLI for the N-body project.
-
-The script deliberately avoids external plotting dependencies so that it can run
-on restrictive login nodes and batch allocations.  Its job is to turn raw CSVs
-from ``run_benchmarks.sh`` into compact summaries and simple SVG figures used by
-the final report.
-"""
 
 from __future__ import annotations
 
@@ -17,14 +10,29 @@ from collections import defaultdict
 from pathlib import Path
 
 
+#                                # =============================================================================
+#                                # FILE MANAGEMENT
+#                                # =============================================================================
+
+
 def read_csv(path: str | Path) -> list[dict[str, str]]:
-    """Read a CSV file as dictionaries, preserving column names from the header."""
+    """Load a CSV file into a list of dictionaries.
+
+    Each row is returned as a dictionary keyed by the CSV header names.  Keeping
+    this helper small avoids repeating encoding/newline handling in every
+    summarizer.
+    """
     with Path(path).open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
 
 
 def write_csv(path: str | Path, fields: list[str], rows: list[dict[str, object]]) -> None:
-    """Write a deterministic CSV and print a short message for Slurm logs."""
+    """Write a summary CSV with a fixed column order.
+
+    The explicit `fields` list makes the output deterministic and report-ready.
+    The final print is useful in Slurm logs because it confirms which artifact
+    was produced by the batch job.
+    """
     with Path(path).open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
@@ -32,18 +40,28 @@ def write_csv(path: str | Path, fields: list[str], rows: list[dict[str, object]]
     print(f"wrote {path}")
 
 
+#                                # =============================================================================
+#                                # NBODY BENCHMARK ANALYSIS
+#                                # =============================================================================
+
 def median_absolute_deviation(values: list[float]) -> float:
-    """Robust dispersion estimator used to identify timing outliers."""
+    """Compute the median absolute deviation of a numeric sample.
+
+    MAD is used as a robust dispersion estimator for runtime measurements,
+    where occasional scheduler or OS noise can create isolated timing spikes.
+    """
     med = statistics.median(values)
     return statistics.median(abs(v - med) for v in values)
 
 
 def keep_non_outliers(rows: list[dict[str, object]]) -> tuple[list[dict[str, object]], int, float]:
-    """Remove 3-sigma-equivalent outliers using MAD, falling back to all rows.
+    """Filter timing rows using a MAD-based outlier rule.
 
     Runtime measurements on shared clusters can show occasional noise from the
     system or scheduler.  Median + MAD is less sensitive to those spikes than
-    mean + standard deviation, so the reported summary remains defensible.
+    mean + standard deviation, so the reported summary remains defensible.  If
+    the filter would remove every row, the function safely falls back to the
+    original sample rather than producing an empty summary.
     """
     totals = [float(r["total"]) for r in rows]
     med = statistics.median(totals)
@@ -56,17 +74,32 @@ def keep_non_outliers(rows: list[dict[str, object]]) -> tuple[list[dict[str, obj
 
 
 def dtype_size(dtype: str) -> int:
-    """Return the byte size used to estimate communication volume."""
+    """Return the number of bytes used by the selected floating-point type.
+
+    This is used only to estimate communication volume for the scaling summary,
+    not to change any measured timing.
+    """
     return 4 if dtype == "float" else 8
 
 
 def finite(row: dict[str, object], keys: tuple[str, ...]) -> bool:
-    """Check that all requested numeric fields are finite."""
+    """Check whether selected numeric fields contain finite values.
+
+    Failed benchmark rows are encoded with `nan`; this helper keeps those rows
+    out of medians while still allowing the caller to count failures separately.
+    """
     return all(math.isfinite(float(row[k])) for k in keys)
 
 
 def summarize_scaling(src: str, dst: str) -> None:
-    """Summarize raw strong/weak scaling rows into one row per configuration."""
+    """Summarize raw strong/weak scaling measurements.
+
+    The input is the raw CSV emitted by `run_benchmarks.sh scaling`, with one
+    row per repetition.  The output has one row per experimental configuration
+    and includes medians, standard deviations, failure counts, outlier counts,
+    speedup, efficiency, weak-scaling normalization, communication-bandwidth
+    estimates, and correctness status.
+    """
     rows: list[dict[str, object]] = []
     for row in read_csv(src):
         for key in ("N", "nsteps", "ranks", "threads"):
@@ -148,32 +181,30 @@ def summarize_scaling(src: str, dst: str) -> None:
     # Baselines are the smallest-resource rows available for each comparable
     # configuration.  Strong scaling fixes N; weak scaling normalizes by the
     # resource ratio because N grows with P.
+    def scaling_baseline_key(row: dict[str, object]) -> tuple[object, ...]:
+        """Return the comparable-baseline key for one scaling summary row.
+
+        Strong scaling keeps N fixed, so N is part of the key.  Weak scaling
+        intentionally changes N with the resource count, so N must be excluded
+        from the key to compare each row against the smallest-resource weak
+        baseline.
+        """
+        common = (
+            row["kind"], row["integrator"], row["comm"],
+            row["kernel"], row["rsqrt"], row["accumulators"],
+        )
+        if row["kind"] == "strong":
+            return (row["kind"], row["N"], *common[1:])
+        return common
+
     baselines: dict[tuple[object, ...], dict[str, object]] = {}
     for row in summary:
-        if row["kind"] == "strong":
-            base_key = (
-                row["kind"], row["N"], row["integrator"], row["comm"],
-                row["kernel"], row["rsqrt"], row["accumulators"],
-            )
-        else:
-            base_key = (
-                row["kind"], row["integrator"], row["comm"],
-                row["kernel"], row["rsqrt"], row["accumulators"],
-            )
+        base_key = scaling_baseline_key(row)
         if base_key not in baselines or int(row["resources"]) < int(baselines[base_key]["resources"]):
             baselines[base_key] = row
 
     for row in summary:
-        if row["kind"] == "strong":
-            base_key = (
-                row["kind"], row["N"], row["integrator"], row["comm"],
-                row["kernel"], row["rsqrt"], row["accumulators"],
-            )
-        else:
-            base_key = (
-                row["kind"], row["integrator"], row["comm"],
-                row["kernel"], row["rsqrt"], row["accumulators"],
-            )
+        base_key = scaling_baseline_key(row)
         base = baselines[base_key]
         if row["kind"] == "weak":
             # Weak scaling grows the problem with the resources.  For a direct
@@ -212,7 +243,14 @@ def summarize_scaling(src: str, dst: str) -> None:
 
 
 def summarize_layout(src: str, dst: str) -> None:
-    """Summarize AoS/SoA timings and preserve checksum comparability."""
+    """Summarize AoS versus SoA force-kernel layout experiments.
+
+    The function groups repeated layout benchmark rows by layout, problem size,
+    thread count, and inverse-square-root mode.  It reports median force time
+    and Gpairs/s, then compares SoA against the matching AoS case.  The checksum
+    difference is kept in the output so performance claims are paired with a
+    lightweight correctness check.
+    """
     groups: dict[tuple[object, ...], list[dict[str, object]]] = defaultdict(list)
     for row in read_csv(src):
         row["N"] = int(row["N"])
@@ -260,7 +298,13 @@ def summarize_layout(src: str, dst: str) -> None:
 
 
 def summarize_energy(src: str, dst: str) -> None:
-    """Summarize the overhead of computing energy diagnostics periodically."""
+    """Summarize the runtime cost of energy diagnostics.
+
+    Energy conservation is useful for correctness, but computing the total
+    energy is itself expensive for an all-pairs N-body method.  This summarizer
+    compares different `energy_every` intervals and reports how much overhead
+    frequent diagnostics add relative to the sparsest diagnostic interval.
+    """
     groups: dict[tuple[int, int, int, int, int], list[dict[str, object]]] = defaultdict(list)
     for row in read_csv(src):
         for key in ("N", "nsteps", "ranks", "threads", "energy_every"):
@@ -308,8 +352,69 @@ def summarize_energy(src: str, dst: str) -> None:
     write_csv(dst, fields, rows)
 
 
+def summarize_memory(src: str, dst: str) -> None:
+    """Summarize STREAM-style RAM-bandwidth measurements.
+
+    The raw CSV contains one row per repeated launch and streaming kernel.  The
+    summary reports medians and standard deviations in GB/s, which directly
+    satisfies the written-report requirement to document measured RAM bandwidth.
+    """
+    groups: dict[tuple[str, int, int, int], list[dict[str, object]]] = defaultdict(list)
+    failures: dict[tuple[str, int, int, int], int] = defaultdict(int)
+    for row in read_csv(src):
+        kernel = row["kernel"]
+        n = int(row["N"])
+        threads = int(row["threads"])
+        inner_repeats = int(row["inner_repeats"])
+        key = (kernel, n, threads, inner_repeats)
+        try:
+            gbps = float(row["GBps"])
+            seconds = float(row["best_seconds"])
+        except ValueError:
+            gbps = math.nan
+            seconds = math.nan
+        if row.get("status") == "OK" and math.isfinite(gbps) and math.isfinite(seconds):
+            row["GBps"] = gbps
+            row["best_seconds"] = seconds
+            row["checksum"] = float(row["checksum"])
+            groups[key].append(row)
+        else:
+            failures[key] += 1
+
+    rows: list[dict[str, object]] = []
+    for (kernel, n, threads, inner_repeats), values in sorted(groups.items()):
+        bandwidths = [float(v["GBps"]) for v in values]
+        seconds = [float(v["best_seconds"]) for v in values]
+        checksums = [float(v["checksum"]) for v in values]
+        rows.append({
+            "kernel": kernel,
+            "N": n,
+            "threads": threads,
+            "inner_repeats": inner_repeats,
+            "runs": len(values),
+            "failed_runs": failures.get((kernel, n, threads, inner_repeats), 0),
+            "median_GBps": statistics.median(bandwidths),
+            "stdev_GBps": statistics.stdev(bandwidths) if len(bandwidths) > 1 else 0.0,
+            "median_seconds": statistics.median(seconds),
+            "checksum_median": statistics.median(checksums),
+            "all_ok": failures.get((kernel, n, threads, inner_repeats), 0) == 0,
+        })
+
+    fields = [
+        "kernel", "N", "threads", "inner_repeats", "runs", "failed_runs",
+        "median_GBps", "stdev_GBps", "median_seconds", "checksum_median", "all_ok",
+    ]
+    write_csv(dst, fields, rows)
+
+
 def summarize_container(src: str, dst: str) -> None:
-    """Pair native/container solver timings and report percentage overhead."""
+    """Compare native and containerized solver timings.
+
+    The input contains raw native and Singularity runs for identical problem
+    sizes and rank counts.  The output pairs matching configurations and reports
+    median native time, median container time, standard deviations, failed-run
+    counts, and percentage overhead.
+    """
     groups: dict[tuple[object, ...], list[float]] = defaultdict(list)
     failures: dict[tuple[object, ...], int] = defaultdict(int)
     for row in read_csv(src):
@@ -354,8 +459,16 @@ def summarize_container(src: str, dst: str) -> None:
     write_csv(dst, fields, rows)
 
 
+#                                    # =============================================================================
+#                                    # OSU BENCHMARK ANALYSIS
+#                                    # =============================================================================
+#                                    # OSU Micro-Benchmarks are independent from the N-body physics.  They isolate
+#                                    # MPI point-to-point latency and bandwidth so native execution can be compared
+#                                    # with the Singularity execution path.
+
 def summarize_osu(src: str, dst: str) -> None:
-    """Summarize OSU latency/bandwidth tables by mode, benchmark, and size."""
+    """Summarize OSU Micro-Benchmark latency and bandwidth results.
+    """
     groups: dict[tuple[str, str, str, int], list[float]] = defaultdict(list)
     for row in read_csv(src):
         groups[(row["mode"], row["benchmark"], row["metric"], int(row["bytes"]))].append(float(row["value"]))
@@ -374,7 +487,8 @@ def summarize_osu(src: str, dst: str) -> None:
 
 
 def add_gflops(src: str, dst: str, flops_per_pair: float) -> None:
-    """Add a model-based GFLOP/s estimate from measured pair-interaction rates."""
+    """Append an estimated GFLOP/s column to a benchmark CSV.
+    """
     with Path(src).open(newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
         rows = list(reader)
@@ -398,20 +512,32 @@ def add_gflops(src: str, dst: str, flops_per_pair: float) -> None:
     write_csv(dst, fields, rows)
 
 
+#                                    # =============================================================================
+#                                    # PLOTTING FUNCTIONS
+#                                    # =============================================================================
+
 def palette(i: int) -> str:
-    """Small deterministic color palette for dependency-free SVG plots."""
     return ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf"][i % 6]
 
 
 def write_svg(path: str | Path, parts: list[str]) -> None:
-    """Finalize and write an SVG assembled as text fragments."""
+    """Write a complete SVG file assembled from XML text fragments.
+
+    The plotting code builds SVGs directly to avoid a dependency on matplotlib
+    on HPC systems.  This helper creates the parent directory, appends the final
+    closing tag, and logs the generated path.
+    """
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text("\n".join(parts + ["</svg>"]), encoding="utf-8")
     print(f"wrote {path}")
 
 
 def axes(title: str, xlabel: str, ylabel: str, width: int = 900, height: int = 520) -> tuple[list[str], int, int, int, int, int, int]:
-    """Create a common blank SVG canvas with title and axes."""
+    """Create a common SVG canvas, margins, title, and axis labels.
+
+    All plot functions start from this helper so the final report figures share
+    the same layout conventions without duplicating SVG boilerplate.
+    """
     left, top, right, bottom = 82, 42, 35, 75
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
@@ -435,7 +561,13 @@ def plot_xy(
     ideal: str | None = None,
     xlabel: str = "resources = ranks x threads",
 ) -> None:
-    """Plot a single x/y curve, optionally with the ideal scaling reference."""
+    """Plot a single x/y curve with optional ideal-reference guidance.
+
+    This generic helper is used for speedup, efficiency, communication
+    bandwidth, weak-scaling normalized time, and energy-overhead figures.  The
+    `ideal` argument adds the dashed reference curves needed to interpret strong
+    scaling plots.
+    """
     rows = sorted(rows, key=lambda r: int(r[x_field]))
     if len(rows) < 2:
         print(f"skipping {path}: only one x value")
@@ -478,7 +610,12 @@ def plot_xy(
 
 
 def plot_scaling(src: str, prefix: str) -> None:
-    """Generate the report figures for strong and weak scaling."""
+    """Generate all strong- and weak-scaling SVG figures.
+
+    The input is the summarized scaling CSV.  The function emits speedup,
+    efficiency, communication-bandwidth, weak absolute-time, and weak normalized
+    time plots using the provided filename prefix.
+    """
     rows = read_csv(src)
     for r in rows:
         r["resources"] = int(r["resources"])
@@ -495,7 +632,13 @@ def plot_scaling(src: str, prefix: str) -> None:
 
 
 def plot_hybrid(src: str, prefix: str) -> None:
-    """Plot hybrid MPI-rank/OpenMP-thread configurations at fixed resources."""
+    """Plot fixed-resource hybrid MPI/OpenMP configurations.
+
+    The summary CSV contains different P x T decompositions that use the same
+    total number of cores.  This function visualizes both total runtime and
+    pair-interaction throughput so the report can discuss whether a specific
+    rank/thread split is preferable.
+    """
     rows = read_csv(src)
     for row in rows:
         row["label"] = f'P{row["ranks"]}xT{row["threads"]}'
@@ -521,7 +664,12 @@ def plot_hybrid(src: str, prefix: str) -> None:
 
 
 def plot_container(src: str, prefix: str) -> None:
-    """Plot native-vs-container median solver times and overhead labels."""
+    """Plot native versus Singularity solver timing comparisons.
+
+    For each strong/weak container configuration, the function draws native and
+    container median timings on the same chart and annotates the measured
+    container overhead percentage.
+    """
     groups: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in read_csv(src):
         groups[row.get("kind", "strong")].append(row)
@@ -547,7 +695,13 @@ def plot_container(src: str, prefix: str) -> None:
 
 
 def plot_ablation(src: str, prefix: str) -> None:
-    """Plot optimization ablation medians as a compact bar chart."""
+    """Plot optimization ablation medians as a compact bar chart.
+
+    The ablation CSV compares algorithmic and implementation choices such as
+    direct versus Newton reuse, exact versus approximate inverse square root,
+    sendrecv versus overlap communication, and one versus four accumulator
+    chains.
+    """
     raw = read_csv(src)
     groups: dict[tuple[str, str], list[float]] = defaultdict(list)
     for row in raw:
@@ -583,7 +737,11 @@ def plot_ablation(src: str, prefix: str) -> None:
 
 
 def plot_layout(src: str, prefix: str) -> None:
-    """Plot AoS and SoA force-kernel timing versus OpenMP threads."""
+    """Plot AoS and SoA force-kernel timing versus OpenMP threads.
+
+    This figure supports the memory-layout discussion by showing how each data
+    structure behaves as the OpenMP thread count increases.
+    """
     rows = read_csv(src)
     if not rows:
         return
@@ -614,7 +772,12 @@ def plot_layout(src: str, prefix: str) -> None:
 
 
 def plot_energy(src: str, prefix: str) -> None:
-    """Plot diagnostic overhead as a function of energy sampling interval."""
+    """Plot energy-diagnostic overhead versus diagnostic interval.
+
+    The x-axis is `energy_every`; the y-axis is the overhead relative to the
+    sparsest diagnostic case.  This makes the correctness/performance trade-off
+    visible in the report.
+    """
     rows = read_csv(src)
     for row in rows:
         row["energy_every"] = int(row["energy_every"])
@@ -631,8 +794,45 @@ def plot_energy(src: str, prefix: str) -> None:
     )
 
 
+def plot_memory(src: str, prefix: str) -> None:
+    """Plot STREAM-style RAM bandwidth by streaming kernel.
+
+    The report needs one compact figure showing measured memory bandwidth.  A
+    bar chart is clearer than a line plot because copy, scale, add, and triad
+    are separate kernels rather than an ordered scaling sweep.
+    """
+    rows = read_csv(src)
+    order = ["copy", "scale", "add", "triad"]
+    rows = sorted(rows, key=lambda r: order.index(r["kernel"]) if r["kernel"] in order else len(order))
+    if not rows:
+        return
+
+    parts, width, height, left, top, right, bottom = axes("STREAM-style RAM bandwidth", "kernel", "GB/s")
+    pw, ph = width - left - right, height - top - bottom
+    max_y = max(float(r["median_GBps"]) for r in rows) * 1.12
+    bar_w = pw / len(rows) * 0.55
+
+    def y_of(v: float) -> float:
+        return top + ph * (1.0 - v / max_y)
+
+    for i, row in enumerate(rows):
+        value = float(row["median_GBps"])
+        x = left + pw * (i + 0.5) / len(rows)
+        y = y_of(value)
+        parts.append(f'<rect x="{x-bar_w/2:.1f}" y="{y:.1f}" width="{bar_w:.1f}" height="{height-bottom-y:.1f}" fill="{palette(i)}"/>')
+        parts.append(f'<text x="{x:.1f}" y="{y-7:.1f}" text-anchor="middle" font-family="sans-serif" font-size="11">{value:.1f}</text>')
+        parts.append(f'<text x="{x:.1f}" y="{height-bottom+22}" text-anchor="middle" font-family="sans-serif" font-size="12">{row["kernel"]}</text>')
+
+    write_svg(f"{prefix}.svg", parts)
+
+
 def plot_osu(src: str, prefix: str) -> None:
-    """Plot OSU latency and bandwidth for the modes present in the CSV."""
+    """Plot OSU latency and bandwidth curves.
+
+    The function supports both native-only/container-only files and the final
+    native-vs-container comparison.  Message sizes are placed on a log2-like
+    categorical axis because OSU reports powers of two.
+    """
     rows = read_csv(src)
     for row in rows:
         row["bytes"] = int(row["bytes"])
@@ -670,7 +870,12 @@ def plot_osu(src: str, prefix: str) -> None:
 
 
 def plot_evidence(root: str) -> None:
-    """Regenerate all final-report figures from the curated results_final data."""
+    """Regenerate every final-report figure from `results_final`.
+
+    This convenience command rebuilds all SVGs used by the report from the
+    curated final CSV files.  It is useful after copying a fresh production run
+    into `results_final`.
+    """
     base = Path(root)
     osu_summary = base / "results_final/osu_microbench_summary.csv"
     if not osu_summary.exists():
@@ -681,17 +886,34 @@ def plot_evidence(root: str) -> None:
     plot_ablation(str(base / "results_final/ablation_64.csv"), str(base / "results_final/ablation_64"))
     plot_layout(str(base / "results_final/layout_summary.csv"), str(base / "results_final/layout_force_time"))
     plot_energy(str(base / "results_final/energy_overhead_summary.csv"), str(base / "results_final/energy_overhead"))
+    memory_summary = base / "results_final/memory_bandwidth_summary.csv"
+    if memory_summary.exists():
+        plot_memory(str(memory_summary), str(base / "results_final/memory_bandwidth"))
     plot_osu(str(osu_summary), str(base / "results_final/osu_microbench"))
 
 
+
+
+
+#                                # *****************************************************
+#                                # COMMAND-LINE INTERFACE
+#                                # *****************************************************
+#                                # Dispatch layer used by Slurm jobs and manual commands
+
 def main() -> None:
-    """CLI entry point: dispatch summarize/plot subcommands."""
+    """Command-line entry point for all analysis and plotting tasks.
+
+    The CLI has two main sections: `summarize`, which converts raw benchmark
+    CSVs into report-ready tables, and `plot`, which converts those summaries
+    into SVG figures.  Dispatch is explicit so Slurm job scripts can call the
+    exact analysis step they need.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="section", required=True)
 
     s = sub.add_parser("summarize")
     ssub = s.add_subparsers(dest="kind", required=True)
-    for name in ("scaling", "layout", "energy", "container", "osu"):
+    for name in ("scaling", "layout", "energy", "memory", "container", "osu"):
         p = ssub.add_parser(name)
         p.add_argument("input")
         p.add_argument("output")
@@ -703,7 +925,7 @@ def main() -> None:
 
     p = sub.add_parser("plot")
     psub = p.add_subparsers(dest="kind", required=True)
-    for name in ("scaling", "hybrid", "container", "ablation", "layout", "energy", "osu"):
+    for name in ("scaling", "hybrid", "container", "ablation", "layout", "energy", "memory", "osu"):
         q = psub.add_parser(name)
         q.add_argument("input")
         q.add_argument("prefix")
@@ -719,6 +941,7 @@ def main() -> None:
                 "scaling": summarize_scaling,
                 "layout": summarize_layout,
                 "energy": summarize_energy,
+                "memory": summarize_memory,
                 "container": summarize_container,
                 "osu": summarize_osu,
             }[args.kind](args.input, args.output)
@@ -733,6 +956,7 @@ def main() -> None:
                 "ablation": plot_ablation,
                 "layout": plot_layout,
                 "energy": plot_energy,
+                "memory": plot_memory,
                 "osu": plot_osu,
             }[args.kind](
                 args.input,

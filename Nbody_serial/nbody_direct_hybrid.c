@@ -321,8 +321,10 @@ static void block_bounds(size_t n, int rank, int nranks,
    * counts differ by at most one, which keeps the O(N^2/P) work balanced. */
   const size_t base = n / (size_t)nranks;
   const size_t rem = n % (size_t)nranks;
-  *count = base + ((size_t)rank < rem ? 1u : 0u);
-  *start = (size_t)rank * base + ((size_t)rank < rem ? (size_t)rank : rem);
+  if (count != NULL)
+    *count = base + ((size_t)rank < rem ? 1u : 0u);
+  if (start != NULL)
+    *start = (size_t)rank * base + ((size_t)rank < rem ? (size_t)rank : rem);
 }
 
 static size_t max_block_count(size_t n, int nranks)
@@ -789,9 +791,8 @@ static void compute_accelerations_ring(particles_t *local, size_t global_n,
     if (nranks > 1)
     {
       const int next_owner = (owner + nranks - 1) % nranks;
-      size_t next_start, next_n;
-      block_bounds(global_n, next_owner, nranks, &next_start, &next_n);
-      (void)next_start;
+      size_t next_n;
+      block_bounds(global_n, next_owner, nranks, NULL, &next_n);
       if (mode == COMM_OVERLAP)
       {
         MPI_Request req[6];

@@ -14,6 +14,7 @@ Main groups:
 - `ablation_64*`: kernel/math/communication/accumulator ablation evidence.
 - `layout*`: AoS-vs-SoA evidence and checksum comparison.
 - `energy*`: energy-diagnostic overhead evidence.
+- `memory_bandwidth*`: standalone STREAM-style RAM-bandwidth evidence.
 - `container_overhead*`: native-vs-Singularity solver timings.
 - `osu_microbench_native_vs_container*` and `osu_microbench_*`: OSU
   latency/bandwidth evidence for native and Singularity execution.

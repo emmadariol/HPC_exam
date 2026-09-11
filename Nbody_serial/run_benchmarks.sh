@@ -15,6 +15,7 @@ Commands:
   ablation    compare kernel, math, communication and accumulator variants
   layout      AoS-vs-SoA memory-layout benchmark
   energy      energy-diagnostic overhead benchmark
+  memory      STREAM-style RAM-bandwidth benchmark
   container   native-vs-container solver overhead plus launch overhead
   osu         OSU latency/bandwidth native, container, or both
   perf        optional perf-stat hardware-counter snapshot
@@ -24,6 +25,7 @@ Examples:
   ./run_benchmarks.sh scaling --ranks "1 2 4 8" --threads 1 --out results.csv
   ./run_benchmarks.sh container --image nbody.sif --runtime singularity
   ./run_benchmarks.sh osu --mode both --image nbody.sif --out osu.csv
+  ./run_benchmarks.sh memory --threads 64 --out memory_bandwidth.csv
 EOF
 }
 
@@ -442,6 +444,44 @@ bench_energy() {
   echo "wrote $out"
 }
 
+bench_memory() {
+  # Standalone STREAM-style RAM-bandwidth benchmark.  This is separate from the
+  # N-body kernels because the written report must document hardware memory
+  # bandwidth directly, not only application-level pair-interaction throughput.
+  local out="${OUT:-memory_bandwidth.csv}"
+  local threads="${THREADS:-${MEMORY_THREADS:-64}}"
+  local stream_n="${STREAM_N:-67108864}"
+  local stream_inner="${STREAM_INNER:-10}"
+  [[ "$threads" != *[[:space:]]* ]] || { echo "memory benchmark requires one scalar THREADS value, got: $threads" >&2; exit 2; }
+  make memory_bandwidth >/dev/null
+  printf "kernel,N,threads,repeat,inner_repeats,best_seconds,GBps,checksum,status\n" > "$out"
+  for rep in $(seq 1 "$warmups"); do
+    STREAM_N="$stream_n" STREAM_INNER="$stream_inner" \
+      OMP_NUM_THREADS="$threads" OMP_PLACES="${OMP_PLACES:-cores}" OMP_PROC_BIND="${OMP_PROC_BIND:-spread}" \
+      "$launcher" $cpu_bind --ntasks=1 --cpus-per-task="$threads" ./memory_bandwidth >/dev/null 2>&1 || true
+  done
+  for rep in $(seq 1 "$repeats"); do
+    local log rc
+    set +e
+    log="$(STREAM_N="$stream_n" STREAM_INNER="$stream_inner" \
+      OMP_NUM_THREADS="$threads" OMP_PLACES="${OMP_PLACES:-cores}" OMP_PROC_BIND="${OMP_PROC_BIND:-spread}" \
+      "$launcher" $cpu_bind --ntasks=1 --cpus-per-task="$threads" ./memory_bandwidth 2>&1)"
+    rc=$?
+    set -e
+    if (( rc != 0 )); then
+      printf "RUN_FAILED,%s,%s,%s,%s,nan,nan,nan,RUN_FAILED\n" "$stream_n" "$threads" "$rep" "$stream_inner" >> "$out"
+      printf "warning: memory bandwidth failed rep=%s rc=%s\n%s\n" "$rep" "$rc" "$log" >&2
+    else
+      printf "%s\n" "$log" |
+        awk -F, -v rep="$rep" '
+          BEGIN { OFS="," }
+          $1 ~ /^(copy|scale|add|triad)$/ && NF >= 7 { print $1,$2,$3,rep,$4,$5,$6,$7,"OK" }
+        ' >> "$out"
+    fi
+  done
+  echo "wrote $out"
+}
+
 bench_container() {
   # Solver container overhead benchmark required by the container part of the
   # assignment.  It compares native and container executions for the same
@@ -596,6 +636,7 @@ case "$cmd" in
   ablation) bench_ablation ;;
   layout) bench_layout ;;
   energy) bench_energy ;;
+  memory) bench_memory ;;
   container) bench_container ;;
   osu) bench_osu ;;
   perf) bench_perf ;;

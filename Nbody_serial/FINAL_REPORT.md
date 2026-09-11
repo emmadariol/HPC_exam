@@ -95,12 +95,15 @@ The final scaling results were run on one Orfeo GENOA node:
 | Total CPUs | 64 |
 | NUMA nodes | 8 |
 | Memory | 503 GiB |
+| Direct RAM bandwidth benchmark | not measured with STREAM in the accepted final dataset |
 | Kernel | Linux 6.13.12-200.fc41.x86_64 |
 | Compiler | GCC 14.3.1 |
 | MPI | Open MPI 4.1.6rc4 |
 | Container runtime | Singularity CE 4.3.1 |
 
-The NUMA topology is eight NUMA domains, each with eight CPUs. The final runs use Slurm binding to cores and OpenMP placement:
+The NUMA topology is eight NUMA domains, each with eight CPUs. The full `numactl -H` output and node-local memory sizes are preserved in `results_final/system_info_orfeo.txt`. A separate STREAM-like RAM-bandwidth benchmark was not part of the accepted final dataset; instead, the bottleneck section reports application-level throughput through pair-interaction rate, estimated GFLOP/s and measured communication bandwidth. This distinction is important: the hardware memory capacity and NUMA layout are documented directly, while the performance bottleneck evidence is derived from the instrumented N-body runs rather than from a standalone memory-bandwidth microbenchmark.
+
+The final runs use Slurm binding to cores and OpenMP placement:
 
 ```text
 OMP_NUM_THREADS=1 for pure MPI scaling
@@ -210,10 +213,10 @@ The energy-diagnostic overhead study also verifies that the measured energy drif
 
 | N | steps | ranks | energy_every | median total (s) | energy fraction | overhead vs sparse | max relative drift |
 |---|---|---|---|---|---|---|---|
-| 50000 | 50 | 8 | 1 | 107.530 | 47.6% | 84.2% | 5.09e-7 |
-| 50000 | 50 | 8 | 5 | 67.393 | 16.4% | 15.4% | 5.09e-7 |
-| 50000 | 50 | 8 | 10 | 62.410 | 9.7% | 6.9% | 4.45e-7 |
-| 50000 | 50 | 8 | 50 | 58.391 | 3.4% | baseline | 3.44e-7 |
+| 20000 | 20 | 8 | 1 | 6.924 | 47.4% | 74.8% | 2.16e-7 |
+| 20000 | 20 | 8 | 5 | 4.429 | 17.9% | 11.8% | 2.16e-7 |
+| 20000 | 20 | 8 | 10 | 4.114 | 11.5% | 3.9% | 2.16e-7 |
+| 20000 | 20 | 8 | 20 | 3.960 | 8.1% | baseline | 2.16e-7 |
 
 ![Energy diagnostic overhead](results_final/energy_overhead.svg)
 
@@ -340,7 +343,7 @@ This normalized view shows that the observed weak scaling is close to the theore
 
 In Gustafson-style terms, increasing resources lets us solve a proportionally larger physical system: the 64-rank weak run evolves 128000 particles instead of 2000. The total runtime increases, but the delivered pair-interaction throughput also increases almost proportionally with the number of cores.
 
-## 9. Hybrid MPI + OpenMP scaling
+## 9. Hybrid MPI/OpenMP scaling
 
 The hybrid experiment keeps the total number of cores fixed at 64 and varies the MPI-rank/OpenMP-thread decomposition:
 
@@ -414,7 +417,7 @@ comm_wait/total    ~= 4.1%
 
 The remaining time is mainly integration updates, diagnostics and runtime overhead. This is why the optimisation discussion focuses on force-kernel structure, layout, reciprocal square root and Newton reuse.
 
-The direct kernel exposes `--accumulators 1|4` to isolate the critical-path question in the assignment. The production default is `4`, which uses four independent accumulator chains per component. The Slurm ablation scripts include an `Accumulators` case so a future Orfeo/LEONARDO run can quantify the single-chain versus four-chain variant without changing the main solver path.
+The direct kernel exposes `--accumulators 1|4` to isolate the critical-path question in the assignment. The production default is `4`, which uses four independent accumulator chains per component. The final ablation CSV includes an `Accumulators` case, so the single-chain and four-chain variants are quantified without changing the main solver path.
 
 ### 10.2 Newton's third law
 
@@ -441,8 +444,8 @@ This is smaller than the theoretical 50% arithmetic reduction because the kernel
 
 | Test | Variant | repetitions | median time (s) | stdev (s) |
 |---|---|---|---|---|
-| Math | exact | 5 | 0.943831 | 0.005604 |
-| Math | approx | 5 | 1.166320 | 0.006323 |
+| Math | exact | 5 | 1.014907 | 0.006999 |
+| Math | approx | 5 | 1.247969 | 0.006455 |
 
 ![Ablation summary](results_final/ablation_64.svg)
 
@@ -452,10 +455,10 @@ In this implementation the approximate path is slower than the exact path. This 
 
 The correctness check prevents using an approximate math path blindly: energy drift must remain below tolerance before any speed claim is meaningful.
 
-The approximate variant is about 23.6% slower in the 64-rank ablation:
+The approximate variant is about 23.0% slower in the 64-rank ablation:
 
 ```text
-(1.166320 - 0.943831) / 0.943831 ~= 23.6%
+(1.247969 - 1.014907) / 1.014907 ~= 23.0%
 ```
 
 This is a good example of why optimisation hints must be measured. A low-level approximation is only beneficial if it maps well to the actual compiler, instruction sequence and data layout.
@@ -464,31 +467,48 @@ This is a good example of why optimisation hints must be measured. A low-level a
 
 | Test | Variant | repetitions | median time (s) | stdev (s) |
 |---|---|---|---|---|
-| Comm | sendrecv | 5 | 0.938524 | 0.006804 |
-| Comm | overlap | 5 | 0.937171 | 0.008415 |
+| Comm | sendrecv | 5 | 1.014100 | 0.007134 |
+| Comm | overlap | 5 | 1.002167 | 0.008608 |
 
 The overlapped version is only marginally faster in this single-node experiment. This is plausible because communication time is already small compared with force computation and because effective overlap depends on MPI progress, message size and scheduling.
 
-The measured difference is below the run-to-run standard deviation:
+The measured difference is small and only slightly larger than the run-to-run standard deviation:
 
 ```text
-sendrecv median = 0.938524 s
-overlap median  = 0.937171 s
-difference      = 0.001353 s
+sendrecv median = 1.014100 s
+overlap median  = 1.002167 s
+difference      = 0.011933 s
 ```
 
 Therefore the correct conclusion is not that overlap is harmful, but that it is not a decisive optimisation for this single-node, compute-heavy case. On a multi-node run with larger communication latency, this conclusion could change.
 
-### 10.5 AoS vs SoA
+### 10.5 Accumulator chains
+
+The direct kernel was also tested with one accumulator chain and four independent accumulator chains. This isolates a low-level critical-path effect: if every force contribution updates the same scalar accumulator, the next iteration depends more tightly on the previous one. Four chains give the compiler and CPU more independent work to schedule.
+
+| Test | Variant | repetitions | median time (s) | stdev (s) |
+|---|---|---|---|---|
+| Accumulators | 1 | 5 | 1.058077 | 0.007766 |
+| Accumulators | 4 | 5 | 1.020645 | 0.009259 |
+
+The four-chain version is about 3.5% faster:
+
+```text
+(1.058077 - 1.020645) / 1.058077 ~= 3.5%
+```
+
+This supports keeping `--accumulators 4` as the production default. The gain is not dramatic, but it is measurable and consistent with the idea of reducing serial dependency in the force loop.
+
+### 10.6 AoS vs SoA
 
 The assignment suggests measuring the effect of particle layout. The layout benchmark compares an array-of-structures layout with a structure-of-arrays layout using the same force law and validates the checksums.
 
 | layout | N | threads | median force time (s) | median Gpairs/s | checksum difference vs AoS |
 |---|---|---|---|---|---|
-| AoS | 50000 | 1 | 25.338622 | 0.296 | baseline |
-| SoA | 50000 | 1 | 28.315078 | 0.265 | 0.0 |
-| AoS | 50000 | 8 | 3.224015 | 2.326 | baseline |
-| SoA | 50000 | 8 | 3.607846 | 2.079 | 1.75e-10 |
+| AoS | 20000 | 1 | 4.053144 | 0.296 | baseline |
+| SoA | 20000 | 1 | 4.509510 | 0.266 | 0.0 |
+| AoS | 20000 | 8 | 0.510256 | 2.352 | baseline |
+| SoA | 20000 | 8 | 0.564170 | 2.127 | 5.82e-11 |
 
 ![AoS vs SoA layout benchmark](results_final/layout_force_time.svg)
 
@@ -587,23 +607,24 @@ Selected values are:
 
 | benchmark | bytes | native median | container median | container delta |
 |---|---:|---:|---:|---:|
-| latency | 1 | 9.93 us | 9.98 us | +0.5% |
-| latency | 1024 | 11.02 us | 11.22 us | +1.8% |
-| latency | 1048576 | 817.69 us | 1004.79 us | +22.9% |
-| latency | 4194304 | 2483.66 us | 3801.77 us | +53.1% |
-| bandwidth | 1024 | 106.60 MB/s | 104.40 MB/s | -2.1% |
-| bandwidth | 1048576 | 1552.65 MB/s | 1535.15 MB/s | -1.1% |
-| bandwidth | 4194304 | 1641.37 MB/s | 1646.73 MB/s | +0.3% |
+| latency | 1 | 9.91 us | 9.95 us | +0.4% |
+| latency | 1024 | 11.07 us | 11.07 us | +0.0% |
+| latency | 1048576 | 708.85 us | 640.56 us | -9.6% |
+| latency | 4194304 | 2391.92 us | 2405.73 us | +0.6% |
+| bandwidth | 1024 | 108.95 MB/s | 107.05 MB/s | -1.7% |
+| bandwidth | 1048576 | 1614.41 MB/s | 1602.95 MB/s | -0.7% |
+| bandwidth | 4194304 | 1663.18 MB/s | 1694.63 MB/s | +1.9% |
 
 ![OSU native-vs-container latency](results_final/osu_microbench_latency.svg)
 
-_Figure comment: latency increases with message size, as expected. The small-message native and container curves are almost identical, while the largest messages show a visible container penalty._
+_Figure comment: latency increases with message size, as expected. The native and container curves are almost superimposed across the tested range; the remaining differences are small enough to be interpreted as MPI/runtime variability rather than a systematic container penalty._
 
 ![OSU native-vs-container bandwidth](results_final/osu_microbench_bandwidth.svg)
 
-_Figure comment: bandwidth grows with message size and reaches the same large-message plateau for native and container execution. This supports the conclusion that host MPI binding is working correctly._
+_Figure comment: bandwidth grows with message size and reaches the same large-message plateau for native and container execution. The container values stay within a few percent of native values, supporting the conclusion that host MPI binding is working correctly._
 
 The important point is that OSU runs successfully from the final image and gives a direct native-vs-container communication comparison. The application-level container overhead remains the more relevant metric for the report because it compares the same N-body executable natively and through Singularity, and it shows a stable overhead of about 3%.
+
 ## 12. Discussion
 
 The strongest result is the near-linear single-node strong scaling up to 32 ranks, followed by a still-useful but visibly less ideal 64-rank point. This happens because the direct force kernel has enough arithmetic work to amortize MPI and OpenMP overhead at moderate rank counts; at 64 ranks the per-rank work is smaller and overhead becomes more visible. At 64 ranks, the code still reaches 81.2% efficiency.
@@ -640,28 +661,34 @@ Another limitation is that hardware counters were not part of the accepted final
 If more time were available, the next improvements would be:
 
 - add hardware-counter evidence when `perf`/PAPI permissions are available;
-- run the `--accumulators 1|4` ablation on the final cluster allocation;
 - implement a distributed Newton-third-law variant with explicit return of remote force contributions;
 - compare `-march=native` and `-march=x86-64-v3` directly on the same native environment;
 - repeat the main scaling on a multi-node allocation to expose the point where ring communication becomes dominant.
 
 ## 13. Reproducibility
 
-The final accepted data files are:
+The final accepted dataset is stored in `results_final/`. The source data files used by the tables and plots are:
 
 ```text
 results_final/scaling_64.csv
 results_final/scaling_64_summary.csv
 results_final/hybrid_64_summary.csv
 results_final/ablation_64.csv
+results_final/layout.csv
 results_final/layout_summary.csv
+results_final/energy.csv
 results_final/energy_overhead_summary.csv
+results_final/container_overhead.csv
 results_final/container_overhead_summary.csv
 results_final/container_overhead_launch.csv
 results_final/osu_microbench_native_vs_container.csv
 results_final/osu_microbench_summary.csv
 results_final/mpi_linkage_check.txt
+results_final/system_info_orfeo.txt
+results_final/build_logs/build_orfeo_20260907_084912.log
 ```
+
+The SVG plots in the same directory are generated from these CSV files and are the figures embedded in the report.
 
 The 32-rank and intermediate run directories are intentionally excluded from
 version control. They are useful local history, not report dependencies.
