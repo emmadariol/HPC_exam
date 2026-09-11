@@ -539,6 +539,7 @@ static void accumulate_sources_scalar_chains(const particles_t *home,
         az1 += dz1 * s1;
       }
 
+      j = source_n_unrolled;
       ax += ax0 + ax1;
       ay += ay0 + ay1;
       az += az0 + az1;
@@ -598,6 +599,7 @@ static void accumulate_sources_scalar_chains(const particles_t *home,
         az3 += dz3 * s3;
       }
 
+      j = source_n_unrolled;
       ax += ax0 + ax1 + ax2 + ax3;
       ay += ay0 + ay1 + ay2 + ay3;
       az += az0 + az1 + az2 + az3;
@@ -703,6 +705,7 @@ static void accumulate_sources_scalar_chains(const particles_t *home,
         az7 += dz7 * s7;
       }
 
+      j = source_n_unrolled;
       ax += ax0 + ax1 + ax2 + ax3 + ax4 + ax5 + ax6 + ax7;
       ay += ay0 + ay1 + ay2 + ay3 + ay4 + ay5 + ay6 + ay7;
       az += az0 + az1 + az2 + az3 + az4 + az5 + az6 + az7;
@@ -713,19 +716,22 @@ static void accumulate_sources_scalar_chains(const particles_t *home,
       break;
     }
 
-#pragma omp simd reduction(+ : ax, ay, az)
-    for (; j < source_n; ++j)
     {
-      /* Include the remainder when source_n is not divisible by chains. */
-      const dtype dx = sx[j] - xi;
-      const dtype dy = sy[j] - yi;
-      const dtype dz = sz[j] - zi;
-      const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;
-      const dtype invr = invsqrt_force(r2, rsqrt_mode);
-      const dtype s = gm * invr * invr * invr;
-      ax += dx * s;
-      ay += dy * s;
-      az += dz * s;
+      size_t j_tail;
+#pragma omp simd reduction(+ : ax, ay, az)
+      for (j_tail = j; j_tail < source_n; ++j_tail)
+      {
+        /* Include the remainder when source_n is not divisible by chains. */
+        const dtype dx = sx[j_tail] - xi;
+        const dtype dy = sy[j_tail] - yi;
+        const dtype dz = sz[j_tail] - zi;
+        const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;
+        const dtype invr = invsqrt_force(r2, rsqrt_mode);
+        const dtype s = gm * invr * invr * invr;
+        ax += dx * s;
+        ay += dy * s;
+        az += dz * s;
+      }
     }
 
     home->ax[i] += ax;
