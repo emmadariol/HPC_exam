@@ -11,7 +11,6 @@ nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_9 = aligned_
 nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_6);
 nbody_direct_hybrid.c:457:9: missed: couldn't vectorize loop
 nbody_direct_hybrid.c:457:9: missed: not vectorized: no vectype for stmt: _24 = *_23;
- scalar_type: dtype
 nbody_direct_hybrid.c:495:5: missed: statement clobbers memory: die ("unsupported accumulator chain count %zu", _1);
 nbody_direct_hybrid.c:825:13: missed: statement clobbers memory: __builtin_GOMP_parallel (accumulate_sources_scalar_chains._omp_fn.0, &.omp_data_o.137, 0, 0);
 nbody_direct_hybrid.c:825:13: missed: statement clobbers memory: __builtin_GOMP_parallel (accumulate_sources_rsqrt14_pd._omp_fn.0, &.omp_data_o.124, 0, 0);
@@ -27,13 +26,10 @@ nbody_direct_hybrid.c:925:19: missed: couldn't vectorize loop
 nbody_direct_hybrid.c:925:19: missed: not vectorized: unsupported control flow in loop.
 nbody_direct_hybrid.c:925:19: missed: couldn't vectorize loop
 nbody_direct_hybrid.c:927:27: missed: not vectorized: no vectype for stmt: _43 = *_42;
- scalar_type: dtype
 nbody_direct_hybrid.c:472:10: missed: couldn't vectorize loop
 nbody_direct_hybrid.c:472:10: missed: not vectorized: no vectype for stmt: _24 = *_23;
- scalar_type: dtype
 nbody_direct_hybrid.c:1091:46: missed: couldn't vectorize loop
 nbody_direct_hybrid.c:1091:46: missed: not vectorized: no vectype for stmt: _23 = *_22;
- scalar_type: dtype
 nbody_direct_hybrid.c:1086:9: missed: statement clobbers memory: __builtin_GOMP_atomic_start ();
 nbody_direct_hybrid.c:1086:9: missed: statement clobbers memory: __builtin_GOMP_atomic_end ();
 nbody_direct_hybrid.c:1113:29: missed: couldn't vectorize loop
@@ -53,7 +49,6 @@ nbody_direct_hybrid.c:805:14: missed: couldn't vectorize loop
 nbody_direct_hybrid.c:805:14: missed: not vectorized: unsupported control flow in loop.
 nbody_direct_hybrid.c:782:19: missed: couldn't vectorize loop
 /usr/lib/gcc/x86_64-redhat-linux/14/include/avx512fintrin.h:9335:10: missed: not vectorized: no vectype for stmt: _54 = MEM[(__m512d_u * {ref-all})_102];
- scalar_type: __m512d_u
 nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _195 = sqrtf (_175);
 nbody_direct_hybrid.c:889:32: missed: couldn't vectorize loop
 nbody_direct_hybrid.c:889:32: missed: not vectorized: unsupported control flow in loop.
@@ -273,7 +268,6 @@ nbody_direct_hybrid.c:1495:31: missed: couldn't vectorize loop
 nbody_direct_hybrid.c:1495:31: missed: not vectorized: unsupported control flow in loop.
 nbody_direct_hybrid.c:338:18: missed: couldn't vectorize loop
 nbody_direct_hybrid.c:340:33: missed: not vectorized: no vectype for stmt: _464 = *_463;
- scalar_type: float
 nbody_direct_hybrid.c:1398:27: missed: couldn't vectorize loop
 nbody_direct_hybrid.c:1398:27: missed: not vectorized: could not determine main exit from loop with multiple exits.
 nbody_direct_hybrid.c:1390:3: missed: statement clobbers memory: MPI_Init_thread (&argc, &argv, 1, &provided);

@@ -1,0 +1,53 @@
+nbody_direct_hybrid.c:721:9: optimized: loop vectorized using 32 byte vectors
+nbody_direct_hybrid.c:621:9: optimized: loop vectorized using 32 byte vectors
+nbody_direct_hybrid.c:621:9: optimized: loop vectorized using 16 byte vectors
+nbody_direct_hybrid.c:518:9: optimized: loop vectorized using 32 byte vectors
+nbody_direct_hybrid.c:518:9: optimized: loop vectorized using 16 byte vectors
+nbody_direct_hybrid.c:557:9: optimized: loop vectorized using 32 byte vectors
+nbody_direct_hybrid.c:557:9: optimized: loop vectorized using 16 byte vectors
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47327, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47329, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47331, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47333, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47335, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47337, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47339, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47341, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47343, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47345, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47347, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47349, 0, 8);
+nbody_direct_hybrid.c:518:9: missed: statement clobbers memory: __builtin_memset (&D.47456, 0, 8);
+nbody_direct_hybrid.c:518:9: missed: statement clobbers memory: __builtin_memset (&D.47458, 0, 8);
+nbody_direct_hybrid.c:518:9: missed: statement clobbers memory: __builtin_memset (&D.47460, 0, 8);
+nbody_direct_hybrid.c:518:9: missed: statement clobbers memory: __builtin_memset (&D.47462, 0, 8);
+nbody_direct_hybrid.c:518:9: missed: statement clobbers memory: __builtin_memset (&D.47464, 0, 8);
+nbody_direct_hybrid.c:518:9: missed: statement clobbers memory: __builtin_memset (&D.47466, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47011, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47013, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47015, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47017, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47019, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47021, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47023, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47025, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47027, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47029, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47031, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47033, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47035, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47037, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47039, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47041, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47043, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47045, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47047, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47049, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47051, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47053, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47055, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47057, 0, 8);
+nbody_direct_hybrid.c:721:9: missed: statement clobbers memory: __builtin_memset (&D.46922, 0, 8);
+nbody_direct_hybrid.c:721:9: missed: statement clobbers memory: __builtin_memset (&D.46924, 0, 8);
+nbody_direct_hybrid.c:721:9: missed: statement clobbers memory: __builtin_memset (&D.46926, 0, 8);
+nbody_direct_hybrid.c:1557:3: missed: statement clobbers memory: MPI_Reduce (iftmp.66_151, &timing.force, 1, &ompi_mpi_double, &ompi_mpi_op_max, 0, &ompi_mpi_comm_world);

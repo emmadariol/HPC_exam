@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="450.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">STREAM-style RAM bandwidth</text>
+<line x1="82" y1="445" x2="865" y2="445" stroke="black"/>
+<line x1="82" y1="42" x2="82" y2="445" stroke="black"/>
+<text x="450.0" y="502" text-anchor="middle" font-family="sans-serif" font-size="14">kernel</text>
+<text transform="translate(24,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">GB/s</text>
+<rect x="126.0" y="85.2" width="107.7" height="359.8" fill="#1f77b4"/>
+<text x="179.9" y="78.2" text-anchor="middle" font-family="sans-serif" font-size="11">547.0</text>
+<text x="179.9" y="467" text-anchor="middle" font-family="sans-serif" font-size="12">copy</text>
+<rect x="321.8" y="97.9" width="107.7" height="347.1" fill="#d62728"/>
+<text x="375.6" y="90.9" text-anchor="middle" font-family="sans-serif" font-size="11">527.6</text>
+<text x="375.6" y="467" text-anchor="middle" font-family="sans-serif" font-size="12">scale</text>
+<rect x="517.5" y="108.0" width="107.7" height="337.0" fill="#2ca02c"/>
+<text x="571.4" y="101.0" text-anchor="middle" font-family="sans-serif" font-size="11">512.2</text>
+<text x="571.4" y="467" text-anchor="middle" font-family="sans-serif" font-size="12">add</text>
+<rect x="713.3" y="121.8" width="107.7" height="323.2" fill="#9467bd"/>
+<text x="767.1" y="114.8" text-anchor="middle" font-family="sans-serif" font-size="11">491.3</text>
+<text x="767.1" y="467" text-anchor="middle" font-family="sans-serif" font-size="12">triad</text>
+</svg>

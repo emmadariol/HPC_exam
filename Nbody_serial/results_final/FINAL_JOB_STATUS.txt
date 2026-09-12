@@ -1,0 +1,493 @@
+Final Orfeo run
+RUN_DIR=/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715
+Generated at: Sat Sep 12 08:17:44 CEST 2026
+
+Jobs:
+00_build_vec	1625040	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/00_build_vec
+01_probe	1625041	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/01_probe
+02_scaling	1625042	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/02_scaling
+03_hybrid	1625043	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/03_hybrid
+04_ablation	1625044	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/04_ablation
+05_evidence	1625045	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/05_evidence
+06_memory	1625046	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/06_memory
+07_arch	1625047	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/07_arch
+08_container	1625048	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/08_container
+09_osu	1625049	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/09_osu
+
+Slurm status:
+JobID           JobName      State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- ---------- -------- ---------- ---------- --------------- 
+1625040       build_vec  COMPLETED      0:0   00:00:03         64        genoa003 
+1625040.bat+      batch  COMPLETED      0:0   00:00:03         64        genoa003 
+1625040.ext+     extern  COMPLETED      0:0   00:00:03         64        genoa003 
+
+JobID           JobName      State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- ---------- -------- ---------- ---------- --------------- 
+1625041      probe_orf+  COMPLETED      0:0   00:00:00          2        genoa001 
+1625041.bat+      batch  COMPLETED      0:0   00:00:00          2        genoa001 
+1625041.ext+     extern  COMPLETED      0:0   00:00:00          2        genoa001 
+
+JobID           JobName      State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- ---------- -------- ---------- ---------- --------------- 
+1625042      scaling_o+  COMPLETED      0:0   00:13:55         64        genoa003 
+1625042.bat+      batch  COMPLETED      0:0   00:13:55         64        genoa003 
+1625042.ext+     extern  COMPLETED      0:0   00:13:55         64        genoa003 
+1625042.0    nbody_dir+  COMPLETED      0:0   00:00:39          1        genoa003 
+1625042.1    nbody_dir+  COMPLETED      0:0   00:00:38          1        genoa003 
+1625042.2    nbody_dir+  COMPLETED      0:0   00:00:39          1        genoa003 
+1625042.3    nbody_dir+  COMPLETED      0:0   00:00:38          1        genoa003 
+1625042.4    nbody_dir+  COMPLETED      0:0   00:00:39          1        genoa003 
+1625042.5    nbody_dir+  COMPLETED      0:0   00:00:39          1        genoa003 
+1625042.6    nbody_dir+  COMPLETED      0:0   00:00:19          2        genoa003 
+1625042.7    nbody_dir+  COMPLETED      0:0   00:00:20          2        genoa003 
+1625042.8    nbody_dir+  COMPLETED      0:0   00:00:20          2        genoa003 
+1625042.9    nbody_dir+  COMPLETED      0:0   00:00:20          2        genoa003 
+1625042.10   nbody_dir+  COMPLETED      0:0   00:00:19          2        genoa003 
+1625042.11   nbody_dir+  COMPLETED      0:0   00:00:20          2        genoa003 
+1625042.12   nbody_dir+  COMPLETED      0:0   00:00:10          4        genoa003 
+1625042.13   nbody_dir+  COMPLETED      0:0   00:00:11          4        genoa003 
+1625042.14   nbody_dir+  COMPLETED      0:0   00:00:10          4        genoa003 
+1625042.15   nbody_dir+  COMPLETED      0:0   00:00:10          4        genoa003 
+1625042.16   nbody_dir+  COMPLETED      0:0   00:00:11          4        genoa003 
+1625042.17   nbody_dir+  COMPLETED      0:0   00:00:10          4        genoa003 
+1625042.18   nbody_dir+  COMPLETED      0:0   00:00:05          8        genoa003 
+1625042.19   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625042.20   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625042.21   nbody_dir+  COMPLETED      0:0   00:00:05          8        genoa003 
+1625042.22   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625042.23   nbody_dir+  COMPLETED      0:0   00:00:05          8        genoa003 
+1625042.24   nbody_dir+  COMPLETED      0:0   00:00:03         16        genoa003 
+1625042.25   nbody_dir+  COMPLETED      0:0   00:00:04         16        genoa003 
+1625042.26   nbody_dir+  COMPLETED      0:0   00:00:03         16        genoa003 
+1625042.27   nbody_dir+  COMPLETED      0:0   00:00:03         16        genoa003 
+1625042.28   nbody_dir+  COMPLETED      0:0   00:00:04         16        genoa003 
+1625042.29   nbody_dir+  COMPLETED      0:0   00:00:03         16        genoa003 
+1625042.30   nbody_dir+  COMPLETED      0:0   00:00:02         32        genoa003 
+1625042.31   nbody_dir+  COMPLETED      0:0   00:00:03         32        genoa003 
+1625042.32   nbody_dir+  COMPLETED      0:0   00:00:02         32        genoa003 
+1625042.33   nbody_dir+  COMPLETED      0:0   00:00:03         32        genoa003 
+1625042.34   nbody_dir+  COMPLETED      0:0   00:00:02         32        genoa003 
+1625042.35   nbody_dir+  COMPLETED      0:0   00:00:03         32        genoa003 
+1625042.36   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625042.37   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625042.38   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625042.39   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625042.40   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625042.41   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625042.42   nbody_dir+  COMPLETED      0:0   00:00:01          1        genoa003 
+1625042.43   nbody_dir+  COMPLETED      0:0   00:00:01          1        genoa003 
+1625042.44   nbody_dir+  COMPLETED      0:0   00:00:01          1        genoa003 
+1625042.45   nbody_dir+  COMPLETED      0:0   00:00:00          1        genoa003 
+1625042.46   nbody_dir+  COMPLETED      0:0   00:00:00          1        genoa003 
+1625042.47   nbody_dir+  COMPLETED      0:0   00:00:01          1        genoa003 
+1625042.48   nbody_dir+  COMPLETED      0:0   00:00:02          2        genoa003 
+1625042.49   nbody_dir+  COMPLETED      0:0   00:00:01          2        genoa003 
+1625042.50   nbody_dir+  COMPLETED      0:0   00:00:01          2        genoa003 
+1625042.51   nbody_dir+  COMPLETED      0:0   00:00:02          2        genoa003 
+1625042.52   nbody_dir+  COMPLETED      0:0   00:00:01          2        genoa003 
+1625042.53   nbody_dir+  COMPLETED      0:0   00:00:01          2        genoa003 
+1625042.54   nbody_dir+  COMPLETED      0:0   00:00:02          4        genoa003 
+1625042.55   nbody_dir+  COMPLETED      0:0   00:00:03          4        genoa003 
+1625042.56   nbody_dir+  COMPLETED      0:0   00:00:02          4        genoa003 
+1625042.57   nbody_dir+  COMPLETED      0:0   00:00:02          4        genoa003 
+1625042.58   nbody_dir+  COMPLETED      0:0   00:00:02          4        genoa003 
+1625042.59   nbody_dir+  COMPLETED      0:0   00:00:02          4        genoa003 
+1625042.60   nbody_dir+  COMPLETED      0:0   00:00:04          8        genoa003 
+1625042.61   nbody_dir+  COMPLETED      0:0   00:00:04          8        genoa003 
+1625042.62   nbody_dir+  COMPLETED      0:0   00:00:04          8        genoa003 
+1625042.63   nbody_dir+  COMPLETED      0:0   00:00:04          8        genoa003 
+1625042.64   nbody_dir+  COMPLETED      0:0   00:00:03          8        genoa003 
+1625042.65   nbody_dir+  COMPLETED      0:0   00:00:04          8        genoa003 
+1625042.66   nbody_dir+  COMPLETED      0:0   00:00:07         16        genoa003 
+1625042.67   nbody_dir+  COMPLETED      0:0   00:00:07         16        genoa003 
+1625042.68   nbody_dir+  COMPLETED      0:0   00:00:07         16        genoa003 
+1625042.69   nbody_dir+  COMPLETED      0:0   00:00:07         16        genoa003 
+1625042.70   nbody_dir+  COMPLETED      0:0   00:00:07         16        genoa003 
+1625042.71   nbody_dir+  COMPLETED      0:0   00:00:07         16        genoa003 
+1625042.72   nbody_dir+  COMPLETED      0:0   00:00:13         32        genoa003 
+1625042.73   nbody_dir+  COMPLETED      0:0   00:00:14         32        genoa003 
+1625042.74   nbody_dir+  COMPLETED      0:0   00:00:13         32        genoa003 
+1625042.75   nbody_dir+  COMPLETED      0:0   00:00:13         32        genoa003 
+1625042.76   nbody_dir+  COMPLETED      0:0   00:00:14         32        genoa003 
+1625042.77   nbody_dir+  COMPLETED      0:0   00:00:13         32        genoa003 
+1625042.78   nbody_dir+  COMPLETED      0:0   00:00:27         64        genoa003 
+1625042.79   nbody_dir+  COMPLETED      0:0   00:00:27         64        genoa003 
+1625042.80   nbody_dir+  COMPLETED      0:0   00:00:27         64        genoa003 
+1625042.81   nbody_dir+  COMPLETED      0:0   00:00:27         64        genoa003 
+1625042.82   nbody_dir+  COMPLETED      0:0   00:00:27         64        genoa003 
+1625042.83   nbody_dir+  COMPLETED      0:0   00:00:28         64        genoa003 
+
+JobID           JobName      State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- ---------- -------- ---------- ---------- --------------- 
+1625043      hybrid_or+  COMPLETED      0:0   00:05:12         64        genoa003 
+1625043.bat+      batch  COMPLETED      0:0   00:05:12         64        genoa003 
+1625043.ext+     extern  COMPLETED      0:0   00:05:12         64        genoa003 
+1625043.0    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625043.1    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625043.2    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625043.3    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625043.4    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625043.5    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625043.6    nbody_dir+  COMPLETED      0:0   00:00:27         64        genoa003 
+1625043.7    nbody_dir+  COMPLETED      0:0   00:00:27         64        genoa003 
+1625043.8    nbody_dir+  COMPLETED      0:0   00:00:27         64        genoa003 
+1625043.9    nbody_dir+  COMPLETED      0:0   00:00:27         64        genoa003 
+1625043.10   nbody_dir+  COMPLETED      0:0   00:00:29         64        genoa003 
+1625043.11   nbody_dir+  COMPLETED      0:0   00:00:29         64        genoa003 
+1625043.12   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.13   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.14   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.15   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.16   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.17   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.18   nbody_dir+  COMPLETED      0:0   00:00:07         64        genoa003 
+1625043.19   nbody_dir+  COMPLETED      0:0   00:00:08         64        genoa003 
+1625043.20   nbody_dir+  COMPLETED      0:0   00:00:08         64        genoa003 
+1625043.21   nbody_dir+  COMPLETED      0:0   00:00:08         64        genoa003 
+1625043.22   nbody_dir+  COMPLETED      0:0   00:00:07         64        genoa003 
+1625043.23   nbody_dir+  COMPLETED      0:0   00:00:08         64        genoa003 
+1625043.24   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.25   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.26   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.27   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.28   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.29   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.30   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625043.31   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.32   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625043.33   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.34   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.35   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625043.36   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.37   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.38   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.39   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.40   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.41   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.42   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.43   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.44   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.45   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.46   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.47   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.48   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.49   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.50   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.51   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.52   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.53   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.54   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.55   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.56   nbody_dir+  COMPLETED      0:0   00:00:00         64        genoa003 
+1625043.57   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.58   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.59   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.60   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.61   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.62   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.63   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.64   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.65   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625043.66   nbody_dir+  COMPLETED      0:0   00:00:00         64        genoa003 
+1625043.67   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.68   nbody_dir+  COMPLETED      0:0   00:00:00         64        genoa003 
+1625043.69   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.70   nbody_dir+  COMPLETED      0:0   00:00:00         64        genoa003 
+1625043.71   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.72   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.73   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.74   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.75   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.76   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.77   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.78   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.79   nbody_dir+  COMPLETED      0:0   00:00:00         64        genoa003 
+1625043.80   nbody_dir+  COMPLETED      0:0   00:00:00         64        genoa003 
+1625043.81   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625043.82   nbody_dir+  COMPLETED      0:0   00:00:00         64        genoa003 
+1625043.83   nbody_dir+  COMPLETED      0:0   00:00:01         64        genoa003 
+
+JobID           JobName      State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- ---------- -------- ---------- ---------- --------------- 
+1625044      ablation_+  COMPLETED      0:0   00:07:13         64        genoa003 
+1625044.bat+      batch  COMPLETED      0:0   00:07:13         64        genoa003 
+1625044.ext+     extern  COMPLETED      0:0   00:07:13         64        genoa003 
+1625044.0    nbody_dir+  COMPLETED      0:0   00:00:38          1        genoa003 
+1625044.1    nbody_dir+  COMPLETED      0:0   00:00:39          1        genoa003 
+1625044.2    nbody_dir+  COMPLETED      0:0   00:00:38          1        genoa003 
+1625044.3    nbody_dir+  COMPLETED      0:0   00:00:39          1        genoa003 
+1625044.4    nbody_dir+  COMPLETED      0:0   00:00:38          1        genoa003 
+1625044.5    nbody_dir+  COMPLETED      0:0   00:00:25          1        genoa003 
+1625044.6    nbody_dir+  COMPLETED      0:0   00:00:24          1        genoa003 
+1625044.7    nbody_dir+  COMPLETED      0:0   00:00:24          1        genoa003 
+1625044.8    nbody_dir+  COMPLETED      0:0   00:00:25          1        genoa003 
+1625044.9    nbody_dir+  COMPLETED      0:0   00:00:24          1        genoa003 
+1625044.10   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.11   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.12   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.13   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.14   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.15   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.16   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625044.17   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.18   nbody_dir+  COMPLETED      0:0   00:00:02         64        genoa003 
+1625044.19   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.20   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.21   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.22   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.23   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.24   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.25   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.26   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.27   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.28   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.29   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.30   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.31   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.32   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.33   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.34   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.35   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.36   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.37   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.38   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.39   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.40   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.41   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.42   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.43   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.44   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.45   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.46   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.47   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.48   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625044.49   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+
+JobID           JobName      State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- ---------- -------- ---------- ---------- --------------- 
+1625045      evidence_+  COMPLETED      0:0   00:03:13         64        genoa003 
+1625045.bat+      batch  COMPLETED      0:0   00:03:13         64        genoa003 
+1625045.ext+     extern  COMPLETED      0:0   00:03:13         64        genoa003 
+1625045.0    nbody_dir+  COMPLETED      0:0   00:00:10          8        genoa003 
+1625045.1    nbody_dir+  COMPLETED      0:0   00:00:09          8        genoa003 
+1625045.2    nbody_dir+  COMPLETED      0:0   00:00:10          8        genoa003 
+1625045.3    nbody_dir+  COMPLETED      0:0   00:00:09          8        genoa003 
+1625045.4    nbody_dir+  COMPLETED      0:0   00:00:10          8        genoa003 
+1625045.5    nbody_dir+  COMPLETED      0:0   00:00:09          8        genoa003 
+1625045.6    nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625045.7    nbody_dir+  COMPLETED      0:0   00:00:07          8        genoa003 
+1625045.8    nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625045.9    nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625045.10   nbody_dir+  COMPLETED      0:0   00:00:07          8        genoa003 
+1625045.11   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625045.12   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625045.13   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625045.14   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625045.15   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625045.16   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625045.17   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625045.18   nbody_dir+  COMPLETED      0:0   00:00:05          8        genoa003 
+1625045.19   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625045.20   nbody_dir+  COMPLETED      0:0   00:00:05          8        genoa003 
+1625045.21   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+1625045.22   nbody_dir+  COMPLETED      0:0   00:00:05          8        genoa003 
+1625045.23   nbody_dir+  COMPLETED      0:0   00:00:06          8        genoa003 
+
+JobID           JobName      State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- ---------- -------- ---------- ---------- --------------- 
+1625046      memory_or+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625046.bat+      batch  COMPLETED      0:0   00:00:03         64        genoa003 
+1625046.ext+     extern  COMPLETED      0:0   00:00:03         64        genoa003 
+1625046.0    memory_ba+  COMPLETED      0:0   00:00:01         64        genoa003 
+1625046.1    memory_ba+  COMPLETED      0:0   00:00:00         64        genoa003 
+1625046.2    memory_ba+  COMPLETED      0:0   00:00:00         64        genoa003 
+1625046.3    memory_ba+  COMPLETED      0:0   00:00:00         64        genoa003 
+1625046.4    memory_ba+  COMPLETED      0:0   00:00:00         64        genoa003 
+1625046.5    memory_ba+  COMPLETED      0:0   00:00:01         64        genoa003 
+
+JobID           JobName      State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- ---------- -------- ---------- ---------- --------------- 
+1625047      arch_orfeo  COMPLETED      0:0   00:00:38         64        genoa003 
+1625047.bat+      batch  COMPLETED      0:0   00:00:38         64        genoa003 
+1625047.ext+     extern  COMPLETED      0:0   00:00:38         64        genoa003 
+1625047.0    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625047.1    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625047.2    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625047.3    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625047.4    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625047.5    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625047.6    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625047.7    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625047.8    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625047.9    nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625047.10   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+1625047.11   nbody_dir+  COMPLETED      0:0   00:00:03         64        genoa003 
+
+JobID           JobName      State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- ---------- -------- ---------- ---------- --------------- 
+1625048      container+  COMPLETED      0:0   00:12:17          4        genoa001 
+1625048.bat+      batch  COMPLETED      0:0   00:12:17          4        genoa001 
+1625048.ext+     extern  COMPLETED      0:0   00:12:17          4        genoa001 
+1625048.0    nbody_dir+  COMPLETED      0:0   00:00:39          1        genoa001 
+1625048.1    singulari+  COMPLETED      0:0   00:00:39          1        genoa001 
+1625048.2    nbody_dir+  COMPLETED      0:0   00:00:01          1        genoa001 
+1625048.3    singulari+  COMPLETED      0:0   00:00:01          1        genoa001 
+1625048.4    nbody_dir+  COMPLETED      0:0   00:00:39          1        genoa001 
+1625048.5    singulari+  COMPLETED      0:0   00:00:39          1        genoa001 
+1625048.6    nbody_dir+  COMPLETED      0:0   00:00:00          1        genoa001 
+1625048.7    singulari+  COMPLETED      0:0   00:00:01          1        genoa001 
+1625048.8    nbody_dir+  COMPLETED      0:0   00:00:39          1        genoa001 
+1625048.9    singulari+  COMPLETED      0:0   00:00:39          1        genoa001 
+1625048.10   nbody_dir+  COMPLETED      0:0   00:00:01          1        genoa001 
+1625048.11   singulari+  COMPLETED      0:0   00:00:01          1        genoa001 
+1625048.12   nbody_dir+  COMPLETED      0:0   00:00:38          1        genoa001 
+1625048.13   singulari+  COMPLETED      0:0   00:00:39          1        genoa001 
+1625048.14   nbody_dir+  COMPLETED      0:0   00:00:01          1        genoa001 
+1625048.15   singulari+  COMPLETED      0:0   00:00:01          1        genoa001 
+1625048.16   nbody_dir+  COMPLETED      0:0   00:00:39          1        genoa001 
+1625048.17   singulari+  COMPLETED      0:0   00:00:39          1        genoa001 
+1625048.18   nbody_dir+  COMPLETED      0:0   00:00:00          1        genoa001 
+1625048.19   singulari+  COMPLETED      0:0   00:00:01          1        genoa001 
+1625048.20   nbody_dir+  COMPLETED      0:0   00:00:20          2        genoa001 
+1625048.21   singulari+  COMPLETED      0:0   00:00:20          2        genoa001 
+1625048.22   nbody_dir+  COMPLETED      0:0   00:00:01          2        genoa001 
+1625048.23   singulari+  COMPLETED      0:0   00:00:02          2        genoa001 
+1625048.24   nbody_dir+  COMPLETED      0:0   00:00:20          2        genoa001 
+1625048.25   singulari+  COMPLETED      0:0   00:00:20          2        genoa001 
+1625048.26   nbody_dir+  COMPLETED      0:0   00:00:01          2        genoa001 
+1625048.27   singulari+  COMPLETED      0:0   00:00:02          2        genoa001 
+1625048.28   nbody_dir+  COMPLETED      0:0   00:00:19          2        genoa001 
+1625048.29   singulari+  COMPLETED      0:0   00:00:20          2        genoa001 
+1625048.30   nbody_dir+  COMPLETED      0:0   00:00:02          2        genoa001 
+1625048.31   singulari+  COMPLETED      0:0   00:00:01          2        genoa001 
+1625048.32   nbody_dir+  COMPLETED      0:0   00:00:20          2        genoa001 
+1625048.33   singulari+  COMPLETED      0:0   00:00:20          2        genoa001 
+1625048.34   nbody_dir+  COMPLETED      0:0   00:00:01          2        genoa001 
+1625048.35   singulari+  COMPLETED      0:0   00:00:02          2        genoa001 
+1625048.36   nbody_dir+  COMPLETED      0:0   00:00:20          2        genoa001 
+1625048.37   singulari+  COMPLETED      0:0   00:00:20          2        genoa001 
+1625048.38   nbody_dir+  COMPLETED      0:0   00:00:01          2        genoa001 
+1625048.39   singulari+  COMPLETED      0:0   00:00:02          2        genoa001 
+1625048.40   nbody_dir+  COMPLETED      0:0   00:00:10          4        genoa001 
+1625048.41   singulari+  COMPLETED      0:0   00:00:10          4        genoa001 
+1625048.42   nbody_dir+  COMPLETED      0:0   00:00:02          4        genoa001 
+1625048.43   singulari+  COMPLETED      0:0   00:00:03          4        genoa001 
+1625048.44   nbody_dir+  COMPLETED      0:0   00:00:10          4        genoa001 
+1625048.45   singulari+  COMPLETED      0:0   00:00:10          4        genoa001 
+1625048.46   nbody_dir+  COMPLETED      0:0   00:00:03          4        genoa001 
+1625048.47   singulari+  COMPLETED      0:0   00:00:02          4        genoa001 
+1625048.48   nbody_dir+  COMPLETED      0:0   00:00:10          4        genoa001 
+1625048.49   singulari+  COMPLETED      0:0   00:00:11          4        genoa001 
+1625048.50   nbody_dir+  COMPLETED      0:0   00:00:02          4        genoa001 
+1625048.51   singulari+  COMPLETED      0:0   00:00:02          4        genoa001 
+1625048.52   nbody_dir+  COMPLETED      0:0   00:00:10          4        genoa001 
+1625048.53   singulari+  COMPLETED      0:0   00:00:11          4        genoa001 
+1625048.54   nbody_dir+  COMPLETED      0:0   00:00:02          4        genoa001 
+1625048.55   singulari+  COMPLETED      0:0   00:00:02          4        genoa001 
+1625048.56   nbody_dir+  COMPLETED      0:0   00:00:11          4        genoa001 
+1625048.57   singulari+  COMPLETED      0:0   00:00:10          4        genoa001 
+1625048.58   nbody_dir+  COMPLETED      0:0   00:00:02          4        genoa001 
+1625048.59   singulari+  COMPLETED      0:0   00:00:03          4        genoa001 
+
+JobID           JobName      State ExitCode    Elapsed  AllocCPUS        NodeList 
+------------ ---------- ---------- -------- ---------- ---------- --------------- 
+1625049       osu_orfeo  COMPLETED      0:0   00:01:55          2  genoa[011-012] 
+1625049.bat+      batch  COMPLETED      0:0   00:01:55          1        genoa011 
+1625049.ext+     extern  COMPLETED      0:0   00:01:55          2  genoa[011-012] 
+1625049.0    osu_laten+  COMPLETED      0:0   00:00:02          2  genoa[011-012] 
+1625049.1    osu_laten+  COMPLETED      0:0   00:00:01          2  genoa[011-012] 
+1625049.2    osu_laten+  COMPLETED      0:0   00:00:02          2  genoa[011-012] 
+1625049.3    osu_laten+  COMPLETED      0:0   00:00:01          2  genoa[011-012] 
+1625049.4    osu_laten+  COMPLETED      0:0   00:00:01          2  genoa[011-012] 
+1625049.5    osu_laten+  COMPLETED      0:0   00:00:02          2  genoa[011-012] 
+1625049.6        osu_bw  COMPLETED      0:0   00:00:01          2  genoa[011-012] 
+1625049.7        osu_bw  COMPLETED      0:0   00:00:01          2  genoa[011-012] 
+1625049.8        osu_bw  COMPLETED      0:0   00:00:00          2  genoa[011-012] 
+1625049.9        osu_bw  COMPLETED      0:0   00:00:01          2  genoa[011-012] 
+1625049.10       osu_bw  COMPLETED      0:0   00:00:01          2  genoa[011-012] 
+1625049.11       osu_bw  COMPLETED      0:0   00:00:01          2  genoa[011-012] 
+1625049.12   singulari+  COMPLETED      0:0   00:00:13          2  genoa[011-012] 
+1625049.13   singulari+  COMPLETED      0:0   00:00:12          2  genoa[011-012] 
+1625049.14   singulari+  COMPLETED      0:0   00:00:12          2  genoa[011-012] 
+1625049.15   singulari+  COMPLETED      0:0   00:00:12          2  genoa[011-012] 
+1625049.16   singulari+  COMPLETED      0:0   00:00:12          2  genoa[011-012] 
+1625049.17   singulari+  COMPLETED      0:0   00:00:13          2  genoa[011-012] 
+1625049.18   singulari+  COMPLETED      0:0   00:00:04          2  genoa[011-012] 
+1625049.19   singulari+  COMPLETED      0:0   00:00:05          2  genoa[011-012] 
+1625049.20   singulari+  COMPLETED      0:0   00:00:04          2  genoa[011-012] 
+1625049.21   singulari+  COMPLETED      0:0   00:00:04          2  genoa[011-012] 
+1625049.22   singulari+  COMPLETED      0:0   00:00:04          2  genoa[011-012] 
+1625049.23   singulari+  COMPLETED      0:0   00:00:04          2  genoa[011-012] 
+
+
+Result files:
+results_final/FINAL_JOB_STATUS.txt
+results_final/README.md
+results_final/ablation.csv
+results_final/ablation.svg
+results_final/ablation_64.csv
+results_final/ablation_64.svg
+results_final/ablation_summary.csv
+results_final/arch_target_comparison.csv
+results_final/arch_target_comparison.svg
+results_final/arch_target_comparison_summary.csv
+results_final/container_overhead.csv
+results_final/container_overhead_launch.csv
+results_final/container_overhead_strong.svg
+results_final/container_overhead_summary.csv
+results_final/container_overhead_weak.svg
+results_final/energy.csv
+results_final/energy_overhead.svg
+results_final/energy_overhead_summary.csv
+results_final/energy_summary.csv
+results_final/hybrid_64_gpairs_by_config.svg
+results_final/hybrid_64_summary.csv
+results_final/hybrid_64_time_by_config.svg
+results_final/hybrid_P16_T4.csv
+results_final/hybrid_P16_T4_summary.csv
+results_final/hybrid_P1_T64.csv
+results_final/hybrid_P1_T64_summary.csv
+results_final/hybrid_P2_T32.csv
+results_final/hybrid_P2_T32_summary.csv
+results_final/hybrid_P32_T2.csv
+results_final/hybrid_P32_T2_summary.csv
+results_final/hybrid_P4_T16.csv
+results_final/hybrid_P4_T16_summary.csv
+results_final/hybrid_P64_T1.csv
+results_final/hybrid_P64_T1_summary.csv
+results_final/hybrid_P8_T8.csv
+results_final/hybrid_P8_T8_summary.csv
+results_final/hybrid_gpairs_by_config.svg
+results_final/hybrid_summary.csv
+results_final/hybrid_time_by_config.svg
+results_final/jobs_chain.tsv
+results_final/layout.csv
+results_final/layout_force_time.svg
+results_final/layout_summary.csv
+results_final/memory_bandwidth.csv
+results_final/memory_bandwidth.svg
+results_final/memory_bandwidth_summary.csv
+results_final/mpi_linkage_check.txt
+results_final/osu_microbench_bandwidth.svg
+results_final/osu_microbench_latency.svg
+results_final/osu_microbench_native_vs_container.csv
+results_final/osu_microbench_summary.csv
+results_final/scaling.csv
+results_final/scaling_64.csv
+results_final/scaling_64_strong_comm_bandwidth.svg
+results_final/scaling_64_strong_efficiency.svg
+results_final/scaling_64_strong_speedup.svg
+results_final/scaling_64_summary.csv
+results_final/scaling_64_weak_normalized_time.svg
+results_final/scaling_64_weak_time.svg
+results_final/scaling_strong_comm_bandwidth.svg
+results_final/scaling_strong_efficiency.svg
+results_final/scaling_strong_speedup.svg
+results_final/scaling_summary.csv
+results_final/scaling_weak_normalized_time.svg
+results_final/scaling_weak_time.svg
+results_final/system_info_evidence.txt
+results_final/system_info_orfeo.txt
+results_final/vectorization_report.txt
+results_final/vectorization_report_filtered.txt
+results_final/vectorization_serial_report.txt

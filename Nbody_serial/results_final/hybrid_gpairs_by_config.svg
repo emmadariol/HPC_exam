@@ -5,33 +5,33 @@
 <line x1="82" y1="42" x2="82" y2="445" stroke="black"/>
 <text x="450.0" y="502" text-anchor="middle" font-family="sans-serif" font-size="14">configuration</text>
 <text transform="translate(24,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">Gpairs/s</text>
-<polyline points="82.0,61.0 142.2,42.0 202.5,47.1 262.7,46.0 322.9,63.4 383.2,50.8 443.4,59.9 503.6,64.2 563.8,53.3 624.1,135.6 684.3,53.6 744.5,205.8 804.8,58.9 865.0,264.9" fill="none" stroke="#1f77b4" stroke-width="2"/>
-<circle cx="82.0" cy="61.0" r="4" fill="#1f77b4"/>
+<polyline points="82.0,63.3 142.2,42.0 202.5,66.7 262.7,44.7 322.9,61.5 383.2,48.0 443.4,65.3 503.6,68.5 563.8,67.6 624.1,110.3 684.3,61.6 744.5,170.1 804.8,60.1 865.0,259.1" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<circle cx="82.0" cy="63.3" r="4" fill="#1f77b4"/>
 <text transform="translate(82.0,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P64xT1</text>
 <circle cx="142.2" cy="42.0" r="4" fill="#1f77b4"/>
 <text transform="translate(142.2,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P64xT1</text>
-<circle cx="202.5" cy="47.1" r="4" fill="#1f77b4"/>
+<circle cx="202.5" cy="66.7" r="4" fill="#1f77b4"/>
 <text transform="translate(202.5,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P32xT2</text>
-<circle cx="262.7" cy="46.0" r="4" fill="#1f77b4"/>
+<circle cx="262.7" cy="44.7" r="4" fill="#1f77b4"/>
 <text transform="translate(262.7,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P32xT2</text>
-<circle cx="322.9" cy="63.4" r="4" fill="#1f77b4"/>
+<circle cx="322.9" cy="61.5" r="4" fill="#1f77b4"/>
 <text transform="translate(322.9,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P16xT4</text>
-<circle cx="383.2" cy="50.8" r="4" fill="#1f77b4"/>
+<circle cx="383.2" cy="48.0" r="4" fill="#1f77b4"/>
 <text transform="translate(383.2,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P16xT4</text>
-<circle cx="443.4" cy="59.9" r="4" fill="#1f77b4"/>
+<circle cx="443.4" cy="65.3" r="4" fill="#1f77b4"/>
 <text transform="translate(443.4,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P8xT8</text>
-<circle cx="503.6" cy="64.2" r="4" fill="#1f77b4"/>
+<circle cx="503.6" cy="68.5" r="4" fill="#1f77b4"/>
 <text transform="translate(503.6,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P8xT8</text>
-<circle cx="563.8" cy="53.3" r="4" fill="#1f77b4"/>
+<circle cx="563.8" cy="67.6" r="4" fill="#1f77b4"/>
 <text transform="translate(563.8,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P4xT16</text>
-<circle cx="624.1" cy="135.6" r="4" fill="#1f77b4"/>
+<circle cx="624.1" cy="110.3" r="4" fill="#1f77b4"/>
 <text transform="translate(624.1,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P4xT16</text>
-<circle cx="684.3" cy="53.6" r="4" fill="#1f77b4"/>
+<circle cx="684.3" cy="61.6" r="4" fill="#1f77b4"/>
 <text transform="translate(684.3,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P2xT32</text>
-<circle cx="744.5" cy="205.8" r="4" fill="#1f77b4"/>
+<circle cx="744.5" cy="170.1" r="4" fill="#1f77b4"/>
 <text transform="translate(744.5,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P2xT32</text>
-<circle cx="804.8" cy="58.9" r="4" fill="#1f77b4"/>
+<circle cx="804.8" cy="60.1" r="4" fill="#1f77b4"/>
 <text transform="translate(804.8,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P1xT64</text>
-<circle cx="865.0" cy="264.9" r="4" fill="#1f77b4"/>
+<circle cx="865.0" cy="259.1" r="4" fill="#1f77b4"/>
 <text transform="translate(865.0,467) rotate(-35)" text-anchor="end" font-family="sans-serif" font-size="11">P1xT64</text>
 </svg>

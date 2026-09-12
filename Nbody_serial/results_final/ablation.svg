@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="450.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">ablation experiments</text>
+<line x1="82" y1="445" x2="865" y2="445" stroke="black"/>
+<line x1="82" y1="42" x2="82" y2="445" stroke="black"/>
+<text x="450.0" y="502" text-anchor="middle" font-family="sans-serif" font-size="14">variant</text>
+<text transform="translate(24,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">median time (s)</text>
+<rect x="99.6" y="78.6" width="43.1" height="366.4" fill="#1f77b4"/>
+<text x="121.2" y="71.6" text-anchor="middle" font-family="sans-serif" font-size="11">38.1</text>
+<text x="121.2" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Kernel</text>
+<text x="121.2" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">direct</text>
+<rect x="177.9" y="215.3" width="43.1" height="229.7" fill="#d62728"/>
+<text x="199.4" y="208.3" text-anchor="middle" font-family="sans-serif" font-size="11">23.9</text>
+<text x="199.4" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Kernel</text>
+<text x="199.4" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">newton</text>
+<rect x="256.2" y="437.9" width="43.1" height="7.1" fill="#2ca02c"/>
+<text x="277.8" y="430.9" text-anchor="middle" font-family="sans-serif" font-size="11">0.738</text>
+<text x="277.8" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Math</text>
+<text x="277.8" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">exact</text>
+<rect x="334.5" y="442.6" width="43.1" height="2.4" fill="#9467bd"/>
+<text x="356.1" y="435.6" text-anchor="middle" font-family="sans-serif" font-size="11">0.253</text>
+<text x="356.1" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Math</text>
+<text x="356.1" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">approx</text>
+<rect x="412.8" y="438.0" width="43.1" height="7.0" fill="#ff7f0e"/>
+<text x="434.4" y="431.0" text-anchor="middle" font-family="sans-serif" font-size="11">0.733</text>
+<text x="434.4" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Comm</text>
+<text x="434.4" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">sendrecv</text>
+<rect x="491.1" y="438.2" width="43.1" height="6.8" fill="#17becf"/>
+<text x="512.6" y="431.2" text-anchor="middle" font-family="sans-serif" font-size="11">0.71</text>
+<text x="512.6" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Comm</text>
+<text x="512.6" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">overlap</text>
+<rect x="569.4" y="438.0" width="43.1" height="7.0" fill="#1f77b4"/>
+<text x="591.0" y="431.0" text-anchor="middle" font-family="sans-serif" font-size="11">0.728</text>
+<text x="591.0" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Accumulators</text>
+<text x="591.0" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">1</text>
+<rect x="647.7" y="438.0" width="43.1" height="7.0" fill="#d62728"/>
+<text x="669.2" y="431.0" text-anchor="middle" font-family="sans-serif" font-size="11">0.725</text>
+<text x="669.2" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Accumulators</text>
+<text x="669.2" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">2</text>
+<rect x="726.0" y="437.9" width="43.1" height="7.1" fill="#2ca02c"/>
+<text x="747.5" y="430.9" text-anchor="middle" font-family="sans-serif" font-size="11">0.737</text>
+<text x="747.5" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Accumulators</text>
+<text x="747.5" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">4</text>
+<rect x="804.3" y="437.8" width="43.1" height="7.2" fill="#9467bd"/>
+<text x="825.9" y="430.8" text-anchor="middle" font-family="sans-serif" font-size="11">0.747</text>
+<text x="825.9" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Accumulators</text>
+<text x="825.9" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">8</text>
+</svg>
