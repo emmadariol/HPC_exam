@@ -1,10 +1,23 @@
-00_build_vec	1625040	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/00_build_vec
-01_probe	1625041	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/01_probe
-02_scaling	1625042	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/02_scaling
-03_hybrid	1625043	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/03_hybrid
-04_ablation	1625044	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/04_ablation
-05_evidence	1625045	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/05_evidence
-06_memory	1625046	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/06_memory
-07_arch	1625047	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/07_arch
-08_container	1625048	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/08_container
-09_osu	1625049	/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/orfeo_clean_20260911_201715/09_osu
+00_build_vec	1625293
+01_probe	1625294
+02_scaling_N10000	1625295
+03_hybrid_N10000	1625296
+04_ablation_N10000	1625297
+05_evidence_N10000	1625298
+06_memory	1625299
+07_arch	1625300
+08_container_N10000	1625301
+09_osu	1625302
+06_memory_retry	1625454
+07_arch_retry	1625455
+08_container_P2	1625849
+08_container_P4	1625850
+08_container_P8	1625851
+08_container_P16	1625852
+08_container_P1_fix	1625928
+08_container_P1_weak	1625963
+08_container_P1_weak_ok	1625977
+08_container_P1_weak_ok	1625978
+08_container_P1_strong_native	1625981
+08_container_P1_strong_container	1625982
+09_osu_exact	1626056
