@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="450.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">OSU bandwidth: native vs container</text>
+<line x1="82" y1="445" x2="865" y2="445" stroke="black"/>
+<line x1="82" y1="42" x2="82" y2="445" stroke="black"/>
+<text x="450.0" y="502" text-anchor="middle" font-family="sans-serif" font-size="14">message size (bytes, log2 scale)</text>
+<text transform="translate(24,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">median bandwidth (MB/s)</text>
+<polyline points="82.0,444.9 117.6,444.8 153.2,444.7 188.8,444.4 224.4,443.8 260.0,442.6 295.5,440.5 331.1,436.1 366.7,429.1 402.3,414.8 437.9,388.7 473.5,359.4 509.1,319.5 544.7,265.6 580.3,133.4 615.9,102.0 651.5,88.3 687.0,80.3 722.6,76.0 758.2,73.6 793.8,72.6 829.4,72.1 865.0,71.9" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<circle cx="82.0" cy="444.9" r="3" fill="#1f77b4"/>
+<circle cx="117.6" cy="444.8" r="3" fill="#1f77b4"/>
+<circle cx="153.2" cy="444.7" r="3" fill="#1f77b4"/>
+<circle cx="188.8" cy="444.4" r="3" fill="#1f77b4"/>
+<circle cx="224.4" cy="443.8" r="3" fill="#1f77b4"/>
+<circle cx="260.0" cy="442.6" r="3" fill="#1f77b4"/>
+<circle cx="295.5" cy="440.5" r="3" fill="#1f77b4"/>
+<circle cx="331.1" cy="436.1" r="3" fill="#1f77b4"/>
+<circle cx="366.7" cy="429.1" r="3" fill="#1f77b4"/>
+<circle cx="402.3" cy="414.8" r="3" fill="#1f77b4"/>
+<circle cx="437.9" cy="388.7" r="3" fill="#1f77b4"/>
+<circle cx="473.5" cy="359.4" r="3" fill="#1f77b4"/>
+<circle cx="509.1" cy="319.5" r="3" fill="#1f77b4"/>
+<circle cx="544.7" cy="265.6" r="3" fill="#1f77b4"/>
+<circle cx="580.3" cy="133.4" r="3" fill="#1f77b4"/>
+<circle cx="615.9" cy="102.0" r="3" fill="#1f77b4"/>
+<circle cx="651.5" cy="88.3" r="3" fill="#1f77b4"/>
+<circle cx="687.0" cy="80.3" r="3" fill="#1f77b4"/>
+<circle cx="722.6" cy="76.0" r="3" fill="#1f77b4"/>
+<circle cx="758.2" cy="73.6" r="3" fill="#1f77b4"/>
+<circle cx="793.8" cy="72.6" r="3" fill="#1f77b4"/>
+<circle cx="829.4" cy="72.1" r="3" fill="#1f77b4"/>
+<circle cx="865.0" cy="71.9" r="3" fill="#1f77b4"/>
+<text x="92" y="62" font-family="sans-serif" font-size="13" fill="#1f77b4">native</text>
+<polyline points="82.0,445.0 117.6,445.0 153.2,445.0 188.8,444.9 224.4,444.9 260.0,444.8 295.5,444.6 331.1,444.2 366.7,443.5 402.3,442.0 437.9,439.5 473.5,434.9 509.1,426.4 544.7,416.0 580.3,408.6 615.9,405.0 651.5,401.9 687.0,400.6 722.6,400.1 758.2,395.3 793.8,390.0 829.4,391.6 865.0,393.2" fill="none" stroke="#d62728" stroke-width="2"/>
+<circle cx="82.0" cy="445.0" r="3" fill="#d62728"/>
+<circle cx="117.6" cy="445.0" r="3" fill="#d62728"/>
+<circle cx="153.2" cy="445.0" r="3" fill="#d62728"/>
+<circle cx="188.8" cy="444.9" r="3" fill="#d62728"/>
+<circle cx="224.4" cy="444.9" r="3" fill="#d62728"/>
+<circle cx="260.0" cy="444.8" r="3" fill="#d62728"/>
+<circle cx="295.5" cy="444.6" r="3" fill="#d62728"/>
+<circle cx="331.1" cy="444.2" r="3" fill="#d62728"/>
+<circle cx="366.7" cy="443.5" r="3" fill="#d62728"/>
+<circle cx="402.3" cy="442.0" r="3" fill="#d62728"/>
+<circle cx="437.9" cy="439.5" r="3" fill="#d62728"/>
+<circle cx="473.5" cy="434.9" r="3" fill="#d62728"/>
+<circle cx="509.1" cy="426.4" r="3" fill="#d62728"/>
+<circle cx="544.7" cy="416.0" r="3" fill="#d62728"/>
+<circle cx="580.3" cy="408.6" r="3" fill="#d62728"/>
+<circle cx="615.9" cy="405.0" r="3" fill="#d62728"/>
+<circle cx="651.5" cy="401.9" r="3" fill="#d62728"/>
+<circle cx="687.0" cy="400.6" r="3" fill="#d62728"/>
+<circle cx="722.6" cy="400.1" r="3" fill="#d62728"/>
+<circle cx="758.2" cy="395.3" r="3" fill="#d62728"/>
+<circle cx="793.8" cy="390.0" r="3" fill="#d62728"/>
+<circle cx="829.4" cy="391.6" r="3" fill="#d62728"/>
+<circle cx="865.0" cy="393.2" r="3" fill="#d62728"/>
+<text x="92" y="82" font-family="sans-serif" font-size="13" fill="#d62728">container</text>
+<text x="82.0" y="467" text-anchor="middle" font-family="sans-serif" font-size="11">1</text>
+<text x="437.9" y="467" text-anchor="middle" font-family="sans-serif" font-size="11">1024</text>
+<text x="793.8" y="467" text-anchor="middle" font-family="sans-serif" font-size="11">1048576</text>
+<text x="865.0" y="467" text-anchor="middle" font-family="sans-serif" font-size="11">4194304</text>
+</svg>
