@@ -1,0 +1,177 @@
+nbody_direct_serial.c:90:3: missed: statement clobbers memory: __builtin_va_start (&args, 0);
+nbody_direct_serial.c:91:3: missed: statement clobbers memory: vfprintf (stderr.18_1, format_5(D), &args);
+nbody_direct_serial.c:92:3: missed: statement clobbers memory: __builtin_va_end (&args);
+nbody_direct_serial.c:93:3: missed: statement clobbers memory: fputc (10, stderr.19_2);
+nbody_direct_serial.c:94:3: missed: statement clobbers memory: exit (1);
+nbody_direct_serial.c:119:11: missed: statement clobbers memory: value_9 = strtoull (text_7(D), &endptr, 10);
+nbody_direct_serial.c:121:5: missed: statement clobbers memory: die ("invalid integer for %s: %s", name_10(D), text_7(D));
+nbody_direct_serial.c:142:11: missed: statement clobbers memory: value_10 = strtod (text_8(D), &endptr);
+nbody_direct_serial.c:144:5: missed: statement clobbers memory: die ("invalid floating-point value for %s: %s", name_11(D), text_8(D));
+nbody_direct_serial.c:162:26: missed: statement clobbers memory: key_len_18 = strlen (key_17(D));
+nbody_direct_serial.c:165:8: missed: statement clobbers memory: _5 = strncmp (arg_21, key_17(D), key_len_18);
+nbody_direct_serial.c:168:7: missed: statement clobbers memory: _9 = strcmp (arg_21, key_17(D));
+nbody_direct_serial.c:171:7: missed: statement clobbers memory: die ("missing value after %s", key_17(D));
+nbody_direct_serial.c:101:7: missed: statement clobbers memory: _1 = timespec_get (&ts, 1);
+nbody_direct_serial.c:102:5: missed: statement clobbers memory: die ("timespec_get failed");
+nbody_direct_serial.c:536:18: missed: couldn't vectorize loop
+nbody_direct_serial.c:536:18: missed: not vectorized: loop nest containing two or more consecutive inner loops cannot be vectorized
+nbody_direct_serial.c:547:9: optimized: loop vectorized using 64 byte vectors
+nbody_direct_serial.c:547:9: optimized: loop vectorized using 32 byte vectors
+nbody_direct_serial.c:551:10: optimized: loop vectorized using 64 byte vectors
+nbody_direct_serial.c:547:9: missed: statement clobbers memory: __builtin_memset (&D.6805, 0, 64);
+nbody_direct_serial.c:547:9: missed: statement clobbers memory: __builtin_memset (&D.6807, 0, 64);
+nbody_direct_serial.c:547:9: missed: statement clobbers memory: __builtin_memset (&D.6809, 0, 64);
+nbody_direct_serial.c:697:24: missed: couldn't vectorize loop
+nbody_direct_serial.c:697:24: missed: not vectorized: inner-loop count not invariant.
+nbody_direct_serial.c:697:24: missed: couldn't vectorize loop
+nbody_direct_serial.c:699:22: missed: not vectorized: no vectype for stmt: _11 = *_10;
+ scalar_type: dtype
+nbody_direct_serial.c:219:22: missed: statement clobbers memory: got_9 = fread (ptr_4(D), size_5(D), nmemb_6(D), fp_7(D));
+nbody_direct_serial.c:223:9: missed: statement clobbers memory: _1 = ferror (fp_7(D));
+nbody_direct_serial.c:225:5: missed: statement clobbers memory: die ("short file while reading %s from \'%s\'", what_11(D), path_12(D));
+nbody_direct_serial.c:224:7: missed: statement clobbers memory: die ("read error while reading %s from \'%s\'", what_11(D), path_12(D));
+nbody_direct_serial.c:199:9: missed: statement clobbers memory: ptr_7 = aligned_alloc (64, padded_6);
+nbody_direct_serial.c:201:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_6);
+nbody_direct_serial.c:196:5: missed: statement clobbers memory: die ("allocation size overflow");
+nbody_direct_serial.c:192:5: missed: statement clobbers memory: die ("attempted zero-byte allocation");
+nbody_direct_serial.c:455:18: missed: couldn't vectorize loop
+nbody_direct_serial.c:461:19: missed: not vectorized: no vectype for stmt: pretmp_723 = *_724;
+ scalar_type: dtype
+nbody_direct_serial.c:455:18: missed: couldn't vectorize loop
+nbody_direct_serial.c:461:19: missed: not vectorized: no vectype for stmt: pretmp_845 = *_844;
+ scalar_type: dtype
+nbody_direct_serial.c:889:31: missed: couldn't vectorize loop
+nbody_direct_serial.c:889:31: missed: not vectorized: loop nest containing two or more consecutive inner loops cannot be vectorized
+nbody_direct_serial.c:661:18: missed: couldn't vectorize loop
+nbody_direct_serial.c:663:46: missed: not vectorized: no vectype for stmt: _405 = *_404;
+ scalar_type: dtype
+nbody_direct_serial.c:592:18: optimized: loop vectorized using 64 byte vectors
+nbody_direct_serial.c:592:18: optimized: loop vectorized using 32 byte vectors
+nbody_direct_serial.c:616:18: optimized: loop vectorized using 64 byte vectors
+nbody_direct_serial.c:616:18: optimized: loop vectorized using 32 byte vectors
+nbody_direct_serial.c:592:18: optimized: loop vectorized using 64 byte vectors
+nbody_direct_serial.c:592:18: optimized: loop vectorized using 32 byte vectors
+nbody_direct_serial.c:661:18: missed: couldn't vectorize loop
+nbody_direct_serial.c:663:46: missed: not vectorized: no vectype for stmt: _209 = *_208;
+ scalar_type: dtype
+nbody_direct_serial.c:397:18: missed: couldn't vectorize loop
+nbody_direct_serial.c:402:11: missed: not vectorized: no vectype for stmt: pretmp_799 = *record_800;
+ scalar_type: const float
+nbody_direct_serial.c:397:18: missed: couldn't vectorize loop
+nbody_direct_serial.c:402:11: missed: not vectorized: no vectype for stmt: pretmp_846 = *record_245;
+ scalar_type: const float
+nbody_direct_serial.c:797:27: missed: couldn't vectorize loop
+nbody_direct_serial.c:797:27: missed: not vectorized: could not determine main exit from loop with multiple exits.
+nbody_direct_serial.c:165:8: missed: statement clobbers memory: _173 = strncmp (arg_172, "--input", 7);
+nbody_direct_serial.c:168:7: missed: statement clobbers memory: _178 = strcmp (arg_172, "--input");
+nbody_direct_serial.c:165:8: missed: statement clobbers memory: _191 = strncmp (prephitmp_719, "--output", 8);
+nbody_direct_serial.c:168:7: missed: statement clobbers memory: _196 = strcmp (prephitmp_719, "--output");
+nbody_direct_serial.c:805:23: missed: statement clobbers memory: value_107 = option_value (&argi, argc_76(D), argv_78(D), "--nsteps");
+nbody_direct_serial.c:807:23: missed: statement clobbers memory: value_109 = option_value (&argi, argc_76(D), argv_78(D), "--energy-every");
+nbody_direct_serial.c:809:23: missed: statement clobbers memory: value_111 = option_value (&argi, argc_76(D), argv_78(D), "--dt");
+nbody_direct_serial.c:811:23: missed: statement clobbers memory: value_113 = option_value (&argi, argc_76(D), argv_78(D), "--eps");
+nbody_direct_serial.c:813:23: missed: statement clobbers memory: value_115 = option_value (&argi, argc_76(D), argv_78(D), "--G");
+nbody_direct_serial.c:815:23: missed: statement clobbers memory: value_117 = option_value (&argi, argc_76(D), argv_78(D), "--mass");
+nbody_direct_serial.c:817:23: missed: statement clobbers memory: value_119 = option_value (&argi, argc_76(D), argv_78(D), "--energy-tol");
+nbody_direct_serial.c:819:23: missed: statement clobbers memory: value_121 = option_value (&argi, argc_76(D), argv_78(D), "--io-mode");
+nbody_direct_serial.c:828:14: missed: statement clobbers memory: _8 = strcmp (_7, "--io-profile");
+nbody_direct_serial.c:830:14: missed: statement clobbers memory: _9 = strcmp (_7, "--quiet");
+nbody_direct_serial.c:821:11: missed: statement clobbers memory: _1 = strcmp (value_121, "checked");
+nbody_direct_serial.c:823:16: missed: statement clobbers memory: _2 = strcmp (value_121, "fast");
+nbody_direct_serial.c:818:20: missed: statement clobbers memory: energy_tol_126 = parse_dtype (value_119, "--energy-tol");
+nbody_direct_serial.c:816:14: missed: statement clobbers memory: mass_128 = parse_dtype (value_117, "--mass");
+nbody_direct_serial.c:814:11: missed: statement clobbers memory: g_130 = parse_dtype (value_115, "--G");
+nbody_direct_serial.c:812:13: missed: statement clobbers memory: eps_132 = parse_dtype (value_113, "--eps");
+nbody_direct_serial.c:810:12: missed: statement clobbers memory: dt_134 = parse_dtype (value_111, "--dt");
+nbody_direct_serial.c:808:22: missed: statement clobbers memory: energy_every_136 = parse_size (value_109, "--energy-every");
+nbody_direct_serial.c:806:16: missed: statement clobbers memory: nsteps_138 = parse_size (value_107, "--nsteps");
+nbody_direct_serial.c:832:14: missed: statement clobbers memory: _10 = strcmp (_600, "--help");
+nbody_direct_serial.c:745:3: missed: statement clobbers memory: fprintf (pretmp_848, "usage: %s --input FILE [options]\n\noptions:\n  --input FILE              input binary particle file (%s)\n  --output FILE             optional final-state binary file\n  --nsteps N                number of DKD steps (default: 10)\n  --dt X                    time step (default: 0.001)\n  --eps X                   softening length (default: 0.01)\n  --G X                     gravitational constant (default: 1)\n  --mass X                  particle mass (default: 1)\n  --energy-every N          diagnostic period in steps (default: 1)\n  --energy-tol X            warning tolerance for max relative drift (default: 1e-4)\n  --io-mode checked|fast    validate conversions or use direct casts (default: checked)\n  --io-profile              print read/write/conversion timings\n  --quiet                   only print final summary\n  --help                    show this help message\n", pretmp_847, "nbody-f32-v1");
+nbody_direct_serial.c:840:7: missed: statement clobbers memory: die ("unknown option: %s", _13);
+nbody_direct_serial.c:745:3: missed: statement clobbers memory: fprintf (pretmp_848, "usage: %s --input FILE [options]\n\noptions:\n  --input FILE              input binary particle file (%s)\n  --output FILE             optional final-state binary file\n  --nsteps N                number of DKD steps (default: 10)\n  --dt X                    time step (default: 0.001)\n  --eps X                   softening length (default: 0.01)\n  --G X                     gravitational constant (default: 1)\n  --mass X                  particle mass (default: 1)\n  --energy-every N          diagnostic period in steps (default: 1)\n  --energy-tol X            warning tolerance for max relative drift (default: 1e-4)\n  --io-mode checked|fast    validate conversions or use direct casts (default: checked)\n  --io-profile              print read/write/conversion timings\n  --quiet                   only print final summary\n  --help                    show this help message\n", pretmp_847, "nbody-f32-v1");
+nbody_direct_serial.c:826:9: missed: statement clobbers memory: die ("--io-mode must be checked or fast");
+nbody_direct_serial.c:171:7: missed: statement clobbers memory: die ("missing value after %s", "--output");
+nbody_direct_serial.c:171:7: missed: statement clobbers memory: die ("missing value after %s", "--input");
+nbody_direct_serial.c:370:8: missed: statement clobbers memory: fp_231 = fopen (input_path_840, "rb");
+nbody_direct_serial.c:374:3: missed: statement clobbers memory: checked_fread (&magic, 1, 8, fp_231, input_path_840, "binary magic");
+nbody_direct_serial.c:376:7: missed: statement clobbers memory: _232 = memcmp (&magic, &nbody_binary_magic, 8);
+nbody_direct_serial.c:379:3: missed: statement clobbers memory: checked_fread (&n64, 8, 1, fp_231, input_path_840, "particle count");
+nbody_direct_serial.c:300:10: missed: statement clobbers memory: _297 = checked_aligned_alloc.constprop (bytes_536);
+nbody_direct_serial.c:301:10: missed: statement clobbers memory: _298 = checked_aligned_alloc.constprop (bytes_536);
+nbody_direct_serial.c:302:10: missed: statement clobbers memory: _299 = checked_aligned_alloc.constprop (bytes_536);
+nbody_direct_serial.c:303:11: missed: statement clobbers memory: _300 = checked_aligned_alloc.constprop (bytes_536);
+nbody_direct_serial.c:304:11: missed: statement clobbers memory: _301 = checked_aligned_alloc.constprop (bytes_536);
+nbody_direct_serial.c:305:11: missed: statement clobbers memory: _302 = checked_aligned_alloc.constprop (bytes_536);
+nbody_direct_serial.c:306:11: missed: statement clobbers memory: _303 = checked_aligned_alloc.constprop (bytes_536);
+nbody_direct_serial.c:307:11: missed: statement clobbers memory: _304 = checked_aligned_alloc.constprop (bytes_536);
+nbody_direct_serial.c:308:11: missed: statement clobbers memory: _305 = checked_aligned_alloc.constprop (bytes_536);
+nbody_direct_serial.c:389:13: missed: statement clobbers memory: records_236 = checked_aligned_alloc.constprop (_235);
+nbody_direct_serial.c:391:13: missed: statement clobbers memory: started_237 = wall_seconds ();
+nbody_direct_serial.c:392:3: missed: statement clobbers memory: checked_fread (records_236, 4, record_values_535, fp_231, input_path_840, "particle records");
+nbody_direct_serial.c:394:28: missed: statement clobbers memory: _238 = wall_seconds ();
+nbody_direct_serial.c:396:13: missed: statement clobbers memory: started_242 = wall_seconds ();
+nbody_direct_serial.c:405:7: missed: statement clobbers memory: die ("non-finite particle value in \'%s\' at index %zu", input_path_840, i_823);
+nbody_direct_serial.c:414:34: missed: statement clobbers memory: _290 = wall_seconds ();
+nbody_direct_serial.c:415:3: missed: statement clobbers memory: free (records_236);
+nbody_direct_serial.c:417:7: missed: statement clobbers memory: _294 = fclose (fp_231);
+nbody_direct_serial.c:726:16: missed: statement clobbers memory: _146 = potential_energy_naive (&particles, g_834, eps_835);
+nbody_direct_serial.c:872:5: missed: statement clobbers memory: __builtin_puts (&"# serial direct N-body DKD baseline"[0]);
+nbody_direct_serial.c:873:5: missed: statement clobbers memory: printf ("# arithmetic_dtype=%s binary_storage=float32 format=%s\n", "double", "nbody-f32-v1");
+nbody_direct_serial.c:875:5: missed: statement clobbers memory: printf ("# N=%zu nsteps=%zu dt=%.17g eps=%.17g G=%.17g mass=%.17g\n", n64.20_233, nsteps_838, dt_836, eps_835, g_834, mass_833);
+nbody_direct_serial.c:878:5: missed: statement clobbers memory: __builtin_puts (&"# step time kinetic potential total rel_energy_drift"[0]);
+nbody_direct_serial.c:879:5: missed: statement clobbers memory: printf ("%zu %.17g %.17g %.17g %.17g %.17g\n", 0, 0.0, _230, _146, _147, 0.0);
+nbody_direct_serial.c:641:3: missed: statement clobbers memory: compute_accelerations_naive (n64.20_233, g_834, mass_833, eps_835, _297, _298, _299, _303, _304, _305);
+nbody_direct_serial.c:726:16: missed: statement clobbers memory: _149 = potential_energy_naive (&particles, g_834, eps_835);
+nbody_direct_serial.c:906:9: missed: statement clobbers memory: printf ("%zu %.17g %.17g %.17g %.17g %.17g\n", step_18, _27, _426, _149, _150, rel_99);
+nbody_direct_serial.c:444:13: missed: statement clobbers memory: records_430 = checked_aligned_alloc.constprop (_235);
+nbody_direct_serial.c:446:8: missed: statement clobbers memory: fp_431 = fopen (output_path_839, "wb");
+nbody_direct_serial.c:242:26: missed: statement clobbers memory: written_432 = fwrite (&nbody_binary_magic, 1, 8, fp_431);
+nbody_direct_serial.c:242:26: missed: statement clobbers memory: written_433 = fwrite (&n64, 8, 1, fp_431);
+nbody_direct_serial.c:454:13: missed: statement clobbers memory: started_434 = wall_seconds ();
+nbody_direct_serial.c:342:5: missed: statement clobbers memory: die ("particle %zu component %s cannot be stored as a finite float", i_810, "vz");
+nbody_direct_serial.c:342:5: missed: statement clobbers memory: die ("particle %zu component %s cannot be stored as a finite float", i_811, "vy");
+nbody_direct_serial.c:342:5: missed: statement clobbers memory: die ("particle %zu component %s cannot be stored as a finite float", i_812, "vx");
+nbody_direct_serial.c:342:5: missed: statement clobbers memory: die ("particle %zu component %s cannot be stored as a finite float", i_813, "z");
+nbody_direct_serial.c:342:5: missed: statement clobbers memory: die ("particle %zu component %s cannot be stored as a finite float", i_814, "y");
+nbody_direct_serial.c:342:5: missed: statement clobbers memory: die ("particle %zu component %s cannot be stored as a finite float", i_815, "x");
+nbody_direct_serial.c:478:34: missed: statement clobbers memory: _495 = wall_seconds ();
+nbody_direct_serial.c:480:13: missed: statement clobbers memory: started_499 = wall_seconds ();
+nbody_direct_serial.c:242:26: missed: statement clobbers memory: written_500 = fwrite (records_430, 4, record_values_535, fp_431);
+nbody_direct_serial.c:483:29: missed: statement clobbers memory: _501 = wall_seconds ();
+nbody_direct_serial.c:484:3: missed: statement clobbers memory: free (records_430);
+nbody_direct_serial.c:486:7: missed: statement clobbers memory: _505 = fclose (fp_431);
+nbody_direct_serial.c:919:5: missed: statement clobbers memory: printf ("# io_profile mode=%s read_seconds=%.9g write_seconds=%.9g conversion_seconds=%.9g\n", iftmp.10_60, _241, io_profile$write_seconds_503, io_profile$conversion_seconds_522);
+nbody_direct_serial.c:927:3: missed: statement clobbers memory: printf ("# final: N=%zu steps=%zu arithmetic_dtype=%s max_relative_energy_drift=%.17g tolerance=%.17g status=%s\n", n64.20_233, nsteps_838, "double", max_rel_drift_19, energy_tol_832, "WARNING");
+nbody_direct_serial.c:932:5: missed: statement clobbers memory: fprintf (stderr.12_32, "warning: relative energy drift %.6e exceeds tolerance %.6e; try smaller --dt, larger --eps, or better initial conditions\n", max_rel_drift_19, energy_tol_832);
+nbody_direct_serial.c:927:3: missed: statement clobbers memory: printf ("# final: N=%zu steps=%zu arithmetic_dtype=%s max_relative_energy_drift=%.17g tolerance=%.17g status=%s\n", n64.20_233, nsteps_838, "double", max_rel_drift_19, energy_tol_832, "OK");
+nbody_direct_serial.c:318:3: missed: statement clobbers memory: free (_297);
+nbody_direct_serial.c:319:3: missed: statement clobbers memory: free (_298);
+nbody_direct_serial.c:320:3: missed: statement clobbers memory: free (_299);
+nbody_direct_serial.c:321:3: missed: statement clobbers memory: free (_300);
+nbody_direct_serial.c:322:3: missed: statement clobbers memory: free (_301);
+nbody_direct_serial.c:323:3: missed: statement clobbers memory: free (_302);
+nbody_direct_serial.c:324:3: missed: statement clobbers memory: free (_303);
+nbody_direct_serial.c:325:3: missed: statement clobbers memory: free (_304);
+nbody_direct_serial.c:326:3: missed: statement clobbers memory: free (_305);
+nbody_direct_serial.c:487:5: missed: statement clobbers memory: die ("error while closing output file \'%s\'", output_path_839);
+nbody_direct_serial.c:245:5: missed: statement clobbers memory: die ("write error while writing %s to \'%s\'", "particle records", output_path_839);
+nbody_direct_serial.c:245:5: missed: statement clobbers memory: die ("write error while writing %s to \'%s\'", "particle count", output_path_839);
+nbody_direct_serial.c:245:5: missed: statement clobbers memory: die ("write error while writing %s to \'%s\'", "binary magic", output_path_839);
+nbody_direct_serial.c:448:5: missed: statement clobbers memory: die ("cannot open output file \'%s\'", output_path_839);
+nbody_direct_serial.c:418:5: missed: statement clobbers memory: die ("error while closing input file \'%s\'", input_path_840);
+nbody_direct_serial.c:295:5: missed: statement clobbers memory: die ("particle mass must be positive and finite");
+nbody_direct_serial.c:385:5: missed: statement clobbers memory: die ("particle record count is too large");
+nbody_direct_serial.c:381:5: missed: statement clobbers memory: die ("invalid particle count in \'%s\'", input_path_840);
+nbody_direct_serial.c:377:5: missed: statement clobbers memory: die ("input file \'%s\' is not an %s file", input_path_840, "nbody-f32-v1");
+nbody_direct_serial.c:372:5: missed: statement clobbers memory: die ("cannot open input file \'%s\'", input_path_840);
+nbody_direct_serial.c:860:5: missed: statement clobbers memory: die ("--energy-tol must be positive");
+nbody_direct_serial.c:858:5: missed: statement clobbers memory: die ("--energy-every must be positive");
+nbody_direct_serial.c:856:5: missed: statement clobbers memory: die ("--mass must be positive");
+nbody_direct_serial.c:854:5: missed: statement clobbers memory: die ("--G must be positive");
+nbody_direct_serial.c:852:5: missed: statement clobbers memory: die ("--eps must be non-negative");
+nbody_direct_serial.c:850:5: missed: statement clobbers memory: die ("--dt must be positive");
+nbody_direct_serial.c:745:3: missed: statement clobbers memory: fprintf (stderr.17_144, "usage: %s --input FILE [options]\n\noptions:\n  --input FILE              input binary particle file (%s)\n  --output FILE             optional final-state binary file\n  --nsteps N                number of DKD steps (default: 10)\n  --dt X                    time step (default: 0.001)\n  --eps X                   softening length (default: 0.01)\n  --G X                     gravitational constant (default: 1)\n  --mass X                  particle mass (default: 1)\n  --energy-every N          diagnostic period in steps (default: 1)\n  --energy-tol X            warning tolerance for max relative drift (default: 1e-4)\n  --io-mode checked|fast    validate conversions or use direct casts (default: checked)\n  --io-profile              print read/write/conversion timings\n  --quiet                   only print final summary\n  --help                    show this help message\n", _17, "nbody-f32-v1");
+nbody_direct_serial.c:847:5: missed: statement clobbers memory: die ("missing required --input FILE");
+nbody_direct_serial.c:266:8: optimized: basic block part vectorized using 64 byte vectors
+nbody_direct_serial.c:470:17: optimized: basic block part vectorized using 16 byte vectors
+nbody_direct_serial.c:474:17: optimized: basic block part vectorized using 8 byte vectors

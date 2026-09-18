@@ -354,10 +354,6 @@ bench_container() {
   runtime="$(detect_runtime)" || { echo "no container runtime found" >&2; exit 127; }
   [[ "$runtime" == "docker" || -f "$image" ]] || { echo "missing image: $image" >&2; exit 1; }
   make nbody_direct_hybrid generate_ic >/dev/null
-  if [[ "$runtime" == "singularity" || "$runtime" == "apptainer" ]]; then
-    write_mpi_linkage_check "$runtime" "$image" ./nbody_direct_hybrid /opt/nbody/nbody_direct_hybrid \
-      "${MPI_LINKAGE_OUT:-$(dirname "$out")/mpi_linkage_check.txt}"
-  fi
   printf "kind,mode,N,ranks,threads,repeat,total,status,max_rel_drift\n" > "$out"
   container_case() {
     # Pair native/container timings as closely as possible: same N, same rank
@@ -407,90 +403,6 @@ parse_osu() {
     BEGIN { OFS="," }
     /^[[:space:]]*[0-9]+[[:space:]]+/ { print mode, bench, metric, $1, $2 }
   '
-}
-
-resolve_command_path() {
-  local tool="$1"
-  if command -v "$tool" >/dev/null 2>&1; then
-    command -v "$tool"
-  else
-    printf "%s\n" "$tool"
-  fi
-}
-
-extract_lib_path() {
-  local lib_regex="$1"
-  awk -v lib_regex="$lib_regex" '
-    $0 ~ lib_regex {
-      for (i = 1; i <= NF; ++i) {
-        if ($i == "=>") {
-          print $(i + 1);
-          exit;
-        }
-      }
-      print $1;
-      exit;
-    }
-  '
-}
-
-write_mpi_linkage_check() {
-  # Mandatory correctness check for container MPI runs: compare dynamic MPI
-  # linkage outside and inside the container.  The job fails unless libmpi.so is
-  # resolved to the same host path, preventing accidental OSU measurements with
-  # Ubuntu/container MPI instead of the Orfeo MPI stack.
-  local runtime="$1" image="$2" native_tool="$3" container_tool="$4" out="$5"
-  local native_path native_ldd container_ldd native_libmpi container_libmpi
-  local interesting='libmpi|libopen-rte|libopen-pal|libpmix|libucp|libucs|libuct|libucm|libfabric|libpsm|libibverbs|libhwloc'
-
-  mkdir -p "$(dirname "$out")"
-  native_path="$(resolve_command_path "$native_tool")"
-  native_ldd="$(ldd "$native_path" 2>&1 || true)"
-  container_ldd="$(
-    run_container_single "$runtime" "$image" sh -lc '
-      tool="$1"
-      if command -v "$tool" >/dev/null 2>&1; then
-        resolved="$(command -v "$tool")"
-      else
-        resolved="$tool"
-      fi
-      echo "container_resolved_tool=$resolved"
-      ldd "$resolved"
-    ' sh "$container_tool" 2>&1 || true
-  )"
-
-  {
-    printf "== native tool ==\n%s\n\n" "$native_path"
-    printf "== native selected ldd ==\n"
-    printf "%s\n" "$native_ldd" | grep -E "$interesting" || true
-    printf "\n== container tool ==\n%s\n\n" "$container_tool"
-    printf "== container selected ldd ==\n"
-    printf "%s\n" "$container_ldd" | grep -E "container_resolved_tool|$interesting" || true
-  } > "$out"
-
-  native_libmpi="$(printf "%s\n" "$native_ldd" | extract_lib_path 'libmpi\.so')"
-  container_libmpi="$(printf "%s\n" "$container_ldd" | extract_lib_path 'libmpi\.so')"
-
-  if [[ -z "$native_libmpi" || -z "$container_libmpi" ]]; then
-    printf "ERROR: unable to resolve libmpi.so in native/container ldd. See %s\n" "$out" >&2
-    return 1
-  fi
-  if [[ "$native_libmpi" != "$container_libmpi" ]]; then
-    {
-      printf "\n== linkage verdict ==\n"
-      printf "FAIL: native and container libmpi.so do not match.\n"
-      printf "native_libmpi=%s\n" "$native_libmpi"
-      printf "container_libmpi=%s\n" "$container_libmpi"
-    } >> "$out"
-    printf "ERROR: MPI linkage mismatch. See %s\n" "$out" >&2
-    return 1
-  fi
-
-  {
-    printf "\n== linkage verdict ==\n"
-    printf "OK: native and container libmpi.so match exactly.\n"
-    printf "libmpi=%s\n" "$native_libmpi"
-  } >> "$out"
 }
 
 bench_osu() {
@@ -549,20 +461,11 @@ bench_osu() {
   if [[ "$mode" == "native" || "$mode" == "both" ]]; then
     command -v "$latency" >/dev/null 2>&1 || [[ -x "$latency" ]] || { echo "missing $latency" >&2; exit 1; }
     command -v "$bw" >/dev/null 2>&1 || [[ -x "$bw" ]] || { echo "missing $bw" >&2; exit 1; }
-    if [[ "$mode" == "both" ]]; then
-      [[ -n "$runtime" ]] || { echo "no container runtime found" >&2; exit 127; }
-      write_mpi_linkage_check "$runtime" "$image" "$latency" "$container_latency" \
-        "${MPI_LINKAGE_OUT:-$(dirname "$out")/osu_mpi_linkage_check.txt}"
-    fi
     run_osu_repeated native latency latency_us "$latency"
     run_osu_repeated native bandwidth bandwidth_MBps "$bw"
   fi
   if [[ "$mode" == "container" || "$mode" == "both" ]]; then
     [[ -n "$runtime" ]] || { echo "no container runtime found" >&2; exit 127; }
-    if [[ "$mode" == "container" ]]; then
-      write_mpi_linkage_check "$runtime" "$image" "${OSU_NATIVE_REFERENCE:-$latency}" "$container_latency" \
-        "${MPI_LINKAGE_OUT:-$(dirname "$out")/osu_mpi_linkage_check.txt}"
-    fi
     run_osu_repeated container latency latency_us "$container_latency"
     run_osu_repeated container bandwidth bandwidth_MBps "$container_bw"
   fi

@@ -1,0 +1,3 @@
+N,nsteps,ranks,threads,energy_every,runs,failed_runs,total_median,force_median,energy_median,energy_fraction,overhead_vs_sparse_percent,max_rel_drift,all_ok
+10000,5,1,8,1,5,0,0.55458,0.301201,0.247584,0.4464351401060262,40.83140760303716,9.616994273962951e-08,True
+10000,5,1,8,5,5,0,0.39379,0.301924,0.088011,0.2234972955128368,0.0,9.616994273962951e-08,True

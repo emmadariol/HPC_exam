@@ -77,57 +77,6 @@ launcher_distribution_args() {
   fi
 }
 
-append_comma_path() {
-  local current="$1"
-  local addition="$2"
-  if [[ -z "$current" ]]; then
-    printf "%s" "$addition"
-  elif [[ ",$current," == *",$addition,"* ]]; then
-    printf "%s" "$current"
-  else
-    printf "%s,%s" "$current" "$addition"
-  fi
-}
-
-prepend_colon_path() {
-  local current="$1"
-  local addition="$2"
-  if [[ -z "$current" ]]; then
-    printf "%s" "$addition"
-  elif [[ ":$current:" == *":$addition:"* ]]; then
-    printf "%s" "$current"
-  else
-    printf "%s:%s" "$addition" "$current"
-  fi
-}
-
-configure_container_mpi_env() {
-  # The assignment requires the containerized MPI executables to load the exact
-  # host MPI/network stack.  On Orfeo these prefixes are provided by the
-  # openMPI/4.1.6 and hwloc modules.  The variables below can be overridden when
-  # running on a different cluster, or disabled with CONTAINER_HOST_MPI=0.
-  [[ "${CONTAINER_HOST_MPI:-1}" == "1" ]] || return 0
-
-  local mpi_prefix="${HOST_MPI_PREFIX:-/opt/programs/openMPI/4.1.6}"
-  local hwloc_prefix="${HOST_HWLOC_PREFIX:-/opt/programs/hwloc/2.12.0}"
-  local bindpath="${SINGULARITY_BINDPATH:-${APPTAINER_BINDPATH:-}}"
-  local ldpath="${SINGULARITYENV_LD_LIBRARY_PATH:-${APPTAINERENV_LD_LIBRARY_PATH:-}}"
-
-  if [[ -d "$mpi_prefix" ]]; then
-    bindpath="$(append_comma_path "$bindpath" "$mpi_prefix:$mpi_prefix")"
-    [[ -d "$mpi_prefix/lib" ]] && ldpath="$(prepend_colon_path "$ldpath" "$mpi_prefix/lib")"
-  fi
-  if [[ -d "$hwloc_prefix" ]]; then
-    bindpath="$(append_comma_path "$bindpath" "$hwloc_prefix:$hwloc_prefix")"
-    [[ -d "$hwloc_prefix/lib" ]] && ldpath="$(prepend_colon_path "$ldpath" "$hwloc_prefix/lib")"
-  fi
-
-  export SINGULARITY_BINDPATH="$bindpath"
-  export APPTAINER_BINDPATH="$bindpath"
-  export SINGULARITYENV_LD_LIBRARY_PATH="$ldpath"
-  export APPTAINERENV_LD_LIBRARY_PATH="$ldpath"
-}
-
 run_container_mpi() {
   local runtime="$1"
   local image="$2"
@@ -138,7 +87,6 @@ run_container_mpi() {
   mapfile -t distribution_args < <(launcher_distribution_args)
   case "$runtime" in
     singularity|apptainer)
-      configure_container_mpi_env
       OMP_NUM_THREADS="$threads" "$launcher" $cpu_bind --ntasks="$ranks" \
         "${distribution_args[@]}" \
         --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" \
@@ -164,10 +112,7 @@ run_container_single() {
   local image="$2"
   shift 2
   case "$runtime" in
-    singularity|apptainer)
-      configure_container_mpi_env
-      "$runtime" exec "$image" "$@"
-      ;;
+    singularity|apptainer) "$runtime" exec "$image" "$@" ;;
     docker) docker run --rm -v "$PWD:/work" -w /work "$image" "$@" ;;
     *) echo "unknown runtime: $runtime" >&2; return 127 ;;
   esac

@@ -688,7 +688,7 @@ def plot_xy(
     This generic helper is used for speedup, efficiency, communication
     bandwidth, weak-scaling normalized time, and energy-overhead figures.  The
     `ideal` argument adds the dashed reference curves needed to interpret strong
-    scaling plots.  For runtime plots, the ideal reference is T(1)/P.
+    scaling plots.
     """
     rows = sorted(rows, key=lambda r: int(r[x_field]))
     if len(rows) < 2:
@@ -724,15 +724,6 @@ def plot_xy(
     if ideal == "efficiency":
         parts.append(f'<line x1="{left}" y1="{ys(1.0):.1f}" x2="{width-right}" y2="{ys(1.0):.1f}" stroke="#555" stroke-width="2" stroke-dasharray="6,4"/>')
         parts.append(f'<text x="{left+10}" y="{top+20}" font-family="sans-serif" font-size="13" fill="#555">ideal</text>')
-    if ideal == "runtime":
-        base_runtime = ys_vals[0]
-        base_resources = xs_vals[0]
-        ipoints = " ".join(
-            f"{xs(x):.1f},{ys(base_runtime * base_resources / x):.1f}"
-            for x in xs_vals
-        )
-        parts.append(f'<polyline points="{ipoints}" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="6,4"/>')
-        parts.append(f'<text x="{left+10}" y="{top+20}" font-family="sans-serif" font-size="13" fill="#555">ideal T(1)/P</text>')
     points = " ".join(f"{xs(int(r[x_field])):.1f},{ys(float(r[y_field])):.1f}" for r in rows)
     parts.append(f'<polyline points="{points}" fill="none" stroke="#1f77b4" stroke-width="2"/>')
     for r in rows:
@@ -743,9 +734,9 @@ def plot_xy(
 def plot_scaling(src: str, prefix: str) -> None:
     """Generate all strong- and weak-scaling SVG figures.
 
-    The input is the summarized scaling CSV.  The function emits strong runtime,
-    speedup, efficiency, communication-bandwidth, weak absolute-time, and weak
-    normalized-time plots using the provided filename prefix.
+    The input is the summarized scaling CSV.  The function emits speedup,
+    efficiency, communication-bandwidth, weak absolute-time, and weak normalized
+    time plots using the provided filename prefix.
     """
     rows = read_csv(src)
     for r in rows:
@@ -755,7 +746,6 @@ def plot_scaling(src: str, prefix: str) -> None:
         r["weak_normalized_time"] = float(r["weak_normalized_time"]) if r.get("weak_normalized_time") else math.nan
     strong = [r for r in rows if r["kind"] == "strong"]
     weak = [r for r in rows if r["kind"] == "weak"]
-    plot_xy(strong, "resources", "total_median", "strong scaling runtime", "median time (s)", f"{prefix}_strong_runtime.svg", "runtime")
     plot_xy(strong, "resources", "speedup", "strong scaling speedup", "speedup", f"{prefix}_strong_speedup.svg", "speedup")
     plot_xy(strong, "resources", "efficiency", "strong scaling efficiency", "efficiency", f"{prefix}_strong_efficiency.svg", "efficiency")
     plot_xy(strong, "resources", "comm_bandwidth_GBps", "strong communication bandwidth", "GB/s", f"{prefix}_strong_comm_bandwidth.svg")
@@ -771,9 +761,7 @@ def plot_hybrid(src: str, prefix: str) -> None:
     pair-interaction throughput so the report can discuss whether a specific
     rank/thread split is preferable.
     """
-    rows = [row for row in read_csv(src) if row.get("kind", "strong") == "strong"]
-    if not rows:
-        raise SystemExit(f"no strong hybrid rows found in {src}")
+    rows = read_csv(src)
     for row in rows:
         row["label"] = f'P{row["ranks"]}xT{row["threads"]}'
         row["total_median"] = float(row["total_median"])

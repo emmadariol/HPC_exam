@@ -1,0 +1,472 @@
+nbody_direct_hybrid.c:118:3: missed: statement clobbers memory: __builtin_va_start (&args, 0);
+nbody_direct_hybrid.c:119:3: missed: statement clobbers memory: vfprintf (stderr.90_1, fmt_5(D), &args);
+nbody_direct_hybrid.c:120:3: missed: statement clobbers memory: __builtin_va_end (&args);
+nbody_direct_hybrid.c:121:3: missed: statement clobbers memory: fputc (10, stderr.91_2);
+nbody_direct_hybrid.c:122:3: missed: statement clobbers memory: MPI_Abort (&ompi_mpi_comm_world, 1);
+nbody_direct_hybrid.c:1209:11: missed: statement clobbers memory: value_11 = strtoull (text_9(D), &end, 10);
+nbody_direct_hybrid.c:1212:5: missed: statement clobbers memory: die ("invalid integer for %s: %s", name_12(D), text_9(D));
+nbody_direct_hybrid.c:1221:11: missed: statement clobbers memory: value_12 = strtod (text_10(D), &end);
+nbody_direct_hybrid.c:1224:5: missed: statement clobbers memory: die ("invalid floating-point value for %s: %s", name_13(D), text_10(D));
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_9 = aligned_alloc (64, padded_6);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_6);
+nbody_direct_hybrid.c:457:9: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:457:9: missed: not vectorized: no vectype for stmt: _24 = *_23;
+ scalar_type: dtype
+nbody_direct_hybrid.c:495:5: missed: statement clobbers memory: die ("unsupported accumulator chain count %zu", _1);
+nbody_direct_hybrid.c:825:13: missed: statement clobbers memory: __builtin_GOMP_parallel (accumulate_sources_scalar_chains._omp_fn.0, &.omp_data_o.137, 0, 0);
+nbody_direct_hybrid.c:825:13: missed: statement clobbers memory: __builtin_GOMP_parallel (accumulate_sources_rsqrt14_pd._omp_fn.0, &.omp_data_o.124, 0, 0);
+nbody_direct_hybrid.c:497:9: missed: not vectorized: vectorization is not profitable.
+nbody_direct_hybrid.c:771:9: missed: not vectorized: vectorization is not profitable.
+nbody_direct_hybrid.c:771:9: optimized: basic block part vectorized using 16 byte vectors
+nbody_direct_hybrid.c:1017:9: missed: splitting region at dont-vectorize loop 2 entry at bb11
+nbody_direct_hybrid.c:1019:48: missed: statement clobbers memory: __builtin_memset (_98, 0, _96);
+nbody_direct_hybrid.c:1019:33: missed: statement clobbers memory: __builtin_memset (_102, 0, _100);
+nbody_direct_hybrid.c:1019:18: missed: statement clobbers memory: __builtin_memset (_106, 0, _104);
+nbody_direct_hybrid.c:1017:9: missed: splitting region at dominance boundary bb3
+nbody_direct_hybrid.c:925:19: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:925:19: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:925:19: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:927:27: missed: not vectorized: no vectype for stmt: _43 = *_42;
+ scalar_type: dtype
+nbody_direct_hybrid.c:472:10: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:472:10: missed: not vectorized: no vectype for stmt: _24 = *_23;
+ scalar_type: dtype
+nbody_direct_hybrid.c:1091:46: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:1091:46: missed: not vectorized: no vectype for stmt: _23 = *_22;
+ scalar_type: dtype
+nbody_direct_hybrid.c:1086:9: missed: statement clobbers memory: __builtin_GOMP_atomic_start ();
+nbody_direct_hybrid.c:1086:9: missed: statement clobbers memory: __builtin_GOMP_atomic_end ();
+nbody_direct_hybrid.c:1113:29: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:1113:29: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:1116:20: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:1116:20: missed: not vectorized: unsupported control flow in loop.
+nbody_common.h:81:10: missed: statement clobbers memory: _82 = sqrt (r2_64);
+nbody_direct_hybrid.c:1110:9: missed: statement clobbers memory: __builtin_GOMP_atomic_start ();
+nbody_direct_hybrid.c:1110:9: missed: statement clobbers memory: __builtin_GOMP_atomic_end ();
+nbody_direct_hybrid.c:1319:26: missed: statement clobbers memory: key_len_17 = strlen (key_16(D));
+nbody_direct_hybrid.c:1321:8: missed: statement clobbers memory: _5 = strncmp (arg_20, key_16(D), key_len_17);
+nbody_direct_hybrid.c:1323:7: missed: statement clobbers memory: _9 = strcmp (arg_20, key_16(D));
+nbody_direct_hybrid.c:1326:7: missed: statement clobbers memory: die ("missing value after %s", key_16(D));
+nbody_direct_hybrid.c:774:46: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:774:46: missed: not vectorized: loop nest containing two or more consecutive inner loops cannot be vectorized
+nbody_direct_hybrid.c:805:14: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:805:14: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:782:19: missed: couldn't vectorize loop
+/usr/lib/gcc/x86_64-redhat-linux/14/include/avx512fintrin.h:9335:10: missed: not vectorized: no vectype for stmt: _54 = MEM[(__m512d_u * {ref-all})_102];
+ scalar_type: __m512d_u
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _195 = sqrtf (_175);
+nbody_direct_hybrid.c:889:32: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:889:32: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:893:27: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:893:27: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:889:32: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:889:32: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:893:27: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:893:27: missed: not vectorized: unsupported control flow in loop.
+nbody_common.h:81:10: missed: statement clobbers memory: _97 = sqrt (r2_60);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _187 = sqrtf (_202);
+nbody_direct_hybrid.c:878:9: missed: statement clobbers memory: __builtin_GOMP_barrier ();
+nbody_direct_hybrid.c:500:29: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:500:29: missed: not vectorized: loop nest containing two or more consecutive inner loops cannot be vectorized
+nbody_direct_hybrid.c:721:9: optimized: loop vectorized using 64 byte vectors
+nbody_direct_hybrid.c:721:9: optimized: loop vectorized using 32 byte vectors
+nbody_direct_hybrid.c:725:28: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:725:28: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:725:28: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:725:28: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:621:9: optimized: loop vectorized using 64 byte vectors
+nbody_direct_hybrid.c:621:9: optimized: loop vectorized using 32 byte vectors
+nbody_direct_hybrid.c:627:29: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:627:29: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:627:29: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:627:29: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:518:9: optimized: loop vectorized using 64 byte vectors
+nbody_direct_hybrid.c:518:9: optimized: loop vectorized using 32 byte vectors
+nbody_direct_hybrid.c:521:29: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:521:29: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:521:29: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:521:29: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:557:9: optimized: loop vectorized using 64 byte vectors
+nbody_direct_hybrid.c:557:9: optimized: loop vectorized using 32 byte vectors
+nbody_direct_hybrid.c:561:29: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:561:29: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:561:29: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:561:29: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47333, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47335, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47337, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47339, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47341, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47343, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47345, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47347, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47349, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47351, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47353, 0, 8);
+nbody_direct_hybrid.c:557:9: missed: statement clobbers memory: __builtin_memset (&D.47355, 0, 8);
+nbody_common.h:81:10: missed: statement clobbers memory: _1208 = sqrt (r2_0_164);
+nbody_common.h:81:10: missed: statement clobbers memory: _1216 = sqrt (r2_1_198);
+nbody_common.h:81:10: missed: statement clobbers memory: _1224 = sqrt (r2_2_232);
+nbody_common.h:81:10: missed: statement clobbers memory: _1232 = sqrt (r2_3_266);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2905 = sqrtf (_2920);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2848 = sqrtf (_2863);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2791 = sqrtf (_2806);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2722 = sqrtf (_2737);
+nbody_direct_hybrid.c:518:9: missed: statement clobbers memory: __builtin_memset (&D.47462, 0, 8);
+nbody_direct_hybrid.c:518:9: missed: statement clobbers memory: __builtin_memset (&D.47464, 0, 8);
+nbody_direct_hybrid.c:518:9: missed: statement clobbers memory: __builtin_memset (&D.47466, 0, 8);
+nbody_direct_hybrid.c:518:9: missed: statement clobbers memory: __builtin_memset (&D.47468, 0, 8);
+nbody_direct_hybrid.c:518:9: missed: statement clobbers memory: __builtin_memset (&D.47470, 0, 8);
+nbody_direct_hybrid.c:518:9: missed: statement clobbers memory: __builtin_memset (&D.47472, 0, 8);
+nbody_common.h:81:10: missed: statement clobbers memory: _1240 = sqrt (r2_0_336);
+nbody_common.h:81:10: missed: statement clobbers memory: _1248 = sqrt (r2_1_370);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _3022 = sqrtf (_3037);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2965 = sqrtf (_2980);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47017, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47019, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47021, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47023, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47025, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47027, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47029, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47031, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47033, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47035, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47037, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47039, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47041, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47043, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47045, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47047, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47049, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47051, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47053, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47055, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47057, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47059, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47061, 0, 8);
+nbody_direct_hybrid.c:621:9: missed: statement clobbers memory: __builtin_memset (&D.47063, 0, 8);
+nbody_common.h:81:10: missed: statement clobbers memory: _338 = sqrt (r2_0_488);
+nbody_common.h:81:10: missed: statement clobbers memory: _1064 = sqrt (r2_1_522);
+nbody_common.h:81:10: missed: statement clobbers memory: _980 = sqrt (r2_2_556);
+nbody_common.h:81:10: missed: statement clobbers memory: _233 = sqrt (r2_3_590);
+nbody_common.h:81:10: missed: statement clobbers memory: _693 = sqrt (r2_4_624);
+nbody_common.h:81:10: missed: statement clobbers memory: _1184 = sqrt (r2_5_658);
+nbody_common.h:81:10: missed: statement clobbers memory: _1192 = sqrt (r2_6_692);
+nbody_common.h:81:10: missed: statement clobbers memory: _1200 = sqrt (r2_7_726);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2638 = sqrtf (_2653);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2581 = sqrtf (_2596);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2518 = sqrtf (_2533);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2461 = sqrtf (_2476);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2404 = sqrtf (_2419);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2347 = sqrtf (_2362);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2290 = sqrtf (_2305);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2233 = sqrtf (_2248);
+nbody_direct_hybrid.c:721:9: missed: statement clobbers memory: __builtin_memset (&D.46928, 0, 8);
+nbody_direct_hybrid.c:721:9: missed: statement clobbers memory: __builtin_memset (&D.46930, 0, 8);
+nbody_direct_hybrid.c:721:9: missed: statement clobbers memory: __builtin_memset (&D.46932, 0, 8);
+nbody_common.h:81:10: missed: statement clobbers memory: _1134 = sqrt (r2_811);
+nbody_direct_hybrid.c:160:30: missed: statement clobbers memory: _2173 = sqrtf (_2188);
+nbody_direct_hybrid.c:1156:27: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:1156:27: missed: not vectorized: latch block not empty.
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_127 = aligned_alloc (64, padded_126);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_126);
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_123 = aligned_alloc (64, padded_126);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_126);
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_119 = aligned_alloc (64, padded_126);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_126);
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_115 = aligned_alloc (64, padded_126);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_126);
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_111 = aligned_alloc (64, padded_126);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_126);
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_107 = aligned_alloc (64, padded_126);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_126);
+nbody_direct_hybrid.c:1132:14: missed: statement clobbers memory: __builtin_GOMP_parallel (kinetic_energy_local._omp_fn.0, &.omp_data_o.154, 0, 0);
+nbody_direct_hybrid.c:1152:3: missed: statement clobbers memory: memcpy (_183, _20, _19);
+nbody_direct_hybrid.c:1153:3: missed: statement clobbers memory: memcpy (_70, _21, _19);
+nbody_direct_hybrid.c:1154:3: missed: statement clobbers memory: memcpy (_68, _22, _19);
+nbody_direct_hybrid.c:1132:14: missed: statement clobbers memory: __builtin_GOMP_parallel (potential_sources._omp_fn.0, &.omp_data_o.158, 0, 0);
+nbody_direct_hybrid.c:1170:7: missed: statement clobbers memory: MPI_Sendrecv (_183, _48, &ompi_mpi_double, send_to_33, 20, _66, _47, &ompi_mpi_double, recv_from_36, 20, &ompi_mpi_comm_world, 0B);
+nbody_direct_hybrid.c:1173:7: missed: statement clobbers memory: MPI_Sendrecv (_70, _48, &ompi_mpi_double, send_to_33, 21, _17, _47, &ompi_mpi_double, recv_from_36, 21, &ompi_mpi_comm_world, 0B);
+nbody_direct_hybrid.c:1176:7: missed: statement clobbers memory: MPI_Sendrecv (_68, _48, &ompi_mpi_double, send_to_33, 22, _108, _47, &ompi_mpi_double, recv_from_36, 22, &ompi_mpi_comm_world, 0B);
+nbody_direct_hybrid.c:1179:7: missed: statement clobbers memory: memcpy (_183, _66, _49);
+nbody_direct_hybrid.c:1180:7: missed: statement clobbers memory: memcpy (_70, _17, _49);
+nbody_direct_hybrid.c:1181:7: missed: statement clobbers memory: memcpy (_68, _108, _49);
+nbody_direct_hybrid.c:1132:14: missed: statement clobbers memory: __builtin_GOMP_parallel (potential_sources._omp_fn.0, &.omp_data_o.158, 0, 0);
+nbody_direct_hybrid.c:1188:3: missed: statement clobbers memory: MPI_Allreduce (&kin_local, &kin_global, 1, &ompi_mpi_long_double, &ompi_mpi_op_sum, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:1189:3: missed: statement clobbers memory: MPI_Allreduce (&pot_local, &pot_global, 1, &ompi_mpi_long_double, &ompi_mpi_op_sum, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:1193:3: missed: statement clobbers memory: free (_183);
+nbody_direct_hybrid.c:1194:3: missed: statement clobbers memory: free (_70);
+nbody_direct_hybrid.c:1195:3: missed: statement clobbers memory: free (_68);
+nbody_direct_hybrid.c:1196:3: missed: statement clobbers memory: free (_66);
+nbody_direct_hybrid.c:1197:3: missed: statement clobbers memory: free (_17);
+nbody_direct_hybrid.c:1198:3: missed: statement clobbers memory: free (_108);
+nbody_direct_hybrid.c:1110:9: missed: not vectorized: vectorization is not profitable.
+nbody_direct_hybrid.c:1110:9: optimized: basic block part vectorized using 16 byte vectors
+nbody_direct_hybrid.c:1110:9: optimized: basic block part vectorized using 16 byte vectors
+nbody_direct_hybrid.c:1110:9: optimized: basic block part vectorized using 16 byte vectors
+nbody_direct_hybrid.c:1110:9: optimized: basic block part vectorized using 16 byte vectors
+nbody_direct_hybrid.c:1024:27: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:1052:9: missed: statement clobbers memory: accumulate_sources (local_3(D), _66, _86, _144, buf_n_234, g_4(D), _249, eps_5(D), rsqrt_mode_6(D), accumulator_mode_38(D));
+nbody_direct_hybrid.c:1024:27: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:970:3: missed: statement clobbers memory: MPI_Irecv (_146, _19, &ompi_mpi_double, recv_from_141, 10, &ompi_mpi_comm_world, &req);
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_135 = aligned_alloc (64, padded_134);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_134);
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_131 = aligned_alloc (64, padded_134);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_134);
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_127 = aligned_alloc (64, padded_134);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_134);
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_123 = aligned_alloc (64, padded_134);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_134);
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_119 = aligned_alloc (64, padded_134);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_134);
+nbody_direct_hybrid.c:176:9: missed: statement clobbers memory: ptr_115 = aligned_alloc (64, padded_134);
+nbody_direct_hybrid.c:178:5: missed: statement clobbers memory: die ("aligned_alloc failed for %zu bytes", padded_134);
+nbody_direct_hybrid.c:978:13: missed: statement clobbers memory: __builtin_GOMP_parallel (compute_accelerations_ring._omp_fn.0, &.omp_data_o.110, 0, 0);
+nbody_direct_hybrid.c:1020:3: missed: statement clobbers memory: memcpy (_66, _24, _23);
+nbody_direct_hybrid.c:1021:3: missed: statement clobbers memory: memcpy (_86, _25, _23);
+nbody_direct_hybrid.c:1022:3: missed: statement clobbers memory: memcpy (_144, _26, _23);
+nbody_direct_hybrid.c:970:3: missed: statement clobbers memory: MPI_Irecv (_146, _19, &ompi_mpi_double, recv_from_141, 10, &ompi_mpi_comm_world, &req);
+nbody_direct_hybrid.c:971:3: missed: statement clobbers memory: MPI_Irecv (_149, _19, &ompi_mpi_double, recv_from_141, 11, &ompi_mpi_comm_world, &MEM <struct ompi_request_t *[6]> [(void *)&req + 8B]);
+nbody_direct_hybrid.c:972:3: missed: statement clobbers memory: MPI_Irecv (_116, _19, &ompi_mpi_double, recv_from_141, 12, &ompi_mpi_comm_world, &MEM <struct ompi_request_t *[6]> [(void *)&req + 16B]);
+nbody_direct_hybrid.c:973:3: missed: statement clobbers memory: MPI_Isend (_66, _20, &ompi_mpi_double, send_to_138, 10, &ompi_mpi_comm_world, &MEM <struct ompi_request_t *[6]> [(void *)&req + 24B]);
+nbody_direct_hybrid.c:974:3: missed: statement clobbers memory: MPI_Isend (_86, _20, &ompi_mpi_double, send_to_138, 11, &ompi_mpi_comm_world, &MEM <struct ompi_request_t *[6]> [(void *)&req + 32B]);
+nbody_direct_hybrid.c:975:3: missed: statement clobbers memory: MPI_Isend (_144, _20, &ompi_mpi_double, send_to_138, 12, &ompi_mpi_comm_world, &MEM <struct ompi_request_t *[6]> [(void *)&req + 40B]);
+nbody_direct_hybrid.c:1040:9: missed: statement clobbers memory: accumulate_sources (local_3(D), _66, _86, _144, buf_n_15, g_4(D), _37, eps_5(D), rsqrt_mode_6(D), accumulator_mode_38(D));
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _39 = MPI_Wtime ();
+nbody_direct_hybrid.c:1044:11: missed: statement clobbers memory: MPI_Waitall (6, &req, 0B);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _40 = MPI_Wtime ();
+nbody_direct_hybrid.c:1061:7: missed: statement clobbers memory: memcpy (_66, _146, _51);
+nbody_direct_hybrid.c:1062:7: missed: statement clobbers memory: memcpy (_86, _149, _51);
+nbody_direct_hybrid.c:1063:7: missed: statement clobbers memory: memcpy (_144, _116, _51);
+nbody_direct_hybrid.c:1052:9: missed: statement clobbers memory: accumulate_sources (local_3(D), _66, _86, _144, buf_n_234, g_4(D), _249, eps_5(D), rsqrt_mode_6(D), accumulator_mode_38(D));
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _252 = MPI_Wtime ();
+nbody_direct_hybrid.c:947:3: missed: statement clobbers memory: MPI_Sendrecv (_66, _248, &ompi_mpi_double, send_to_253, 10, _146, _247, &ompi_mpi_double, recv_from_254, 10, &ompi_mpi_comm_world, 0B);
+nbody_direct_hybrid.c:950:3: missed: statement clobbers memory: MPI_Sendrecv (_86, _248, &ompi_mpi_double, send_to_253, 11, _149, _247, &ompi_mpi_double, recv_from_254, 11, &ompi_mpi_comm_world, 0B);
+nbody_direct_hybrid.c:953:3: missed: statement clobbers memory: MPI_Sendrecv (_144, _248, &ompi_mpi_double, send_to_253, 12, _116, _247, &ompi_mpi_double, recv_from_254, 12, &ompi_mpi_comm_world, 0B);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _259 = MPI_Wtime ();
+nbody_direct_hybrid.c:1061:7: missed: statement clobbers memory: memcpy (_66, _146, _285);
+nbody_direct_hybrid.c:1062:7: missed: statement clobbers memory: memcpy (_86, _149, _285);
+nbody_direct_hybrid.c:1063:7: missed: statement clobbers memory: memcpy (_144, _116, _285);
+nbody_direct_hybrid.c:1068:7: missed: statement clobbers memory: accumulate_sources (local_3(D), _66, _86, _144, buf_n_21, g_4(D), _52, eps_5(D), rsqrt_mode_6(D), accumulator_mode_38(D));
+nbody_direct_hybrid.c:1072:3: missed: statement clobbers memory: free (_66);
+nbody_direct_hybrid.c:1073:3: missed: statement clobbers memory: free (_86);
+nbody_direct_hybrid.c:1074:3: missed: statement clobbers memory: free (_144);
+nbody_direct_hybrid.c:1075:3: missed: statement clobbers memory: free (_146);
+nbody_direct_hybrid.c:1076:3: missed: statement clobbers memory: free (_149);
+nbody_direct_hybrid.c:1077:3: missed: statement clobbers memory: free (_116);
+nbody_direct_hybrid.c:997:7: missed: statement clobbers memory: die ("--kernel newton is implemented for -np 1 only; use --kernel direct for MPI ring runs");
+nbody_direct_hybrid.c:867:5: missed: statement clobbers memory: die ("invalid Newton workspace");
+nbody_direct_hybrid.c:869:41: missed: statement clobbers memory: _103 = omp_get_max_threads ();
+nbody_direct_hybrid.c:872:5: missed: statement clobbers memory: die ("invalid Newton workspace");
+nbody_direct_hybrid.c:874:3: missed: statement clobbers memory: memset (prephitmp_122, 0, _109);
+nbody_direct_hybrid.c:875:3: missed: statement clobbers memory: memset (_111, 0, _109);
+nbody_direct_hybrid.c:876:3: missed: statement clobbers memory: memset (_112, 0, _109);
+nbody_direct_hybrid.c:978:13: missed: statement clobbers memory: __builtin_GOMP_parallel (compute_accelerations_newton_private._omp_fn.0, &.omp_data_o.116, 0, 0);
+nbody_direct_hybrid.c:978:13: missed: statement clobbers memory: __builtin_GOMP_parallel (compute_accelerations_newton_private._omp_fn.1, &.omp_data_o.118, 0, 0);
+nbody_direct_hybrid.c:916:9: optimized: basic block part vectorized using 16 byte vectors
+nbody_direct_hybrid.c:413:20: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:413:20: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:378:18: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:378:18: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:1495:31: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:1495:31: missed: not vectorized: unsupported control flow in loop.
+nbody_direct_hybrid.c:338:18: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:340:33: missed: not vectorized: no vectype for stmt: _464 = *_463;
+ scalar_type: float
+nbody_direct_hybrid.c:1398:27: missed: couldn't vectorize loop
+nbody_direct_hybrid.c:1398:27: missed: not vectorized: could not determine main exit from loop with multiple exits.
+nbody_direct_hybrid.c:1390:3: missed: statement clobbers memory: MPI_Init_thread (&argc, &argv, 1, &provided);
+nbody_direct_hybrid.c:1393:3: missed: statement clobbers memory: MPI_Comm_rank (&ompi_mpi_comm_world, &rank);
+nbody_direct_hybrid.c:1394:3: missed: statement clobbers memory: MPI_Comm_size (&ompi_mpi_comm_world, &nranks);
+nbody_direct_hybrid.c:193:3: missed: statement clobbers memory: memset (&local, 0, 88);
+nbody_direct_hybrid.c:232:3: missed: statement clobbers memory: memset (&newton_workspace, 0, 40);
+nbody_direct_hybrid.c:1321:8: missed: statement clobbers memory: _380 = strncmp (arg_379, "--input", 7);
+nbody_direct_hybrid.c:1323:7: missed: statement clobbers memory: _385 = strcmp (arg_379, "--input");
+nbody_direct_hybrid.c:1326:7: missed: statement clobbers memory: die ("missing value after %s", "--input");
+nbody_direct_hybrid.c:1321:8: missed: statement clobbers memory: _402 = strncmp (arg_401, "--output", 8);
+nbody_direct_hybrid.c:1323:7: missed: statement clobbers memory: _407 = strcmp (arg_401, "--output");
+nbody_direct_hybrid.c:1326:7: missed: statement clobbers memory: die ("missing value after %s", "--output");
+nbody_direct_hybrid.c:1405:23: missed: statement clobbers memory: value_256 = option_value (&argi, prephitmp_1007, prephitmp_1006, "--nsteps");
+nbody_direct_hybrid.c:1407:23: missed: statement clobbers memory: value_258 = option_value (&argi, argc.7_7, argv.6_6, "--energy-every");
+nbody_direct_hybrid.c:1409:23: missed: statement clobbers memory: value_260 = option_value (&argi, argc.9_9, argv.8_8, "--dt");
+nbody_direct_hybrid.c:1411:23: missed: statement clobbers memory: value_262 = option_value (&argi, argc.11_11, argv.10_10, "--comm");
+nbody_direct_hybrid.c:1413:23: missed: statement clobbers memory: value_264 = option_value (&argi, argc.13_13, argv.12_12, "--kernel");
+nbody_direct_hybrid.c:1415:23: missed: statement clobbers memory: value_266 = option_value (&argi, argc.15_15, argv.14_14, "--rsqrt");
+nbody_direct_hybrid.c:1417:23: missed: statement clobbers memory: value_268 = option_value (&argi, argc.17_17, argv.16_16, "--accumulators");
+nbody_direct_hybrid.c:1419:23: missed: statement clobbers memory: value_270 = option_value (&argi, argc.19_19, argv.18_18, "--eps");
+nbody_direct_hybrid.c:1421:23: missed: statement clobbers memory: value_272 = option_value (&argi, argc.21_21, argv.20_20, "--G");
+nbody_direct_hybrid.c:1423:23: missed: statement clobbers memory: value_274 = option_value (&argi, argc.23_23, argv.22_22, "--mass");
+nbody_direct_hybrid.c:1425:23: missed: statement clobbers memory: value_276 = option_value (&argi, argc.25_25, argv.24_24, "--energy-tol");
+nbody_direct_hybrid.c:1427:14: missed: statement clobbers memory: _32 = strcmp (_31, "--quiet");
+nbody_direct_hybrid.c:1429:14: missed: statement clobbers memory: _34 = strcmp (_31, "--help");
+nbody_direct_hybrid.c:1437:7: missed: statement clobbers memory: die ("unknown option: %s", _31);
+nbody_direct_hybrid.c:1426:20: missed: statement clobbers memory: energy_tol_282 = parse_dtype (value_276, "--energy-tol");
+nbody_direct_hybrid.c:1424:14: missed: statement clobbers memory: mass_284 = parse_dtype (value_274, "--mass");
+nbody_direct_hybrid.c:1422:11: missed: statement clobbers memory: g_286 = parse_dtype (value_272, "--G");
+nbody_direct_hybrid.c:1420:13: missed: statement clobbers memory: eps_288 = parse_dtype (value_270, "--eps");
+nbody_direct_hybrid.c:1260:7: missed: statement clobbers memory: _427 = strcmp (value_268, "1");
+nbody_direct_hybrid.c:1262:7: missed: statement clobbers memory: _428 = strcmp (value_268, "2");
+nbody_direct_hybrid.c:1264:7: missed: statement clobbers memory: _429 = strcmp (value_268, "4");
+nbody_direct_hybrid.c:1266:7: missed: statement clobbers memory: _430 = strcmp (value_268, "8");
+nbody_direct_hybrid.c:1268:3: missed: statement clobbers memory: die ("invalid --accumulators \'%s\' (expected 1, 2, 4 or 8)", value_268);
+nbody_direct_hybrid.c:1250:7: missed: statement clobbers memory: _424 = strcmp (value_266, "exact");
+nbody_direct_hybrid.c:1252:7: missed: statement clobbers memory: _425 = strcmp (value_266, "approx");
+nbody_direct_hybrid.c:1254:3: missed: statement clobbers memory: die ("invalid --rsqrt \'%s\' (expected exact or approx)", value_266);
+nbody_direct_hybrid.c:1240:7: missed: statement clobbers memory: _421 = strcmp (value_264, "direct");
+nbody_direct_hybrid.c:1242:7: missed: statement clobbers memory: _422 = strcmp (value_264, "newton");
+nbody_direct_hybrid.c:1244:3: missed: statement clobbers memory: die ("invalid --kernel \'%s\' (expected direct or newton)", value_264);
+nbody_direct_hybrid.c:1230:7: missed: statement clobbers memory: _418 = strcmp (value_262, "sendrecv");
+nbody_direct_hybrid.c:1232:7: missed: statement clobbers memory: _419 = strcmp (value_262, "overlap");
+nbody_direct_hybrid.c:1234:3: missed: statement clobbers memory: die ("invalid --comm \'%s\' (expected sendrecv or overlap)", value_262);
+nbody_direct_hybrid.c:1410:12: missed: statement clobbers memory: dt_298 = parse_dtype (value_260, "--dt");
+nbody_direct_hybrid.c:1408:22: missed: statement clobbers memory: energy_every_300 = parse_size (value_258, "--energy-every");
+nbody_direct_hybrid.c:1406:16: missed: statement clobbers memory: nsteps_302 = parse_size (value_256, "--nsteps");
+nbody_direct_hybrid.c:1339:3: missed: statement clobbers memory: fprintf (stderr.88_432, "usage: %s --input FILE [options]\n\noptions:\n  --input FILE              input binary particle file (%s)\n  --output FILE             optional final-state binary file\n  --nsteps N                KDK steps (default: 10)\n  --dt X                    time step (default: 0.001)\n  --eps X                   softening length (default: 0.01)\n  --G X                     gravitational constant (default: 1)\n  --mass X                  particle mass (default: 1)\n  --energy-every N          diagnostic period in steps (default: 1)\n  --energy-tol X            warning tolerance for max relative drift (default: 1e-4)\n  --comm sendrecv|overlap   ring exchange mode (default: sendrecv)\n  --kernel direct|newton    force kernel (default: direct; newton is -np 1 only)\n  --rsqrt exact|approx      inverse square-root mode (default: exact)\n  --accumulators 1|2|4|8    direct-kernel accumulator chains (default: 4)\n  --quiet                   final summary only\n  --help                    show this help message\n", _36, "nbody-f32-v1");
+nbody_direct_hybrid.c:1359:3: missed: statement clobbers memory: fprintf (stderr.89_433, "binary format: %s\n", "nbody-f32-v1");
+nbody_direct_hybrid.c:1433:7: missed: statement clobbers memory: MPI_Finalize ();
+nbody_direct_hybrid.c:1441:5: missed: statement clobbers memory: die ("missing required --input FILE");
+nbody_direct_hybrid.c:1445:5: missed: statement clobbers memory: die ("invalid non-positive physical or diagnostic parameter");
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _222 = MPI_Wtime ();
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _223 = MPI_Wtime ();
+nbody_direct_hybrid.c:303:7: missed: statement clobbers memory: _434 = MPI_File_open (&ompi_mpi_comm_world, input_path_317, 2, &ompi_mpi_info_null, &fh);
+nbody_direct_hybrid.c:305:5: missed: statement clobbers memory: die ("MPI_File_open failed for input \'%s\'", input_path_317);
+nbody_direct_hybrid.c:307:7: missed: statement clobbers memory: _436 = MPI_File_read_all (fh.92_435, &magic, 8, &ompi_mpi_byte, 0B);
+nbody_direct_hybrid.c:309:5: missed: statement clobbers memory: die ("MPI_File_read_all failed for magic in \'%s\'", input_path_317);
+nbody_direct_hybrid.c:310:7: missed: statement clobbers memory: _437 = memcmp (&magic, &nbody_binary_magic, 8);
+nbody_direct_hybrid.c:311:5: missed: statement clobbers memory: die ("invalid input magic in \'%s\'", input_path_317);
+nbody_direct_hybrid.c:313:7: missed: statement clobbers memory: _439 = MPI_File_read_all (fh.93_438, &n64, 1, &ompi_mpi_uint64_t, 0B);
+nbody_direct_hybrid.c:315:5: missed: statement clobbers memory: die ("MPI_File_read_all failed for particle count in \'%s\'", input_path_317);
+nbody_direct_hybrid.c:193:3: missed: statement clobbers memory: memset (&MEM <struct particles_t> [(void *)&local + 16B], 0, 72);
+nbody_direct_hybrid.c:205:10: missed: statement clobbers memory: _502 = checked_aligned_alloc (bytes_500);
+nbody_direct_hybrid.c:206:10: missed: statement clobbers memory: _503 = checked_aligned_alloc (bytes_500);
+nbody_direct_hybrid.c:207:10: missed: statement clobbers memory: _504 = checked_aligned_alloc (bytes_500);
+nbody_direct_hybrid.c:208:11: missed: statement clobbers memory: _505 = checked_aligned_alloc (bytes_500);
+nbody_direct_hybrid.c:209:11: missed: statement clobbers memory: _506 = checked_aligned_alloc (bytes_500);
+nbody_direct_hybrid.c:210:11: missed: statement clobbers memory: _507 = checked_aligned_alloc (bytes_500);
+nbody_direct_hybrid.c:211:11: missed: statement clobbers memory: _508 = checked_aligned_alloc (bytes_500);
+nbody_direct_hybrid.c:212:11: missed: statement clobbers memory: _509 = checked_aligned_alloc (bytes_500);
+nbody_direct_hybrid.c:213:11: missed: statement clobbers memory: _510 = checked_aligned_alloc (bytes_500);
+nbody_direct_hybrid.c:327:13: missed: statement clobbers memory: records_452 = checked_aligned_alloc (_1101);
+nbody_direct_hybrid.c:325:5: missed: statement clobbers memory: die ("MPI-IO read count exceeds INT_MAX");
+nbody_direct_hybrid.c:327:13: missed: statement clobbers memory: records_431 = checked_aligned_alloc (_1101);
+nbody_direct_hybrid.c:333:7: missed: statement clobbers memory: _460 = MPI_File_read_at_all (fh.97_458, _1104, iftmp.96_459, _680, &ompi_mpi_float, 0B);
+nbody_direct_hybrid.c:336:5: missed: statement clobbers memory: die ("MPI_File_read_at_all failed for particle records in \'%s\'", input_path_317);
+nbody_direct_hybrid.c:348:3: missed: statement clobbers memory: free (records_294);
+nbody_direct_hybrid.c:349:3: missed: statement clobbers memory: MPI_File_close (&fh);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _224 = MPI_Wtime ();
+nbody_direct_hybrid.c:1460:5: missed: statement clobbers memory: _46 = omp_get_max_threads ();
+nbody_direct_hybrid.c:240:5: missed: statement clobbers memory: die ("invalid OpenMP thread count for Newton workspace");
+nbody_direct_hybrid.c:242:5: missed: statement clobbers memory: die ("Newton workspace size overflow");
+nbody_direct_hybrid.c:232:3: missed: statement clobbers memory: memset (&MEM <struct thread_workspace_t> [(void *)&newton_workspace + 12B], 0, 28);
+nbody_direct_hybrid.c:251:13: missed: statement clobbers memory: _517 = checked_aligned_alloc (_1100);
+nbody_direct_hybrid.c:252:13: missed: statement clobbers memory: _518 = checked_aligned_alloc (_1100);
+nbody_direct_hybrid.c:253:13: missed: statement clobbers memory: _519 = checked_aligned_alloc (_1100);
+nbody_direct_hybrid.c:245:5: missed: statement clobbers memory: die ("Newton workspace byte-size overflow");
+nbody_direct_hybrid.c:232:3: missed: statement clobbers memory: memset (&MEM <struct thread_workspace_t> [(void *)&newton_workspace + 12B], 0, 28);
+nbody_direct_hybrid.c:251:13: missed: statement clobbers memory: _852 = checked_aligned_alloc (_1100);
+nbody_direct_hybrid.c:252:13: missed: statement clobbers memory: _855 = checked_aligned_alloc (_1100);
+nbody_direct_hybrid.c:253:13: missed: statement clobbers memory: _858 = checked_aligned_alloc (_1100);
+nbody_direct_hybrid.c:256:5: missed: statement clobbers memory: die ("cannot allocate Newton workspace");
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _197 = MPI_Wtime ();
+nbody_direct_hybrid.c:1463:13: missed: statement clobbers memory: energy0_190 = total_energy_ring.constprop (&local, n_440, _449, g_254, eps_134, rank.40_49, nranks.39_48, &kinetic0, &potential0);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _221 = MPI_Wtime ();
+nbody_direct_hybrid.c:1469:5: missed: statement clobbers memory: printf ("# hybrid MPI+OpenMP direct N-body %s\n", "kdk");
+nbody_direct_hybrid.c:1471:5: missed: statement clobbers memory: _55 = omp_get_max_threads ();
+nbody_direct_hybrid.c:1471:5: missed: statement clobbers memory: printf ("# ranks=%d omp_max_threads=%d arithmetic_dtype=%s comm=%s kernel=%s rsqrt=%s accumulators=%s\n", nranks.44_56, _55, "double", iftmp.167_196, iftmp.166_195, iftmp.165_194, _316);
+nbody_direct_hybrid.c:1477:5: missed: statement clobbers memory: printf ("# N=%zu nsteps=%zu dt=%.17g eps=%.17g G=%.17g mass=%.17g\n", n_440, nsteps_396, dt_130, eps_134, g_254, mass_516);
+nbody_direct_hybrid.c:1480:5: missed: statement clobbers memory: __builtin_puts (&"# step time kinetic potential total rel_energy_drift"[0]);
+nbody_direct_hybrid.c:1481:5: missed: statement clobbers memory: printf ("%zu %.17g %.17g %.17g %.17g %.17g\n", 0, 0.0, kinetic0.47_58, potential0.46_57, energy0_190, 0.0);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _319 = MPI_Wtime ();
+nbody_direct_hybrid.c:1487:3: missed: statement clobbers memory: compute_accelerations_ring.constprop (&local, n_440, g_254, eps_134, rank.49_60, nranks.48_59, comm_mode_635, kernel_mode_412, rsqrt_mode_387, accumulator_mode_383, &newton_workspace, &timing.comm_wait);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _318 = MPI_Wtime ();
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _327 = MPI_Wtime ();
+nbody_direct_hybrid.c:1366:5: missed: statement clobbers memory: __builtin_GOMP_parallel (kick._omp_fn.0, &.omp_data_o.141, 0, 0);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _326 = MPI_Wtime ();
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _325 = MPI_Wtime ();
+nbody_direct_hybrid.c:1366:5: missed: statement clobbers memory: __builtin_GOMP_parallel (drift._omp_fn.0, &.omp_data_o.101, 0, 0);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _324 = MPI_Wtime ();
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _323 = MPI_Wtime ();
+nbody_direct_hybrid.c:1508:5: missed: statement clobbers memory: compute_accelerations_ring.constprop (&local, n_440, g_254, eps_134, rank.52_69, nranks.51_68, comm_mode_635, kernel_mode_412, rsqrt_mode_387, accumulator_mode_383, &newton_workspace, &timing.comm_wait);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _322 = MPI_Wtime ();
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _321 = MPI_Wtime ();
+nbody_direct_hybrid.c:1366:5: missed: statement clobbers memory: __builtin_GOMP_parallel (kick._omp_fn.0, &.omp_data_o.141, 0, 0);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _320 = MPI_Wtime ();
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _329 = MPI_Wtime ();
+nbody_direct_hybrid.c:1529:16: missed: statement clobbers memory: energy_243 = total_energy_ring.constprop (&local, n_440, _449, g_254, eps_134, rank.55_77, nranks.54_76, &kinetic, &potential);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _328 = MPI_Wtime ();
+nbody_direct_hybrid.c:1537:9: missed: statement clobbers memory: printf ("%zu %.17g %.17g %.17g %.17g %.17g\n", step_835, _86, kinetic.60_84, potential.59_83, energy_243, rel_246);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _331 = MPI_Wtime ();
+nbody_direct_hybrid.c:374:12: missed: statement clobbers memory: counts_524 = malloc (_523);
+nbody_direct_hybrid.c:375:12: missed: statement clobbers memory: displs_525 = malloc (_523);
+nbody_direct_hybrid.c:377:5: missed: statement clobbers memory: die ("cannot allocate gather metadata");
+nbody_direct_hybrid.c:383:7: missed: statement clobbers memory: die ("MPI gather count exceeds INT_MAX");
+nbody_direct_hybrid.c:435:5: missed: statement clobbers memory: MPI_Gatherv (_603, _602, &ompi_mpi_double, 0B, counts_524, displs_525, &ompi_mpi_double, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:436:5: missed: statement clobbers memory: MPI_Gatherv (_606, _605, &ompi_mpi_double, 0B, counts_524, displs_525, &ompi_mpi_double, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:437:5: missed: statement clobbers memory: MPI_Gatherv (_609, _608, &ompi_mpi_double, 0B, counts_524, displs_525, &ompi_mpi_double, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:438:5: missed: statement clobbers memory: MPI_Gatherv (_612, _611, &ompi_mpi_double, 0B, counts_524, displs_525, &ompi_mpi_double, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:439:5: missed: statement clobbers memory: MPI_Gatherv (_615, _614, &ompi_mpi_double, 0B, counts_524, displs_525, &ompi_mpi_double, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:440:5: missed: statement clobbers memory: MPI_Gatherv (_618, _617, &ompi_mpi_double, 0B, counts_524, displs_525, &ompi_mpi_double, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:394:9: missed: statement clobbers memory: x_546 = checked_aligned_alloc (bytes_545);
+nbody_direct_hybrid.c:395:9: missed: statement clobbers memory: y_547 = checked_aligned_alloc (bytes_545);
+nbody_direct_hybrid.c:396:9: missed: statement clobbers memory: z_548 = checked_aligned_alloc (bytes_545);
+nbody_direct_hybrid.c:397:10: missed: statement clobbers memory: vx_549 = checked_aligned_alloc (bytes_545);
+nbody_direct_hybrid.c:398:10: missed: statement clobbers memory: vy_550 = checked_aligned_alloc (bytes_545);
+nbody_direct_hybrid.c:399:10: missed: statement clobbers memory: vz_551 = checked_aligned_alloc (bytes_545);
+nbody_direct_hybrid.c:401:5: missed: statement clobbers memory: MPI_Gatherv (_554, _553, &ompi_mpi_double, x_546, counts_524, displs_525, &ompi_mpi_double, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:402:5: missed: statement clobbers memory: MPI_Gatherv (_557, _556, &ompi_mpi_double, y_547, counts_524, displs_525, &ompi_mpi_double, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:403:5: missed: statement clobbers memory: MPI_Gatherv (_560, _559, &ompi_mpi_double, z_548, counts_524, displs_525, &ompi_mpi_double, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:404:5: missed: statement clobbers memory: MPI_Gatherv (_563, _562, &ompi_mpi_double, vx_549, counts_524, displs_525, &ompi_mpi_double, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:405:5: missed: statement clobbers memory: MPI_Gatherv (_566, _565, &ompi_mpi_double, vy_550, counts_524, displs_525, &ompi_mpi_double, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:406:5: missed: statement clobbers memory: MPI_Gatherv (_569, _568, &ompi_mpi_double, vz_551, counts_524, displs_525, &ompi_mpi_double, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:408:10: missed: statement clobbers memory: fp_570 = fopen (output_path_140, "wb");
+nbody_direct_hybrid.c:410:7: missed: statement clobbers memory: die ("cannot open output \'%s\'", output_path_140);
+nbody_direct_hybrid.c:187:7: missed: statement clobbers memory: _571 = fwrite (&nbody_binary_magic, 1, 8, fp_570);
+nbody_direct_hybrid.c:188:5: missed: statement clobbers memory: die ("failed writing %s to \'%s\'", "magic", output_path_140);
+nbody_direct_hybrid.c:187:7: missed: statement clobbers memory: _572 = fwrite (&n64, 8, 1, fp_570);
+nbody_direct_hybrid.c:188:5: missed: statement clobbers memory: die ("failed writing %s to \'%s\'", "particle count", output_path_140);
+nbody_direct_hybrid.c:358:5: missed: statement clobbers memory: die ("cannot write non-finite or overflowing value to \'%s\'", output_path_140);
+nbody_direct_hybrid.c:358:5: missed: statement clobbers memory: die ("cannot write non-finite or overflowing value to \'%s\'", output_path_140);
+nbody_direct_hybrid.c:358:5: missed: statement clobbers memory: die ("cannot write non-finite or overflowing value to \'%s\'", output_path_140);
+nbody_direct_hybrid.c:358:5: missed: statement clobbers memory: die ("cannot write non-finite or overflowing value to \'%s\'", output_path_140);
+nbody_direct_hybrid.c:358:5: missed: statement clobbers memory: die ("cannot write non-finite or overflowing value to \'%s\'", output_path_140);
+nbody_direct_hybrid.c:358:5: missed: statement clobbers memory: die ("cannot write non-finite or overflowing value to \'%s\'", output_path_140);
+nbody_direct_hybrid.c:187:7: missed: statement clobbers memory: _599 = fwrite (&rec, 4, 6, fp_570);
+nbody_direct_hybrid.c:188:5: missed: statement clobbers memory: die ("failed writing %s to \'%s\'", "particle record", output_path_140);
+nbody_direct_hybrid.c:425:5: missed: statement clobbers memory: fclose (fp_570);
+nbody_direct_hybrid.c:426:5: missed: statement clobbers memory: free (x_546);
+nbody_direct_hybrid.c:427:5: missed: statement clobbers memory: free (y_547);
+nbody_direct_hybrid.c:428:5: missed: statement clobbers memory: free (z_548);
+nbody_direct_hybrid.c:429:5: missed: statement clobbers memory: free (vx_549);
+nbody_direct_hybrid.c:430:5: missed: statement clobbers memory: free (vy_550);
+nbody_direct_hybrid.c:431:5: missed: statement clobbers memory: free (vz_551);
+nbody_direct_hybrid.c:443:3: missed: statement clobbers memory: free (counts_524);
+nbody_direct_hybrid.c:444:3: missed: statement clobbers memory: free (displs_525);
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _330 = MPI_Wtime ();
+nbody_direct_hybrid.c:140:10: missed: statement clobbers memory: _332 = MPI_Wtime ();
+nbody_direct_hybrid.c:1555:3: missed: statement clobbers memory: MPI_Reduce (iftmp.64_150, &timing.drift, 1, &ompi_mpi_double, &ompi_mpi_op_max, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:1557:3: missed: statement clobbers memory: MPI_Reduce (iftmp.66_151, &timing.force, 1, &ompi_mpi_double, &ompi_mpi_op_max, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:1559:3: missed: statement clobbers memory: MPI_Reduce (iftmp.68_152, &timing.comm_wait, 1, &ompi_mpi_double, &ompi_mpi_op_max, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:1561:3: missed: statement clobbers memory: MPI_Reduce (iftmp.70_153, &timing.kick, 1, &ompi_mpi_double, &ompi_mpi_op_max, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:1563:3: missed: statement clobbers memory: MPI_Reduce (iftmp.72_154, &timing.energy, 1, &ompi_mpi_double, &ompi_mpi_op_max, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:1565:3: missed: statement clobbers memory: MPI_Reduce (iftmp.74_155, &timing.io, 1, &ompi_mpi_double, &ompi_mpi_op_max, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:1567:3: missed: statement clobbers memory: MPI_Reduce (iftmp.76_156, &timing.total, 1, &ompi_mpi_double, &ompi_mpi_op_max, 0, &ompi_mpi_comm_world);
+nbody_direct_hybrid.c:1576:5: missed: statement clobbers memory: _108 = omp_get_max_threads ();
+nbody_direct_hybrid.c:1576:5: missed: statement clobbers memory: printf ("# final: N=%zu steps=%zu ranks=%d threads_per_rank=%d integrator=%s comm=%s kernel=%s rsqrt=%s arithmetic_dtype=%s accumulators=%s max_relative_energy_drift=%.17g tolerance=%.17g status=%s\n", n_440, nsteps_396, nranks.82_109, _108, "kdk", iftmp.167_333, iftmp.166_334, iftmp.165_335, "double", _337, max_rel_drift_834, energy_tol_122, iftmp.81_157);
+nbody_direct_hybrid.c:1587:5: missed: statement clobbers memory: printf ("# timing_max_seconds total=%.6f io=%.6f drift=%.6f force=%.6f comm_wait=%.6f kick=%.6f energy=%.6f\n", _116, _115, _114, _113, _112, _111, _110);
+nbody_direct_hybrid.c:1591:5: missed: statement clobbers memory: printf ("# kernel_rate pair_interactions_per_second=%.6e gpair_interactions_per_second=%.6f\n", _118, ginteractions_220);
+nbody_direct_hybrid.c:261:3: missed: statement clobbers memory: free (_628);
+nbody_direct_hybrid.c:262:3: missed: statement clobbers memory: free (_629);
+nbody_direct_hybrid.c:263:3: missed: statement clobbers memory: free (_630);
+nbody_direct_hybrid.c:232:3: missed: statement clobbers memory: memset (&newton_workspace, 0, 40);
+nbody_direct_hybrid.c:218:3: missed: statement clobbers memory: free (_619);
+nbody_direct_hybrid.c:219:3: missed: statement clobbers memory: free (_620);
+nbody_direct_hybrid.c:220:3: missed: statement clobbers memory: free (_621);
+nbody_direct_hybrid.c:221:3: missed: statement clobbers memory: free (_622);
+nbody_direct_hybrid.c:222:3: missed: statement clobbers memory: free (_623);
+nbody_direct_hybrid.c:223:3: missed: statement clobbers memory: free (_624);
+nbody_direct_hybrid.c:224:3: missed: statement clobbers memory: free (_625);
+nbody_direct_hybrid.c:225:3: missed: statement clobbers memory: free (_626);
+nbody_direct_hybrid.c:226:3: missed: statement clobbers memory: free (_627);
+nbody_direct_hybrid.c:193:3: missed: statement clobbers memory: memset (&local, 0, 88);
+nbody_direct_hybrid.c:1598:3: missed: statement clobbers memory: MPI_Finalize ();

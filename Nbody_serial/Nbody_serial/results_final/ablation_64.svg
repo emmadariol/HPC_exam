@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="450.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">ablation experiments</text>
+<line x1="82" y1="445" x2="865" y2="445" stroke="black"/>
+<line x1="82" y1="42" x2="82" y2="445" stroke="black"/>
+<text x="450.0" y="502" text-anchor="middle" font-family="sans-serif" font-size="14">variant</text>
+<text transform="translate(24,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">median time (s)</text>
+<rect x="104.0" y="78.6" width="53.8" height="366.4" fill="#1f77b4"/>
+<text x="130.9" y="71.6" text-anchor="middle" font-family="sans-serif" font-size="11">43.9</text>
+<text x="130.9" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Kernel</text>
+<text x="130.9" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">direct</text>
+<rect x="201.9" y="157.2" width="53.8" height="287.8" fill="#d62728"/>
+<text x="228.8" y="150.2" text-anchor="middle" font-family="sans-serif" font-size="11">34.5</text>
+<text x="228.8" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Kernel</text>
+<text x="228.8" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">newton</text>
+<rect x="299.8" y="436.5" width="53.8" height="8.5" fill="#2ca02c"/>
+<text x="326.7" y="429.5" text-anchor="middle" font-family="sans-serif" font-size="11">1.01</text>
+<text x="326.7" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Math</text>
+<text x="326.7" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">exact</text>
+<rect x="397.6" y="434.6" width="53.8" height="10.4" fill="#9467bd"/>
+<text x="424.6" y="427.6" text-anchor="middle" font-family="sans-serif" font-size="11">1.25</text>
+<text x="424.6" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Math</text>
+<text x="424.6" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">approx</text>
+<rect x="495.5" y="436.5" width="53.8" height="8.5" fill="#ff7f0e"/>
+<text x="522.4" y="429.5" text-anchor="middle" font-family="sans-serif" font-size="11">1.01</text>
+<text x="522.4" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Comm</text>
+<text x="522.4" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">sendrecv</text>
+<rect x="593.4" y="436.6" width="53.8" height="8.4" fill="#17becf"/>
+<text x="620.3" y="429.6" text-anchor="middle" font-family="sans-serif" font-size="11">1</text>
+<text x="620.3" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Comm</text>
+<text x="620.3" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">overlap</text>
+<rect x="691.3" y="436.2" width="53.8" height="8.8" fill="#1f77b4"/>
+<text x="718.2" y="429.2" text-anchor="middle" font-family="sans-serif" font-size="11">1.06</text>
+<text x="718.2" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Accumulators</text>
+<text x="718.2" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">1</text>
+<rect x="789.1" y="436.5" width="53.8" height="8.5" fill="#d62728"/>
+<text x="816.1" y="429.5" text-anchor="middle" font-family="sans-serif" font-size="11">1.02</text>
+<text x="816.1" y="467" text-anchor="middle" font-family="sans-serif" font-size="10">Accumulators</text>
+<text x="816.1" y="483" text-anchor="middle" font-family="sans-serif" font-size="10">4</text>
+</svg>
