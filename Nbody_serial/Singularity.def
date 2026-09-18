@@ -1,5 +1,7 @@
 Bootstrap: docker
-From: ubuntu:22.04
+# Ubuntu 24.04 provides glibc >= 2.38, matching the minimum required by the
+# Orfeo host OpenMPI libraries that are injected at runtime.
+From: ubuntu:24.04
 
 %files
     # Copy the repository into the container at build time.

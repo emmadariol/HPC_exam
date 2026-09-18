@@ -126,6 +126,12 @@ configure_container_mpi_env() {
   export APPTAINER_BINDPATH="$bindpath"
   export SINGULARITYENV_LD_LIBRARY_PATH="$ldpath"
   export APPTAINERENV_LD_LIBRARY_PATH="$ldpath"
+  export SINGULARITYENV_OMPI_MCA_pml="${OMPI_MCA_pml:-ob1}"
+  export APPTAINERENV_OMPI_MCA_pml="${OMPI_MCA_pml:-ob1}"
+  export SINGULARITYENV_OMPI_MCA_btl="${OMPI_MCA_btl:-self,tcp}"
+  export APPTAINERENV_OMPI_MCA_btl="${OMPI_MCA_btl:-self,tcp}"
+  export SINGULARITYENV_OMPI_MCA_btl_vader_single_copy_mechanism="${OMPI_MCA_btl_vader_single_copy_mechanism:-none}"
+  export APPTAINERENV_OMPI_MCA_btl_vader_single_copy_mechanism="${OMPI_MCA_btl_vader_single_copy_mechanism:-none}"
 }
 
 run_container_mpi() {

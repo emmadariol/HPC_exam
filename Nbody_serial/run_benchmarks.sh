@@ -421,7 +421,7 @@ resolve_command_path() {
 extract_lib_path() {
   local lib_regex="$1"
   awk -v lib_regex="$lib_regex" '
-    $0 ~ lib_regex {
+    $0 ~ lib_regex && $0 ~ /=>/ {
       for (i = 1; i <= NF; ++i) {
         if ($i == "=>") {
           print $(i + 1);
@@ -471,6 +471,16 @@ write_mpi_linkage_check() {
   native_libmpi="$(printf "%s\n" "$native_ldd" | extract_lib_path 'libmpi\.so')"
   container_libmpi="$(printf "%s\n" "$container_ldd" | extract_lib_path 'libmpi\.so')"
 
+  if printf "%s\n" "$container_ldd" | grep -qE "GLIBC_[0-9.]+.*not found|version .* not found"; then
+    {
+      printf "\n== linkage verdict ==\n"
+      printf "FAIL: container C library is too old for the injected host MPI stack.\n"
+      printf "The image must be rebuilt from a base distribution with a newer glibc, e.g. Ubuntu 24.04 for Orfeo host OpenMPI requiring GLIBC_2.38.\n"
+    } >> "$out"
+    printf "ERROR: container glibc is too old for host MPI. See %s\n" "$out" >&2
+    return 1
+  fi
+
   if [[ -z "$native_libmpi" || -z "$container_libmpi" ]]; then
     printf "ERROR: unable to resolve libmpi.so in native/container ldd. See %s\n" "$out" >&2
     return 1
@@ -506,6 +516,20 @@ bench_osu() {
   local container_bw="${CONTAINER_OSU_BW:-osu_bw}"
   local runtime
   runtime="$(detect_runtime 2>/dev/null || true)"
+  # Use the same stable OpenMPI transport on both sides of the OSU comparison.
+  # On Orfeo, host OpenMPI's UCX component can otherwise pick UCX libraries from
+  # the container namespace, causing API-version warnings or RDMA aborts.  The
+  # ob1/tcp path is slower than optimized UCX, but it is symmetric and avoids a
+  # false native-vs-container mismatch.
+  export OMPI_MCA_pml="${OMPI_MCA_pml:-ob1}"
+  export OMPI_MCA_btl="${OMPI_MCA_btl:-self,tcp}"
+  export OMPI_MCA_btl_vader_single_copy_mechanism="${OMPI_MCA_btl_vader_single_copy_mechanism:-none}"
+  export SINGULARITYENV_OMPI_MCA_pml="$OMPI_MCA_pml"
+  export APPTAINERENV_OMPI_MCA_pml="$OMPI_MCA_pml"
+  export SINGULARITYENV_OMPI_MCA_btl="$OMPI_MCA_btl"
+  export APPTAINERENV_OMPI_MCA_btl="$OMPI_MCA_btl"
+  export SINGULARITYENV_OMPI_MCA_btl_vader_single_copy_mechanism="$OMPI_MCA_btl_vader_single_copy_mechanism"
+  export APPTAINERENV_OMPI_MCA_btl_vader_single_copy_mechanism="$OMPI_MCA_btl_vader_single_copy_mechanism"
   printf "mode,benchmark,metric,bytes,value\n" > "$out"
   run_osu_one() {
     # Run one OSU executable in native or container mode.  Warnings go to stderr;

@@ -1,5 +1,8 @@
 # Docker build used to create the portable container image locally.  
-FROM ubuntu:22.04
+# Ubuntu 24.04 provides glibc >= 2.38.  This is required on Orfeo when the
+# container is run with the host OpenMPI libraries injected, because the host
+# MPI stack was built against GLIBC_2.38 symbols.
+FROM ubuntu:24.04
 
 # BUILD_MARCH defaults to x86-64-v3 so that the image stays portable across
 # modern HPC CPU nodes while still enabling useful vector instructions.
