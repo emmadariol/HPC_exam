@@ -137,6 +137,9 @@ bench_scaling() {
     rc=$?
     set -e
     prefix="$kind,$n,$nsteps,$ranks,$threads,$rep,kdk,$comm,$kernel,$rsqrt,$accumulators"
+    if [[ -n "${RESULT_DIR:-}" ]]; then
+      printf "%s\n" "$log" > "$RESULT_DIR/${kind}_N${n}_P${ranks}_T${threads}_rep${rep}_record${record}.log"
+    fi
     if (( rc != 0 )); then
       if [[ "$record" == "1" ]]; then
         write_failed_scaling_row "$kind" "$n" "$nsteps" "$ranks" "$threads" "$rep" kdk "$comm" "$kernel" "$rsqrt" "$accumulators" >> "$out"
@@ -152,7 +155,7 @@ bench_scaling() {
 
   # Warmups are executed but not recorded; repeated measurements are recorded
   # and later summarized with medians/outlier handling in analyze.py.
-  for kind in strong weak; do
+  for kind in ${SCALING_KINDS:-strong weak}; do
     for ranks in $ranks_list; do
       local n="$strong_n"
       [[ "$kind" == "weak" ]] && n=$((weak_per_rank * ranks))
@@ -195,7 +198,7 @@ bench_ablation() {
   local input="ic_ablation_N${n}.bin"
   make nbody_direct_hybrid generate_ic >/dev/null
   ./generate_ic --model "$model" --n "$n" --seed "${SEED:-123}" --output "$input" >/dev/null
-  printf "Test_Type,Config,Time_Sec\n" > "$out"
+  printf "Test_Type,Config,Time_Sec,N,nsteps,ranks,threads,repeat,dt,eps,energy_every,force,comm_wait,gpairs,status,max_rel_drift\n" > "$out"
 
   ablation_case() {
     # Record median-ready total times for one variant.  Failures are written as
@@ -208,18 +211,30 @@ bench_ablation() {
     rc=$?
     set -e
     if (( rc != 0 )); then
-      printf "%s,%s,nan\n" "$test_type" "$config" >> "$out"
+      printf "%s,%s,nan,%s,%s,%s,%s,%s,%s,%s,%s,nan,nan,nan,RUN_FAILED,nan\n" \
+        "$test_type" "$config" "$n" "$nsteps" "$ranks" "${THREADS:-1}" "$rep" "$dt" "$eps" "$energy_every" >> "$out"
       printf "warning: ablation %s/%s failed rc=%s\n%s\n" "$test_type" "$config" "$rc" "$log" >&2
     else
       time_sec="$(printf "%s\n" "$log" | awk 'BEGIN{FS="[ =]+"} /^# timing_max_seconds/ {for(i=1;i<=NF;i++) if($i=="total") print $(i+1)}')"
-      printf "%s,%s,%s\n" "$test_type" "$config" "${time_sec:-nan}" >> "$out"
+      printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s," \
+        "$test_type" "$config" "${time_sec:-nan}" "$n" "$nsteps" "$ranks" "${THREADS:-1}" "$rep" "$dt" "$eps" "$energy_every" >> "$out"
+      printf "%s\n" "$log" | awk '
+        BEGIN { FS="[ =]+"; force=wait=rate=drift="nan"; status="PARSE_FAILED" }
+        /^# timing_max_seconds/ { for(i=1;i<NF;i++) {
+          if($i=="force") force=$(i+1); if($i=="comm_wait") wait=$(i+1) } }
+        /^# kernel_rate/ { for(i=1;i<NF;i++) if($i=="gpair_interactions_per_second") rate=$(i+1) }
+        /^# final:/ { for(i=1;i<NF;i++) {
+          if($i=="status") status=$(i+1); if($i=="max_relative_energy_drift") drift=$(i+1) } }
+        END { printf "%s,%s,%s,%s,%s\n",force,wait,rate,status,drift }
+      ' >> "$out"
     fi
   }
 
   for rep in $(seq 1 "$repeats"); do ablation_case Kernel direct 1 --kernel direct; done
   for rep in $(seq 1 "$repeats"); do ablation_case Kernel newton 1 --kernel newton; done
   for rep in $(seq 1 "$repeats"); do ablation_case Math exact "$ranks" --rsqrt exact; done
-  for rep in $(seq 1 "$repeats"); do ablation_case Math approx "$ranks" --rsqrt approx; done
+  for rep in $(seq 1 "$repeats"); do ablation_case Math approx1 "$ranks" --rsqrt approx1; done
+  for rep in $(seq 1 "$repeats"); do ablation_case Math approx2 "$ranks" --rsqrt approx2; done
   for rep in $(seq 1 "$repeats"); do ablation_case Comm sendrecv "$ranks" --comm sendrecv; done
   for rep in $(seq 1 "$repeats"); do ablation_case Comm overlap "$ranks" --comm overlap; done
   for rep in $(seq 1 "$repeats"); do ablation_case Accumulators 1 "$ranks" --accumulators 1; done
@@ -648,10 +663,23 @@ bench_perf() {
   command -v perf >/dev/null 2>&1 || { echo "perf is not available in PATH" >&2; exit 127; }
   make all >/dev/null
   ./generate_ic --model "$model" --n "$n" --seed 4242 --output "$input" >/dev/null
-  OMP_NUM_THREADS="$threads" perf stat -e "$events" -o "$out" \
-    "$launcher" -n "$ranks" ./nbody_direct_hybrid \
-    --input "$input" --nsteps "$nsteps" --energy-every "$nsteps" \
-    --comm sendrecv --kernel direct --rsqrt exact --quiet
+  if [[ "${PERF_TARGET:-solver}" == "layout" ]]; then
+    for layout in aos soa; do
+      for rep in $(seq 1 "$repeats"); do
+        OMP_NUM_THREADS="$threads" "$launcher" --ntasks=1 --cpus-per-task="$threads" $cpu_bind \
+          perf stat -x ';' -e "$events" -o "${out}_${layout}_rep${rep}.csv" \
+          ./nbody_layout_benchmark --input "$input" --layout "$layout" \
+          --warmups "$warmups" --inner-repeats "${INNER_REPEATS:-3}" --eps "$eps" --rsqrt exact \
+          > "${out}_${layout}_rep${rep}.out"
+      done
+    done
+  else
+    OMP_NUM_THREADS="$threads" "$launcher" --ntasks="$ranks" --cpus-per-task="$threads" $cpu_bind \
+      bash -c 'dest="$1"; events="$2"; shift 2; exec perf stat -e "$events" -o "${dest}_rank${SLURM_PROCID:-0}.txt" "$@"' bash "$out" "$events" \
+      ./nbody_direct_hybrid --input "$input" --nsteps "$nsteps" \
+      --dt "$dt" --eps "$eps" --energy-every "$nsteps" \
+      --comm sendrecv --kernel direct --rsqrt exact --quiet
+  fi
   rm -f "$input"
 }
 

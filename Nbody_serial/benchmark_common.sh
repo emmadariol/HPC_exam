@@ -67,8 +67,12 @@ run_mpi_solver() {
   local ranks="$1"
   local threads="$2"
   shift 2
+  local wrapper=()
+  if [[ -n "${VERIFY_MAPPING:-}" ]]; then
+    wrapper=(bash "$script_dir/collect_system_info.sh" --verify-binding "$VERIFY_MAPPING")
+  fi
   OMP_NUM_THREADS="$threads" "$launcher" $cpu_bind --ntasks="$ranks" \
-    --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" "$@"
+    --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" "${wrapper[@]}" "$@"
 }
 
 launcher_distribution_args() {

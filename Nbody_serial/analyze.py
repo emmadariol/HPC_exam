@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import math
+import os
 import statistics
 from collections import defaultdict
 from pathlib import Path
@@ -64,6 +65,8 @@ def keep_non_outliers(rows: list[dict[str, object]]) -> tuple[list[dict[str, obj
     original sample rather than producing an empty summary.
     """
     totals = [float(r["total"]) for r in rows]
+    if os.environ.get("KEEP_ALL_REPETITIONS") == "1":
+        return rows, 0, median_absolute_deviation(totals)
     med = statistics.median(totals)
     mad = median_absolute_deviation(totals)
     if mad == 0.0:
@@ -848,6 +851,7 @@ def plot_ablation(src: str, prefix: str) -> None:
     order = [
         ("Kernel", "direct"), ("Kernel", "newton"),
         ("Math", "exact"), ("Math", "approx"),
+        ("Math", "approx1"), ("Math", "approx2"),
         ("Comm", "sendrecv"), ("Comm", "overlap"),
         ("Accumulators", "1"), ("Accumulators", "2"),
         ("Accumulators", "4"), ("Accumulators", "8"),

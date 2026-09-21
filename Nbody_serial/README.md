@@ -141,6 +141,17 @@ Run both smoke tests:
 make run-smoke
 ```
 
+Benchmark scripts use the following numerical defaults unless the environment
+explicitly overrides them:
+
+| Variable / option | Default | Meaning |
+|---|---:|---|
+| `DT` / `--dt` | `1e-4` | Leapfrog timestep. |
+| `EPS` / `--eps` | `0.05` | Gravitational softening length. |
+| `G` / `--G` | `1.0` | Gravitational constant in code units. |
+| `MASS` / `--mass` | `1.0` | Equal particle mass. |
+| `ENERGY_TOL` / `--energy-tol` | `1e-4` | Relative energy-drift tolerance. |
+
 Run the hybrid solver directly:
 
 ```sh
