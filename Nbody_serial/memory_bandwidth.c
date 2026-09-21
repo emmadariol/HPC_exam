@@ -10,9 +10,7 @@
 
 /* STREAM-style OpenMP memory-bandwidth benchmark.
  *
- * This executable is intentionally independent from the N-body solver.  The
- * written report has to document the RAM bandwidth of the measured machine, so
- * this small benchmark measures sustained bandwidth for the standard copy,
+ * Small benchmark measures bandwidth for the standard copy,
  * scale, add, and triad streaming kernels.
  */
 

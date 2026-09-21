@@ -1,14 +1,3 @@
-/*
- * nbody_direct_hybrid.c
- *
- * Production solver used for the scaling experiments.  It combines MPI across
- * ranks with OpenMP inside each rank and keeps the same direct O(N^2)
- * gravitational algorithm as the serial reference.  The point of this file is
- * not to change the physics, but to expose the parallelization choices that the
- * report evaluates: rank decomposition, communication mode, force-kernel
- * variants, inverse-square-root approximation, and diagnostic overhead.
- */
-
 #include "nbody_common.h"
 
 #include <errno.h>
@@ -443,6 +432,11 @@ static void write_output_root(const char *path, const particles_t *local,
   free(counts);
   free(displs);
 }
+
+
+/* 
+        ************************************* Main logic **************************************
+*/
 
 static void drift(particles_t *p, dtype dt)
 {
@@ -1199,8 +1193,14 @@ static dtype total_energy_ring(const particles_t *local, size_t global_n,
   return *kinetic + *potential;
 }
 
-/* Command-line parsing is kept together at the end of the implementation so
- * the numerical and MPI/OpenMP routines above remain easy to follow. */
+
+
+/*                  ************************************************          */
+/*                            PARSING FUNCTION                               */
+/*                  ************************************************          */
+
+
+
 static size_t parse_size(const char *text, const char *name)
 {
   char *end = NULL;
