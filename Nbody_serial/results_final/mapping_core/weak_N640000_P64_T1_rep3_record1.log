@@ -1,0 +1,131 @@
+cpu-bind=MASK - genoa002, task  0  0 [2863700]: mask 0x1 set
+cpu-bind=MASK - genoa002, task  1  1 [2863701]: mask 0x100000000 set
+cpu-bind=MASK - genoa002, task  2  2 [2863702]: mask 0x2 set
+cpu-bind=MASK - genoa002, task  3  3 [2863703]: mask 0x200000000 set
+cpu-bind=MASK - genoa002, task  4  4 [2863704]: mask 0x4 set
+cpu-bind=MASK - genoa002, task  5  5 [2863705]: mask 0x400000000 set
+cpu-bind=MASK - genoa002, task  6  6 [2863706]: mask 0x8 set
+cpu-bind=MASK - genoa002, task  7  7 [2863707]: mask 0x800000000 set
+cpu-bind=MASK - genoa002, task  8  8 [2863708]: mask 0x10 set
+cpu-bind=MASK - genoa002, task  9  9 [2863709]: mask 0x1000000000 set
+cpu-bind=MASK - genoa002, task 10 10 [2863710]: mask 0x20 set
+cpu-bind=MASK - genoa002, task 11 11 [2863711]: mask 0x2000000000 set
+cpu-bind=MASK - genoa002, task 12 12 [2863712]: mask 0x40 set
+cpu-bind=MASK - genoa002, task 13 13 [2863713]: mask 0x4000000000 set
+cpu-bind=MASK - genoa002, task 14 14 [2863714]: mask 0x80 set
+cpu-bind=MASK - genoa002, task 15 15 [2863715]: mask 0x8000000000 set
+cpu-bind=MASK - genoa002, task 16 16 [2863716]: mask 0x100 set
+cpu-bind=MASK - genoa002, task 17 17 [2863717]: mask 0x10000000000 set
+cpu-bind=MASK - genoa002, task 18 18 [2863718]: mask 0x200 set
+cpu-bind=MASK - genoa002, task 19 19 [2863719]: mask 0x20000000000 set
+cpu-bind=MASK - genoa002, task 20 20 [2863720]: mask 0x400 set
+cpu-bind=MASK - genoa002, task 21 21 [2863721]: mask 0x40000000000 set
+cpu-bind=MASK - genoa002, task 22 22 [2863722]: mask 0x800 set
+cpu-bind=MASK - genoa002, task 23 23 [2863723]: mask 0x80000000000 set
+cpu-bind=MASK - genoa002, task 24 24 [2863724]: mask 0x1000 set
+cpu-bind=MASK - genoa002, task 25 25 [2863725]: mask 0x100000000000 set
+cpu-bind=MASK - genoa002, task 26 26 [2863726]: mask 0x2000 set
+cpu-bind=MASK - genoa002, task 27 27 [2863727]: mask 0x200000000000 set
+cpu-bind=MASK - genoa002, task 28 28 [2863728]: mask 0x4000 set
+cpu-bind=MASK - genoa002, task 29 29 [2863729]: mask 0x400000000000 set
+cpu-bind=MASK - genoa002, task 30 30 [2863730]: mask 0x8000 set
+cpu-bind=MASK - genoa002, task 31 31 [2863731]: mask 0x800000000000 set
+cpu-bind=MASK - genoa002, task 32 32 [2863732]: mask 0x10000 set
+cpu-bind=MASK - genoa002, task 33 33 [2863733]: mask 0x1000000000000 set
+cpu-bind=MASK - genoa002, task 34 34 [2863734]: mask 0x20000 set
+cpu-bind=MASK - genoa002, task 35 35 [2863735]: mask 0x2000000000000 set
+cpu-bind=MASK - genoa002, task 36 36 [2863736]: mask 0x40000 set
+cpu-bind=MASK - genoa002, task 37 37 [2863737]: mask 0x4000000000000 set
+cpu-bind=MASK - genoa002, task 38 38 [2863738]: mask 0x80000 set
+cpu-bind=MASK - genoa002, task 39 39 [2863739]: mask 0x8000000000000 set
+cpu-bind=MASK - genoa002, task 40 40 [2863740]: mask 0x100000 set
+cpu-bind=MASK - genoa002, task 41 41 [2863741]: mask 0x10000000000000 set
+cpu-bind=MASK - genoa002, task 42 42 [2863742]: mask 0x200000 set
+cpu-bind=MASK - genoa002, task 43 43 [2863743]: mask 0x20000000000000 set
+cpu-bind=MASK - genoa002, task 44 44 [2863744]: mask 0x400000 set
+cpu-bind=MASK - genoa002, task 45 45 [2863745]: mask 0x40000000000000 set
+cpu-bind=MASK - genoa002, task 46 46 [2863746]: mask 0x800000 set
+cpu-bind=MASK - genoa002, task 47 47 [2863747]: mask 0x80000000000000 set
+cpu-bind=MASK - genoa002, task 48 48 [2863748]: mask 0x1000000 set
+cpu-bind=MASK - genoa002, task 49 49 [2863749]: mask 0x100000000000000 set
+cpu-bind=MASK - genoa002, task 50 50 [2863750]: mask 0x2000000 set
+cpu-bind=MASK - genoa002, task 51 51 [2863751]: mask 0x200000000000000 set
+cpu-bind=MASK - genoa002, task 52 52 [2863752]: mask 0x4000000 set
+cpu-bind=MASK - genoa002, task 53 53 [2863753]: mask 0x400000000000000 set
+cpu-bind=MASK - genoa002, task 54 54 [2863754]: mask 0x8000000 set
+cpu-bind=MASK - genoa002, task 55 55 [2863755]: mask 0x800000000000000 set
+cpu-bind=MASK - genoa002, task 56 56 [2863756]: mask 0x10000000 set
+cpu-bind=MASK - genoa002, task 57 57 [2863757]: mask 0x1000000000000000 set
+cpu-bind=MASK - genoa002, task 58 58 [2863758]: mask 0x20000000 set
+cpu-bind=MASK - genoa002, task 59 59 [2863759]: mask 0x2000000000000000 set
+cpu-bind=MASK - genoa002, task 60 60 [2863760]: mask 0x40000000 set
+cpu-bind=MASK - genoa002, task 61 61 [2863761]: mask 0x4000000000000000 set
+cpu-bind=MASK - genoa002, task 62 62 [2863762]: mask 0x80000000 set
+cpu-bind=MASK - genoa002, task 63 63 [2863763]: mask 0x8000000000000000 set
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "51", "cpus": [57], "cores": [[1, 57]], "sockets": [1], "numa": [7], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "11", "cpus": [37], "cores": [[1, 37]], "sockets": [1], "numa": [4], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "3", "cpus": [33], "cores": [[1, 33]], "sockets": [1], "numa": [4], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "5", "cpus": [34], "cores": [[1, 34]], "sockets": [1], "numa": [4], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "53", "cpus": [58], "cores": [[1, 58]], "sockets": [1], "numa": [7], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "63", "cpus": [63], "cores": [[1, 63]], "sockets": [1], "numa": [7], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "1", "cpus": [32], "cores": [[1, 32]], "sockets": [1], "numa": [4], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "7", "cpus": [35], "cores": [[1, 35]], "sockets": [1], "numa": [4], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "57", "cpus": [60], "cores": [[1, 60]], "sockets": [1], "numa": [7], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "59", "cpus": [61], "cores": [[1, 61]], "sockets": [1], "numa": [7], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "61", "cpus": [62], "cores": [[1, 62]], "sockets": [1], "numa": [7], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "43", "cpus": [53], "cores": [[1, 53]], "sockets": [1], "numa": [6], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "47", "cpus": [55], "cores": [[1, 55]], "sockets": [1], "numa": [6], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "25", "cpus": [44], "cores": [[1, 44]], "sockets": [1], "numa": [5], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "41", "cpus": [52], "cores": [[1, 52]], "sockets": [1], "numa": [6], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "2", "cpus": [1], "cores": [[0, 1]], "sockets": [0], "numa": [0], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "55", "cpus": [59], "cores": [[1, 59]], "sockets": [1], "numa": [7], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "49", "cpus": [56], "cores": [[1, 56]], "sockets": [1], "numa": [7], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "29", "cpus": [46], "cores": [[1, 46]], "sockets": [1], "numa": [5], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "31", "cpus": [47], "cores": [[1, 47]], "sockets": [1], "numa": [5], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "27", "cpus": [45], "cores": [[1, 45]], "sockets": [1], "numa": [5], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "16", "cpus": [8], "cores": [[0, 8]], "sockets": [0], "numa": [1], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "18", "cpus": [9], "cores": [[0, 9]], "sockets": [0], "numa": [1], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "13", "cpus": [38], "cores": [[1, 38]], "sockets": [1], "numa": [4], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "9", "cpus": [36], "cores": [[1, 36]], "sockets": [1], "numa": [4], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "15", "cpus": [39], "cores": [[1, 39]], "sockets": [1], "numa": [4], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "45", "cpus": [54], "cores": [[1, 54]], "sockets": [1], "numa": [6], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "4", "cpus": [2], "cores": [[0, 2]], "sockets": [0], "numa": [0], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "6", "cpus": [3], "cores": [[0, 3]], "sockets": [0], "numa": [0], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "0", "cpus": [0], "cores": [[0, 0]], "sockets": [0], "numa": [0], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "20", "cpus": [10], "cores": [[0, 10]], "sockets": [0], "numa": [1], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "22", "cpus": [11], "cores": [[0, 11]], "sockets": [0], "numa": [1], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "10", "cpus": [5], "cores": [[0, 5]], "sockets": [0], "numa": [0], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "12", "cpus": [6], "cores": [[0, 6]], "sockets": [0], "numa": [0], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "14", "cpus": [7], "cores": [[0, 7]], "sockets": [0], "numa": [0], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "8", "cpus": [4], "cores": [[0, 4]], "sockets": [0], "numa": [0], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "26", "cpus": [13], "cores": [[0, 13]], "sockets": [0], "numa": [1], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "28", "cpus": [14], "cores": [[0, 14]], "sockets": [0], "numa": [1], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "24", "cpus": [12], "cores": [[0, 12]], "sockets": [0], "numa": [1], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "34", "cpus": [17], "cores": [[0, 17]], "sockets": [0], "numa": [2], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "36", "cpus": [18], "cores": [[0, 18]], "sockets": [0], "numa": [2], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "42", "cpus": [21], "cores": [[0, 21]], "sockets": [0], "numa": [2], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "44", "cpus": [22], "cores": [[0, 22]], "sockets": [0], "numa": [2], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "46", "cpus": [23], "cores": [[0, 23]], "sockets": [0], "numa": [2], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "17", "cpus": [40], "cores": [[1, 40]], "sockets": [1], "numa": [5], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "19", "cpus": [41], "cores": [[1, 41]], "sockets": [1], "numa": [5], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "21", "cpus": [42], "cores": [[1, 42]], "sockets": [1], "numa": [5], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "23", "cpus": [43], "cores": [[1, 43]], "sockets": [1], "numa": [5], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "33", "cpus": [48], "cores": [[1, 48]], "sockets": [1], "numa": [6], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "35", "cpus": [49], "cores": [[1, 49]], "sockets": [1], "numa": [6], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "39", "cpus": [51], "cores": [[1, 51]], "sockets": [1], "numa": [6], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "30", "cpus": [15], "cores": [[0, 15]], "sockets": [0], "numa": [1], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "32", "cpus": [16], "cores": [[0, 16]], "sockets": [0], "numa": [2], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "37", "cpus": [50], "cores": [[1, 50]], "sockets": [1], "numa": [6], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "40", "cpus": [20], "cores": [[0, 20]], "sockets": [0], "numa": [2], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "50", "cpus": [25], "cores": [[0, 25]], "sockets": [0], "numa": [3], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "54", "cpus": [27], "cores": [[0, 27]], "sockets": [0], "numa": [3], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "48", "cpus": [24], "cores": [[0, 24]], "sockets": [0], "numa": [3], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "38", "cpus": [19], "cores": [[0, 19]], "sockets": [0], "numa": [2], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "52", "cpus": [26], "cores": [[0, 26]], "sockets": [0], "numa": [3], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "56", "cpus": [28], "cores": [[0, 28]], "sockets": [0], "numa": [3], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "58", "cpus": [29], "cores": [[0, 29]], "sockets": [0], "numa": [3], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "60", "cpus": [30], "cores": [[0, 30]], "sockets": [0], "numa": [3], "cpus_per_task": 1}
+{"check": "PASS", "mapping": "core", "host": "genoa002.hpc.rd.areasciencepark.it", "rank": "62", "cpus": [31], "cores": [[0, 31]], "sockets": [0], "numa": [3], "cpus_per_task": 1}
+# final: N=640000 steps=20 ranks=64 threads_per_rank=1 integrator=kdk comm=overlap kernel=direct rsqrt=exact arithmetic_dtype=double accumulators=4 max_relative_energy_drift=8.1344433356917326e-06 tolerance=0.0001 status=OK
+# timing_max_seconds total=565.704653 io=0.087606 drift=0.000507 force=521.707838 comm_wait=1.233052 kick=0.000946 energy=43.932259
+# kernel_rate pair_interactions_per_second=1.648736e+10 gpair_interactions_per_second=16.487363
