@@ -5,9 +5,9 @@ Dariol Emma - SM3800118
 
 
 
-## 1. Strong scaling and force-phase profiling
+## 1. Strong scaling at N=100000
 
-The fixed problem has **N=20000, 20 steps, P=1,2,4,8,16,32,64 and T=1**. It uses KDK, the direct kernel, exact reciprocal square root, four accumulator chains and overlap communication.
+The fixed problem has **N=100000, 100 steps, P=1,2,4,8,16,32 and T=1**. The benchmark uses KDK and the direct force kernel with blocking ring communication (`sendrecv`). These are the native runs of the required comparison campaign, not new measurements.
 
 The solver uses direct all-pairs gravity, KDK leapfrog integration and an MPI ring to exchange source particles. Each rank keeps its home particles. N is the global particle count, P is the number of MPI ranks, and T is the number of OpenMP threads per rank; the core count is P*T.
 
@@ -57,115 +57,105 @@ After the run, `MPI_Reduce(..., MPI_MAX, ...)` selects the largest rank time for
 
 For each configuration, the median is the middle of the sorted run values (or the average of the two middle values). Sample standard deviation is `s = sqrt(sum((x_i-mean(x))^2)/(n-1))`. It describes run-to-run spread, not uncertainty bounds for the median. Phase medians are calculated separately; a ratio of medians is not necessarily the median of per-run ratios.
 
-For K KDK steps, `gpairs = (K+1)*N*(N-1)/(force*1e9)`. The initial force evaluation explains the K+1 factor. The table reports the median of the five per-run rates. `force` includes ring communication and buffer handling. `io` covers reading and optional writing, `kick` and `drift` cover velocity and position updates, and `energy` covers the energy checks. Numerical energy drift is a separate quantity from the `drift` timer.
+Each point retains all five successful native runs in `required_table/required_container_scaling.csv`. No timing outliers are removed. The benchmark varies the Plummer seed between repetitions and uses the same five seeds at each P. The reported spread therefore includes both run-to-run variation and differences between these inputs. This campaign has no separate warm-up loop in the benchmark driver.
 
-Each point uses all five successful runs from `scaling_64.csv`. No timing outliers are removed. The earlier MAD filter flagged two runs at P=1. These samples are now retained because a timing deviation alone does not prove a failed run. For example, the strong P=1 standard deviation rises from 0.003016 s to 0.069692 s. The raw CSV does not record a warm-up count; no count is assumed here.
+All 30 native strong-scaling runs have status OK. The largest recorded relative energy drift is **6.7152e-6**, below the 1e-4 tolerance. This value covers the sampled energy checks, not every instant of the trajectory.
 
-Speedup is `T(1)/T(P)` and efficiency is `speedup/P`. The updated summary is `scaling_64_all_runs_summary.csv`.
+Speedup is `S(P)=T(1)/T(P)` and efficiency is `E(P)=S(P)/P`, using median total time. The summary is `required_table/required_native_strong_summary.csv`.
 
-| ranks | median time (s) | stdev (s) | speedup | efficiency | median comm wait (s) | median Gpairs/s |
-|---|---|---|---|---|---|---|
-| 1 | 31.191439 | 0.069692 | 1.00 | 100.0% | 0.000000 | 0.289 |
-| 2 | 16.038907 | 0.006556 | 1.94 | 97.2% | 0.086697 | 0.579 |
-| 4 | 8.136352 | 0.004001 | 3.83 | 95.8% | 0.039723 | 1.158 |
-| 8 | 4.116069 | 0.001794 | 7.58 | 94.7% | 0.023563 | 2.306 |
-| 16 | 2.101684 | 0.011390 | 14.84 | 92.8% | 0.014187 | 4.560 |
-| 32 | 1.084200 | 0.002154 | 28.77 | 89.9% | 0.007983 | 8.898 |
-| 64 | 0.600278 | 0.007607 | 51.96 | 81.2% | 0.024547 | 16.845 |
+| MPI ranks P | N/P | Native median total (s) | Sample s (s) | Speedup | Efficiency |
+|---|---:|---:|---:|---:|---:|
+| 1 | 100000 | 5602.089946 | 2.385251 | 1.00 | 100.00% |
+| 2 | 50000 | 3196.789666 | 2.173859 | 1.75 | 87.62% |
+| 4 | 25000 | 1694.323952 | 1.368110 | 3.31 | 82.66% |
+| 8 | 12500 | 871.846346 | 0.129579 | 6.43 | 80.32% |
+| 16 | 6250 | 448.971312 | 7.104450 | 12.48 | 77.99% |
+| 32 | 3125 | 222.973794 | 0.433408 | 25.12 | 78.51% |
 
-![MPI strong-scaling runtime](results_final/scaling_64_all_runs_strong_runtime.svg)
+![Native strong-scaling runtime at N=100000](results_final/required_table/required_native_strong_runtime.svg)
 
-_Runtime falls from 31.19 s to 0.60 s. The dashed line is ideal T(1)/P._
+_Runtime falls from 5602.09 s at P=1 to 222.97 s at P=32. The dashed line is ideal T(1)/P._
 
-![MPI strong-scaling speedup](results_final/scaling_64_all_runs_strong_speedup.svg)
+![Native strong-scaling speedup at N=100000](results_final/required_table/required_native_strong_speedup.svg)
 
-_The dashed line is ideal speedup P. The measured speedup reaches 51.96 at 64 ranks._
+_Speedup reaches 25.12 at P=32, compared with the ideal value of 32._
 
-![MPI strong-scaling efficiency](results_final/scaling_64_all_runs_strong_efficiency.svg)
+![Native strong-scaling efficiency at N=100000](results_final/required_table/required_native_strong_efficiency.svg)
 
-_Efficiency remains close to ideal at moderate rank counts and falls to 81.2% at 64 ranks._
+_Efficiency is 87.62% at P=2 and 78.51% at P=32. The small increase from P=16 to P=32 means it does not fall monotonically._
 
-The x-axis counts ranks/cores within one node. At 64 ranks, ideal runtime is `31.191439/64 = 0.487366 s`, compared with 0.600278 s measured. Amdahl's model gives an effective serial/overhead fraction:
-
-```text
-f_eff = (1/S_64 - 1/64) / (1 - 1/64) about 0.0037
-```
-
-This includes communication, synchronisation and other scaling costs; it is not a measurement of serial code alone. The force phase remains dominant. Exposed communication wait is 0.024547 s, about 4.1% of total time.
-
-Force throughput grows from 0.289 to 16.845 Gpairs/s. With a rough count of 20 operations per pair, the last value is about 336.9 GFLOP/s. Gpairs/s is the primary metric because counting sqrt, division and FMA as FLOPs requires a convention.
-
-At fixed resources, increasing N tenfold gives about 100 times as many pairs: `(10N)*(10N-1)/(N*(N-1))`. Similar time per pair would therefore give about 100 times the force time. The available experiments do not test this ratio under matching resources and step counts. Faster kernels reduce the constant cost but keep the O(N^2) growth.
-
-For the P=64 point, the instrumented phases are:
+At P=32, ideal time is `5602.089946/32 = 175.065311 s`; the measured median is 222.973794 s. An Amdahl-style effective serial/overhead fraction is:
 
 ```text
-total, io, drift, force, comm_wait, kick, energy
+f_eff = (1/S_32 - 1/32) / (1 - 1/32) = 0.00883
 ```
 
-In the main scaling summaries, the force time is the largest section. At 64 ranks, the strong-scaling median total time is `0.600278 s`, with median force time `0.498629 s` and communication wait `0.024547 s`. Force evaluation is the main timed phase in this single-node test. These timings alone do not separate arithmetic limits from memory limits inside that phase.
+This combines serial work, communication and other scaling costs. It is not a direct measurement of the serial code fraction. The x-axis counts ranks/cores within one node, and this campaign has no P=64 point.
 
-This matches the expected arithmetic intensity of a direct O(N^2) N-body kernel.
+The available CSV records total time and energy drift, but not separate force or exposed-wait times. It therefore cannot supply Gpairs/s or a measured communication fraction. The old N=20000 phase timings are not used to explain these N=100000 results. The hybrid experiment later provides separate phase timings for its own N=100000, 20-step workload.
 
-Separate phase timers show where time is spent. They help distinguish force evaluation, communication, I/O and energy diagnostics. Hardware counters or bandwidth measurements are needed to explain the limiting resource within the force kernel.
+Two limits matter as P increases. First, each target and ring-source block shrinks to about N/P particles. Very short source loops leave fewer full SIMD groups and make setup, reductions and tail processing more costly relative to useful work. Too few target particles also leave less work for threads. SIMD width and accumulator count are different quantities, so there is no single universal N/P threshold. At P=32, each block still contains **3125 particles**. These timing data do not show a SIMD-utilisation collapse; vector counters or tests with much smaller blocks would be needed to locate it.
 
-For the final 64-rank strong-scaling point:
+Second, blocking ring communication requires P-1 exchanges per force evaluation. A simple per-rank model is:
 
 ```text
-total median       = 0.600278 s
-force median       = 0.498629 s
-comm_wait median   = 0.024547 s
-force/total        ~= 83.1%
-comm_wait/total    ~= 4.1%
+T_compute ~ c*N^2/P
+T_comm    ~ (P-1)*alpha + b*N*(1-1/P)/B
 ```
 
-The remaining time includes integration, energy diagnostics and other runtime work. These results describe single-node scaling; the network limit would need a multi-node solver experiment.
+Here alpha is latency per exchange, b is bytes per source particle and B is effective bandwidth. At fixed N, the bandwidth term approaches a constant while the latency term grows with P. Computation falls with P, so communication can eventually set a scaling floor. A latency crossover would roughly satisfy `c*N^2/P ~ alpha*P`. Neither c nor alpha is measured independently here.
+
+The P=1 to P=32 results show sublinear speedup, but total times alone do not establish that ring latency dominates. The test also cannot locate a multi-node network limit. Unlike the earlier overlap campaign, these runs use `sendrecv`; the separate communication experiment discusses overlap.
+
+At fixed resources and similar time per pair, increasing N tenfold would give about 100 times the force work: `(10N)*(10N-1)/(N*(N-1))`. This is the O(N^2) model, not a matched experimental verification of that factor.
 
 ## 2. Weak scaling
 
-This test uses **2000 particles per rank, 20 steps, T=1 and P=1,2,4,8,16,32,64**. Global N grows from 2000 to 128000. Every point retains all five successful runs, using the native build, binding and timing method of Experiment 1, with dt=1e-4 and epsilon=0.05. The earlier MAD filter flagged two samples at P=4 and one at P=8,16,64; all are retained because the runs passed the numerical checks.
+The required native experiment fixes **N/P=10000 particles per MPI rank**, with **P=1,2,4,8,16, T=1 and 100 integration steps**. Global N is 10000, 20000, 40000, 80000 and 160000. Each point contains five successful independent executions on one GENOA node. These are the native measurements from the required native/Singularity comparison in Experiment 11, not an additional campaign. All five samples are retained; the table reports median and sample standard deviation.
 
-Keeping N/P fixed does not keep work per rank fixed. Each local particle interacts with all N particles, so work per rank is about `(N/P)*N`. With N proportional to P, ideal runtime grows as O(P).
+Times are internal solver totals measured using `MPI_Wtime()`, reduced across ranks with `MPI_MAX`. They include input, force evaluation, integration and energy diagnostics, but exclude MPI initialisation and process/container launch. The available summary reports total time; it does not provide force or exposed-wait measurements for this campaign.
 
-| ranks | total N | median time (s) | stdev (s) | median comm wait (s) | median Gpairs/s |
-|---|---|---|---|---|---|
-| 1 | 2000 | 0.321935 | 0.003562 | 0.000000 | 0.284 |
-| 2 | 4000 | 0.657047 | 0.005018 | 0.006889 | 0.573 |
-| 4 | 8000 | 1.321200 | 0.003362 | 0.011446 | 1.150 |
-| 8 | 16000 | 2.643163 | 0.002888 | 0.015853 | 2.301 |
-| 16 | 32000 | 5.304320 | 0.035023 | 0.022958 | 4.604 |
-| 32 | 64000 | 10.912477 | 0.005657 | 0.038610 | 8.958 |
-| 64 | 128000 | 22.183823 | 0.057243 | 0.118783 | 17.646 |
+| MPI ranks P | Global N | Native median total (s) | Sample s (s) | T(P)/(P*T(1)) | Model-based speedup | Work-normalized efficiency |
+|---|---:|---:|---:|---:|---:|---:|
+| 1 | 10000 | 56.787664 | 0.153334 | 1.000 | 1.00 | 100.00% |
+| 2 | 20000 | 129.411167 | 0.426024 | 1.139 | 1.76 | 87.77% |
+| 4 | 40000 | 273.585721 | 1.137005 | 1.204 | 3.32 | 83.03% |
+| 8 | 80000 | 565.052400 | 4.282051 | 1.244 | 6.43 | 80.41% |
+| 16 | 160000 | 1151.460268 | 3.968119 | 1.267 | 12.63 | 78.92% |
 
-![MPI weak-scaling absolute time](results_final/scaling_64_all_runs_weak_time.svg)
+![Required native weak runtime](results_final/required_table/required_native_weak_time.svg)
 
-_The dashed line is P*T(1), the expected growth for this direct all-pairs workload._
+_The dashed reference is P*T(1), with T(1)=56.787664 s. At P=16, the ideal reference is 908.602624 s and measured time is 1151.460268 s, 26.73% higher._
 
-![MPI weak-scaling normalized time](results_final/scaling_64_all_runs_weak_normalized_time.svg)
+![Required native weak normalized time](results_final/required_table/required_native_weak_normalized_time.svg)
 
-_Normalized time is T(P)/(P*T(1)). A value of 1 follows the ideal trend. At 64 ranks it is 1.077, about 7.7% above ideal._
+_Particles per rank remain constant; time per rank need not remain constant for direct all-pairs gravity._
 
-### Speedup and efficiency for the growing problem
+Let n=N/P=10000. Each rank computes approximately n*N=n^2*P directed interactions per force evaluation. Total work across the job grows as N^2=n^2*P^2, while work per rank grows as P. In a full ring, each rank sends and receives approximately n*(P-1) source records per evaluation, in P-1 exchanges. Thus communication volume **per rank** grows linearly in P; volume summed over all ranks grows as P*(P-1). These two accounting levels must not be mixed.
 
-Let `T_P` be the measured time for `N_P=2000P` and `T_1` the one-core time for `N_1=2000`. We account for the growing pair count with:
+A simple per-rank model is `T_compute ~ c*n^2*P` and `T_comm ~ (P-1)*(alpha + b*n/B)`, where alpha is message latency, b the bytes per source record and B effective bandwidth. The ratio approaches a constant for fixed n and constant c, alpha and B. This is an asymptotic model; at P=1 there is no ring exchange. It predicts approximately linear runtime growth, not flat runtime.
+
+For the growing problem, the plotted speedup and efficiency are:
 
 ```text
-R_W(P) = N_P*(N_P-1) / (N_1*(N_1-1)) about P^2
-S_W(P) = R_W(P)*T_1/T_P
+R_W(P) = N_P*(N_P-1)/(N_1*(N_1-1))
+S_W(P) = R_W(P)*T(1)/T(P)
 E_W(P) = S_W(P)/P
 ```
 
-The larger-problem serial time `R_W*T_1` is estimated, not measured. It assumes constant serial time per pair and that quadratic work dominates. Cache effects and other phases can change this estimate. Ideal speedup is P and ideal efficiency is 1. For large N, efficiency is about the reciprocal of normalized weak time.
+Here N_1=10000. The serial runtime of each larger problem is estimated as R_W*T(1), not measured. This assumes constant serial cost per pair and dominant quadratic work. The resulting speedup and efficiency are work-normalized model comparisons, not measured fixed-N strong speedups.
 
-![Work-normalized weak-scaling speedup](results_final/scaling_64_all_runs_weak_speedup.svg)
+![Required native weak model-based speedup](results_final/required_table/required_native_weak_speedup.svg)
 
-_The model-based speedup reaches 59.47 at 64 ranks._
+![Required native weak work-normalized efficiency](results_final/required_table/required_native_weak_efficiency.svg)
 
-![Work-normalized weak-scaling efficiency](results_final/scaling_64_all_runs_weak_efficiency.svg)
+_At P=16, model-based speedup is 12.63 and work-normalized efficiency is 78.92%. Conventional flat-time efficiency T(1)/T(P) is not the appropriate ideal for this growing all-pairs workload._
 
-_The corresponding efficiency is 92.92%. Both plots use all five runs at every point._
+The deviation from the linear reference can reflect changing cache behaviour, CPU frequency, NUMA placement, shared-memory contention, MPI progress, synchronisation and operating-system jitter. Ring dependencies allow a delayed rank to delay others. In a multi-node run, finite network injection bandwidth per node and fabric contention can reduce B as more ranks share a network interface; fixed effective bandwidth is then no longer a valid assumption. Neither network injection nor jitter must inevitably dominate: the limiting term depends on placement, n, hardware and runtime behaviour.
 
-This follows Gustafson's idea of using more resources for a larger problem, but is not a fixed-time experiment: the system and runtime both grow. Conventional flat-time weak efficiency, T(1)/T(P), would be about 1.45%; its constant-work-per-rank assumption does not hold here. These plots use the formulas above, not the legacy weak `speedup` CSV field.
+Non-uniform Plummer positions do not by themselves cause unequal pair counts in this direct kernel. Each target visits every source without a distance cutoff or adaptive interaction list, and these N values divide evenly among ranks. Spatial density would be a stronger load-balancing issue for a tree, neighbour-list or adaptive method. Unequal CPU service, memory placement or progress can still produce imbalance here.
+
+These single-node total timings establish a departure from the ideal model, but cannot identify which resource ultimately limits a multi-node run. Phase timers, affinity and hardware/network counters would be needed to distinguish the proposed causes. No network-saturation threshold is claimed from these measurements.
 
 ## 3. MPI/OpenMP mapping at fixed core count
 
@@ -404,11 +394,28 @@ A quantitative conclusion about MPI overlap requires a matched sendrecv/overlap 
 
 In a multi-rank run, `comm_wait` measures blocking exchange time or time in `MPI_Waitall`; overlap can hide part of a transfer before the wait starts. The communication-bandwidth proxy divides estimated ring bytes by exposed wait time, so it is not a direct measure of network or DRAM bandwidth. The current P=1 result has no transfer from which to estimate bandwidth.
 
+The availability checks performed on Orfeo's login02 returned:
+
+```text
+command -v perf
+perf --version
+perf stat -e cycles,instructions,cache-misses -- sleep 1
+# perf was not found; no counters were collected.
+
+module avail papi 2>&1
+# No module(s) or extension(s) found!
+command -v papi_avail
+command -v papi_native_avail
+# Neither command returned a path.
+```
+
+This documents that perf was absent from PATH and no PAPI module or utility was found in the inspected login environment. It does not prove that counters are disabled or that these tools are unavailable on every compute node. Consequently, this report contains no measured IPC, cache-miss or branch-miss counts. Internal solver timers and Gpairs/s support the performance discussion but do not replace the assignment's requested perf/PAPI layout-counter evidence.
+
 ## 10. Native compilation targets
 
-This native HPC experiment changes only the compiler target: `-march=native` versus `-march=x86-64-v3`. Other build flags are those of Experiment 1. It uses dt=1e-4, epsilon=0.05 and the same core binding. The v3 target allows AVX2 and FMA, but does not enable AVX-512.
+This native HPC experiment compares two build targets: `-march=native` and `-march=x86-64-v3`. Other build flags are those of Experiment 1. It uses dt=1e-4, epsilon=0.05 and the same core binding. The v3 target allows AVX2 and FMA, but does not enable AVX-512. Changing the target can affect instruction selection, scheduling and vector width together; it does not isolate SIMD width.
 
-AVX2 holds four doubles per vector, while AVX-512 holds eight. On a CPU with equal instruction rates and frequency, doubling the width could double FMA throughput. GENOA uses Zen 4 with internal 256-bit datapaths, so AVX-512 does not automatically double its FMA throughput. The reference FP64 ceiling is about 16 FLOP/cycle/core. Actual performance also depends on instructions, register use and compiler output.
+AVX2 holds four doubles per vector and AVX-512 holds eight. This width difference alone does not predict application speedup. The compiler must generate those vector instructions, and their execution cost and the kernel's limiting operations also matter. A hardware throughput model cannot replace measurements of the generated force kernel.
 
 The architecture-target experiment uses N=10000, five integration steps, P=8 MPI ranks and T=1 thread per rank, with five executions per compilation target. Times are internal solver totals measured with `MPI_Wtime()` from input through optional output, excluding launch and MPI initialisation and reduced with `MPI_MAX` across ranks.
 
@@ -417,9 +424,18 @@ The architecture-target experiment uses N=10000, five integration steps, P=8 MPI
 | native | 10000 | 5 | 8 | 1 | 5 | 0.385524 | 0.002109 |
 | x86-64-v3 | 10000 | 5 | 8 | 1 | 5 | 0.384304 | 0.006533 |
 
-The portable target changes median runtime by **-0.316%**. The 0.001220 s difference is smaller than the sample standard deviations, so this test shows no clear penalty. It uses the exact square-root path. Both binaries run natively on the same host.
+The portable target changes median runtime by **-0.316%**. The 0.001220 s difference is smaller than the sample standard deviations. The supported conclusion is narrow: this short, exact-math workload shows no clear difference in total runtime. It does not establish equal force throughput or a negligible AVX-512 benefit. The saved CSV contains total time, not force time or vector-instruction counts.
 
-Without AVX-512, the approximate path uses a portable sqrtf-based seed instead of `_mm512_rsqrt14_pd`. This changes the algorithm as well as the vector width. The separate exact/approximate test must therefore not be treated as a direct measurement of the v3 target penalty.
+The benchmark explicitly selects `--rsqrt exact`. In the source, both targets therefore enter `accumulate_sources_scalar_chains()`; the explicit `_mm512_rsqrt14_pd` routine is selected only for approximate modes. Its absence from the portable binary does **not** explain this exact-mode timing result, because this test does not execute that routine in either build. The vector instructions generated inside the shared routine have not been established by this timing experiment.
+
+For approximate modes, changing the target also changes the implementation: the native AVX-512 path uses `_mm512_rsqrt14_pd`, while the portable path uses a sqrtf-based seed and refinement. That comparison would measure the combined effects of instructions, algorithm and vectorisation. It could quantify the practical portability cost of approximate mode, but not the effect of SIMD width alone.
+
+To complete this experiment, two separate measurements are needed:
+
+1. **Build-target cost:** repeat native/v3 tests for exact, approx1 and approx2, with matching input, compiler, libraries, binding and numerical parameters. Record force time and Gpairs/s as well as total time. Use a warm-up and at least five measured runs per point. Report the approximate-mode gap as a full implementation-path difference.
+2. **SIMD-width effect:** compare explicit AVX2 and AVX-512 force kernels using the same double-precision sqrt/division algorithm, FMA policy, layout and accumulator strategy. Run them on the same core with data already loaded, and verify the intended instructions in disassembly. Measure force-only time, pair throughput and force error against the same reference. A compiler vector-width preference alone is not proof that these conditions hold.
+
+The current data do not provide either the approximate-mode target comparison or the controlled SIMD-width comparison. They therefore do not quantify the throughput gap expected in the assignment. A gap must be measured rather than assumed; the result on Orfeo also cannot establish the penalty on LEONARDO.
 
 ## 11. Native and Singularity solver comparison
 
