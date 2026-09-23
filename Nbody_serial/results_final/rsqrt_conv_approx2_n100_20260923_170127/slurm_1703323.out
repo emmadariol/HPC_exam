@@ -1,0 +1,8 @@
+wrote /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/rsqrt_conv_approx2_n100_20260923_170127/scaling.csv
+wrote /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/rsqrt_conv_approx2_n100_20260923_170127/scaling_summary.csv
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/rsqrt_conv_approx2_n100_20260923_170127/scaling_strong_runtime.svg: only one x value
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/rsqrt_conv_approx2_n100_20260923_170127/scaling_strong_speedup.svg: only one x value
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/rsqrt_conv_approx2_n100_20260923_170127/scaling_strong_efficiency.svg: only one x value
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/rsqrt_conv_approx2_n100_20260923_170127/scaling_strong_comm_bandwidth.svg: only one x value
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/rsqrt_conv_approx2_n100_20260923_170127/scaling_weak_time.svg: only one x value
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/rsqrt_conv_approx2_n100_20260923_170127/scaling_weak_normalized_time.svg: only one x value

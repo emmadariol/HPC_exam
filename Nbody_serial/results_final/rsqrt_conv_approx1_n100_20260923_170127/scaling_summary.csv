@@ -1,0 +1,2 @@
+kind,N,nsteps,ranks,threads,resources,integrator,comm,kernel,rsqrt,accumulators,dtype,runs,failed_runs,used_runs,outliers,total_mad,total_median,total_stdev,force_median,comm_wait_median,comm_bandwidth_GBps,gpairs_median,speedup,efficiency,weak_normalized_time,all_ok
+strong,10000,100,1,8,8,kdk,sendrecv,direct,approx1,4,double,3,0,3,0,0.0015099999999996783,4.560137,0.005542267135387626,0.583983,0.0,0.0,17.293293,1.0,1.0,,True

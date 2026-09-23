@@ -1,0 +1,4 @@
+kind,N,nsteps,ranks,threads,repeat,integrator,comm,kernel,rsqrt,accumulators,dtype,total,io,drift,force,comm_wait,kick,energy,gpairs,status,max_rel_drift
+strong,10000,200,1,8,1,kdk,sendrecv,direct,exact,4,double,18.056262,0.008445,0.004633,9.825407,0.000000,0.008237,8.209417,2.045512,OK,5.7558953854238843e-08
+strong,10000,200,1,8,2,kdk,sendrecv,direct,exact,4,double,18.041857,0.003390,0.004784,9.826365,0.000000,0.008169,8.199016,2.045313,OK,6.299122439709748e-08
+strong,10000,200,1,8,3,kdk,sendrecv,direct,exact,4,double,18.035478,0.005850,0.004767,9.821004,0.000000,0.008251,8.195485,2.046429,OK,5.0862468861712795e-08

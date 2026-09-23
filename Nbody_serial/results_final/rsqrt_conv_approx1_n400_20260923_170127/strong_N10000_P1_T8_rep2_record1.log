@@ -1,0 +1,5 @@
+srun: Job step's --cpus-per-task value exceeds that of job (8 > 1). Job step may never run.
+cpu-bind=MASK - genoa006, task  0  0 [1552554]: mask 0xff000000000 set
+# final: N=10000 steps=400 ranks=1 threads_per_rank=8 integrator=kdk comm=sendrecv kernel=direct rsqrt=approx1 arithmetic_dtype=double accumulators=4 max_relative_energy_drift=1.5728222210111524e-08 tolerance=0.0001 status=OK
+# timing_max_seconds total=18.035309 io=0.004751 drift=0.009720 force=2.299557 comm_wait=0.000000 kick=0.011991 energy=15.709032
+# kernel_rate pair_interactions_per_second=1.743640e+10 gpair_interactions_per_second=17.436399
