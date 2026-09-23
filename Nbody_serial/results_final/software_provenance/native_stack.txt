@@ -1,0 +1,32 @@
+2026-09-23T07:53:10+02:00
+login02.hpc.rd.areasciencepark.it
+
+Currently Loaded Modules:
+  1) hwloc/2.12.0   2) openMPI/4.1.6   3) singularity/4.3.1
+
+ 
+
+gcc (GCC) 14.3.1 20251022 (Red Hat 14.3.1-4)
+Copyright (C) 2024 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+mpicc: Open MPI 4.1.6rc4 (Language: C)
+gcc
+-I/opt/programs/openMPI/4.1.6/include
+-L/opt/programs/openMPI/4.1.6/lib -L/opt/programs/hwloc/2.12.0/lib -Wl,-rpath -Wl,/opt/programs/openMPI/4.1.6/lib -Wl,-rpath -Wl,/opt/programs/hwloc/2.12.0/lib -Wl,--enable-new-dtags -lmpi
+singularity-ce version 4.3.1
+	linux-vdso.so.1 (0x00007f34abb36000)
+	libm.so.6 => /lib64/libm.so.6 (0x00007f34aba39000)
+	libmpi.so.40 => /opt/programs/openMPI/4.1.6/lib/libmpi.so.40 (0x00007f34ab8ed000)
+	libgomp.so.1 => /lib64/libgomp.so.1 (0x00007f34ab897000)
+	libc.so.6 => /lib64/libc.so.6 (0x00007f34ab6a4000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007f34abb38000)
+	libopen-rte.so.40 => /opt/programs/openMPI/4.1.6/lib/libopen-rte.so.40 (0x00007f34ab5e6000)
+	libopen-pal.so.40 => /opt/programs/openMPI/4.1.6/lib/libopen-pal.so.40 (0x00007f34ab52e000)
+	libz.so.1 => /lib64/libz.so.1 (0x00007f34ab50a000)
+	libhwloc.so.15 => /opt/programs/hwloc/2.12.0/lib/libhwloc.so.15 (0x00007f34ab4aa000)
+	libevent_core-2.1.so.7 => /lib64/libevent_core-2.1.so.7 (0x00007f34ab472000)
+	libevent_pthreads-2.1.so.7 => /lib64/libevent_pthreads-2.1.so.7 (0x00007f34ab46b000)
+/usr/lib64/libgomp.so.1.0.0
+libgomp-14.3.1-4.fc41.x86_64
