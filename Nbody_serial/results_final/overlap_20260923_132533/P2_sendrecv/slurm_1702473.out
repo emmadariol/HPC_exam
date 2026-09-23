@@ -1,0 +1,8 @@
+wrote /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/overlap_20260923_132533/P2_sendrecv/scaling.csv
+wrote /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/overlap_20260923_132533/P2_sendrecv/scaling_summary.csv
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/overlap_20260923_132533/P2_sendrecv/scaling_strong_runtime.svg: only one x value
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/overlap_20260923_132533/P2_sendrecv/scaling_strong_speedup.svg: only one x value
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/overlap_20260923_132533/P2_sendrecv/scaling_strong_efficiency.svg: only one x value
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/overlap_20260923_132533/P2_sendrecv/scaling_strong_comm_bandwidth.svg: only one x value
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/overlap_20260923_132533/P2_sendrecv/scaling_weak_time.svg: only one x value
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/overlap_20260923_132533/P2_sendrecv/scaling_weak_normalized_time.svg: only one x value

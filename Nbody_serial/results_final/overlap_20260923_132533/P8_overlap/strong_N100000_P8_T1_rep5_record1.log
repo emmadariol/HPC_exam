@@ -1,0 +1,11 @@
+cpu-bind=MASK - genoa003, task  0  0 [3021350]: mask 0x1 set
+cpu-bind=MASK - genoa003, task  1  1 [3021351]: mask 0x40000000000000 set
+cpu-bind=MASK - genoa003, task  2  2 [3021352]: mask 0x2 set
+cpu-bind=MASK - genoa003, task  3  3 [3021353]: mask 0x80000000000000 set
+cpu-bind=MASK - genoa003, task  4  4 [3021354]: mask 0x4 set
+cpu-bind=MASK - genoa003, task  5  5 [3021355]: mask 0x100000000000000 set
+cpu-bind=MASK - genoa003, task  6  6 [3021356]: mask 0x8 set
+cpu-bind=MASK - genoa003, task  7  7 [3021357]: mask 0x200000000000000 set
+# final: N=100000 steps=20 ranks=8 threads_per_rank=1 integrator=kdk comm=overlap kernel=direct rsqrt=exact arithmetic_dtype=double accumulators=4 max_relative_energy_drift=3.4105920373308354e-07 tolerance=0.0001 status=OK
+# timing_max_seconds total=105.782381 io=0.047741 drift=0.000498 force=97.917168 comm_wait=0.164708 kick=0.001021 energy=7.817806
+# kernel_rate pair_interactions_per_second=2.144648e+09 gpair_interactions_per_second=2.144648

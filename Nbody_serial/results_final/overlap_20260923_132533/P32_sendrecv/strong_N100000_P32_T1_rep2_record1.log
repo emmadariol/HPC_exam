@@ -1,0 +1,35 @@
+cpu-bind=MASK - genoa004, task  0  0 [2627195]: mask 0x1000 set
+cpu-bind=MASK - genoa004, task  1  1 [2627196]: mask 0x1000000000000 set
+cpu-bind=MASK - genoa004, task  2  2 [2627197]: mask 0x2000 set
+cpu-bind=MASK - genoa004, task  3  3 [2627198]: mask 0x2000000000000 set
+cpu-bind=MASK - genoa004, task  4  4 [2627199]: mask 0x4000 set
+cpu-bind=MASK - genoa004, task  5  5 [2627200]: mask 0x4000000000000 set
+cpu-bind=MASK - genoa004, task  6  6 [2627201]: mask 0x8000 set
+cpu-bind=MASK - genoa004, task  7  7 [2627202]: mask 0x8000000000000 set
+cpu-bind=MASK - genoa004, task  8  8 [2627203]: mask 0x10000 set
+cpu-bind=MASK - genoa004, task  9  9 [2627204]: mask 0x10000000000000 set
+cpu-bind=MASK - genoa004, task 10 10 [2627205]: mask 0x20000 set
+cpu-bind=MASK - genoa004, task 11 11 [2627206]: mask 0x20000000000000 set
+cpu-bind=MASK - genoa004, task 12 12 [2627207]: mask 0x40000 set
+cpu-bind=MASK - genoa004, task 13 13 [2627208]: mask 0x40000000000000 set
+cpu-bind=MASK - genoa004, task 14 14 [2627209]: mask 0x80000 set
+cpu-bind=MASK - genoa004, task 15 15 [2627210]: mask 0x80000000000000 set
+cpu-bind=MASK - genoa004, task 16 16 [2627211]: mask 0x100000 set
+cpu-bind=MASK - genoa004, task 17 17 [2627212]: mask 0x100000000000000 set
+cpu-bind=MASK - genoa004, task 18 18 [2627213]: mask 0x200000 set
+cpu-bind=MASK - genoa004, task 19 19 [2627214]: mask 0x200000000000000 set
+cpu-bind=MASK - genoa004, task 20 20 [2627215]: mask 0x400000 set
+cpu-bind=MASK - genoa004, task 21 21 [2627216]: mask 0x400000000000000 set
+cpu-bind=MASK - genoa004, task 22 22 [2627217]: mask 0x800000 set
+cpu-bind=MASK - genoa004, task 23 23 [2627218]: mask 0x800000000000000 set
+cpu-bind=MASK - genoa004, task 24 24 [2627219]: mask 0x1000000 set
+cpu-bind=MASK - genoa004, task 25 25 [2627220]: mask 0x1000000000000000 set
+cpu-bind=MASK - genoa004, task 26 26 [2627221]: mask 0x2000000 set
+cpu-bind=MASK - genoa004, task 27 27 [2627222]: mask 0x2000000000000000 set
+cpu-bind=MASK - genoa004, task 28 28 [2627223]: mask 0x4000000 set
+cpu-bind=MASK - genoa004, task 29 29 [2627224]: mask 0x4000000000000000 set
+cpu-bind=MASK - genoa004, task 30 30 [2627225]: mask 0x8000000 set
+cpu-bind=MASK - genoa004, task 31 31 [2627226]: mask 0x8000000000000000 set
+# final: N=100000 steps=20 ranks=32 threads_per_rank=1 integrator=kdk comm=sendrecv kernel=direct rsqrt=exact arithmetic_dtype=double accumulators=4 max_relative_energy_drift=4.9355452992872889e-07 tolerance=0.0001 status=OK
+# timing_max_seconds total=28.154642 io=0.333555 drift=0.000097 force=25.651736 comm_wait=0.510733 kick=0.000278 energy=2.169414
+# kernel_rate pair_interactions_per_second=8.186499e+09 gpair_interactions_per_second=8.186499
