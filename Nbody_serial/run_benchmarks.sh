@@ -626,13 +626,13 @@ bench_arch() {
     ./generate_ic --model "$model" --n "$n" --seed "${SEED:-5151}" --output "$input" >/dev/null
     for rep in $(seq 1 "$warmups"); do
       run_hybrid_solver native "" "" "$ranks" "$threads" "$input" \
-        --comm overlap --kernel direct --rsqrt exact --accumulators 4 >/dev/null 2>&1 || true
+        --comm overlap --kernel direct --rsqrt "${RSQRT:-exact}" --accumulators 4 >/dev/null 2>&1 || true
     done
     for rep in $(seq 1 "$repeats"); do
       local log rc prefix
       set +e
       log="$(run_hybrid_solver native "" "" "$ranks" "$threads" "$input" \
-        --comm overlap --kernel direct --rsqrt exact --accumulators 4 2>&1)"
+        --comm overlap --kernel direct --rsqrt "${RSQRT:-exact}" --accumulators 4 2>&1)"
       rc=$?
       set -e
       prefix="$target,$n,$nsteps,$ranks,$threads,$rep"
