@@ -1,3 +1,0 @@
-layout,N,threads,rsqrt,runs,force_median,force_stdev,gpairs_median,checksum_median,soa_vs_aos_speedup,checksum_abs_diff_vs_aos,checksum_rel_diff_vs_aos
-aos,10000,8,exact,5,0.129557233,0.00011483386514526195,2.31534737,4.656612873077393e-10,,,
-soa,10000,8,exact,5,0.141305397,6.46791970667589e-05,2.12284885,4.656612873077393e-10,0.9168597643867771,0.0,0.0

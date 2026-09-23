@@ -707,6 +707,8 @@ def plot_xy(
         max_y = max(max_y, float(max_x))
     if ideal == "efficiency":
         max_y = max(max_y, 1.0)
+    if ideal == "weak_runtime":
+        max_y = max(max_y, ys_vals[0] * max_x / xs_vals[0])
 
     def xs(x: float) -> float:
         return left + pw * (x - min_x) / max(1.0, max_x - min_x)
@@ -727,20 +729,38 @@ def plot_xy(
     if ideal == "efficiency":
         parts.append(f'<line x1="{left}" y1="{ys(1.0):.1f}" x2="{width-right}" y2="{ys(1.0):.1f}" stroke="#555" stroke-width="2" stroke-dasharray="6,4"/>')
         parts.append(f'<text x="{left+10}" y="{top+20}" font-family="sans-serif" font-size="13" fill="#555">ideal</text>')
-    if ideal == "runtime":
+    if ideal in ("runtime", "weak_runtime"):
         base_runtime = ys_vals[0]
         base_resources = xs_vals[0]
         ipoints = " ".join(
-            f"{xs(x):.1f},{ys(base_runtime * base_resources / x):.1f}"
+            f"{xs(x):.1f},{ys(base_runtime * (base_resources / x if ideal == 'runtime' else x / base_resources)):.1f}"
             for x in xs_vals
         )
         parts.append(f'<polyline points="{ipoints}" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="6,4"/>')
-        parts.append(f'<text x="{left+10}" y="{top+20}" font-family="sans-serif" font-size="13" fill="#555">ideal T(1)/P</text>')
+        label = "ideal T(1)/P" if ideal == "runtime" else "ideal P*T(1)"
+        parts.append(f'<text x="{left+10}" y="{top+20}" font-family="sans-serif" font-size="13" fill="#555">{label}</text>')
     points = " ".join(f"{xs(int(r[x_field])):.1f},{ys(float(r[y_field])):.1f}" for r in rows)
     parts.append(f'<polyline points="{points}" fill="none" stroke="#1f77b4" stroke-width="2"/>')
     for r in rows:
         parts.append(f'<circle cx="{xs(int(r[x_field])):.1f}" cy="{ys(float(r[y_field])):.1f}" r="4" fill="#1f77b4"/>')
     write_svg(path, parts)
+
+
+def plot_weak_work_scaling(src: str, prefix: str) -> None:
+    """Plot model-based weak speedup/efficiency without a same-size serial run."""
+    rows = [r for r in read_csv(src) if r["kind"] == "weak"]
+    if not rows:
+        return
+    base = min(rows, key=lambda r: int(r["resources"]))
+    n0, t0 = int(base["N"]), float(base["total_median"])
+    if int(base["resources"]) != 1:
+        raise ValueError("Work-normalized weak scaling requires a one-core baseline")
+    for row in rows:
+        n = int(row["N"])
+        row["work_speedup"] = n * (n - 1) / (n0 * (n0 - 1)) * t0 / float(row["total_median"])
+        row["work_efficiency"] = row["work_speedup"] / int(row["resources"])
+    plot_xy(rows, "resources", "work_speedup", "Weak scaling: model-based speedup", "work-normalized speedup", f"{prefix}_weak_speedup.svg", "speedup")
+    plot_xy(rows, "resources", "work_efficiency", "Weak scaling: model-based efficiency", "work-normalized efficiency", f"{prefix}_weak_efficiency.svg", "efficiency")
 
 
 def plot_scaling(src: str, prefix: str) -> None:
@@ -758,11 +778,12 @@ def plot_scaling(src: str, prefix: str) -> None:
         r["weak_normalized_time"] = float(r["weak_normalized_time"]) if r.get("weak_normalized_time") else math.nan
     strong = [r for r in rows if r["kind"] == "strong"]
     weak = [r for r in rows if r["kind"] == "weak"]
+    plot_weak_work_scaling(src, prefix)
     plot_xy(strong, "resources", "total_median", "strong scaling runtime", "median time (s)", f"{prefix}_strong_runtime.svg", "runtime")
     plot_xy(strong, "resources", "speedup", "strong scaling speedup", "speedup", f"{prefix}_strong_speedup.svg", "speedup")
     plot_xy(strong, "resources", "efficiency", "strong scaling efficiency", "efficiency", f"{prefix}_strong_efficiency.svg", "efficiency")
     plot_xy(strong, "resources", "comm_bandwidth_GBps", "strong communication bandwidth", "GB/s", f"{prefix}_strong_comm_bandwidth.svg")
-    plot_xy(weak, "resources", "total_median", "weak scaling absolute time", "median time (s)", f"{prefix}_weak_time.svg")
+    plot_xy(weak, "resources", "total_median", "weak scaling absolute time", "median time (s)", f"{prefix}_weak_time.svg", "weak_runtime")
     plot_xy([r for r in weak if math.isfinite(float(r["weak_normalized_time"]))], "resources", "weak_normalized_time", "weak normalized time", "T(P)/(P*T1)", f"{prefix}_weak_normalized_time.svg")
 
 
