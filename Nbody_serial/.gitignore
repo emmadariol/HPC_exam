@@ -42,3 +42,7 @@ runs/
 # Local run pointers and container cache
 LAST_ORFEO*_RUN.txt
 singularity_cache/
+runs/*/slurm_*.out
+runs/*/slurm_*.err
+nbody_direct_hybrid
+*.sif

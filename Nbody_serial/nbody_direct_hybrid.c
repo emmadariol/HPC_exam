@@ -679,7 +679,6 @@ static void accumulate_sources_scalar_chains(const particles_t *home,
 
     case 8u: // Eight chains are the maximum exposed scalar ILP setting
     {
-      /
       const size_t source_n_unrolled = source_n - (source_n % 8u);
       
       dtype ax0 = (dtype)0.0, ay0 = (dtype)0.0, az0 = (dtype)0.0;
