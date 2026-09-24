@@ -1,354 +1,106 @@
-# Serial C11 direct N-body baseline
+# Direct N-body simulation with MPI + OpenMP
 
-This directory contains the stand-alone programs for the direct gravitational N-body exercise:
+HPC exam project, Exercise 1 (direct gravitational N-body). The full description of
+the method, the experiments and the results is in [`FINAL_REPORT.md`](FINAL_REPORT.md).
 
-- `nbody_direct_serial.c`: serial softened direct solver using a DKD leapfrog
-  step and a relative energy-drift verifier.
-- `nbody_direct_hybrid.c`: MPI + OpenMP direct solver for Exercise 1. Each MPI
-  rank owns one permanent SoA chunk, rotates source chunks with a ring-shift
-  communication pattern, parallelises the home-particle force loop with OpenMP,
-  and reports per-section timings plus a pair-interaction rate.
-- `nbody_layout_benchmark.c`: force-only AoS-vs-SoA microbenchmark using the
-  same binary input format and force law as the solver.
-- `collect_system_info.sh`: writes the hardware/software stack requested in the
-  report.
-- `run_benchmarks.sh scaling`: runs repeated strong/weak scaling experiments and
-  writes a CSV that can be plotted for speedup and efficiency.
-- `analyze.py summarize scaling`: reduces the raw benchmark CSV to medians, standard
-  deviations, outlier counts, speedup, efficiency, and estimated ring
-  communication bandwidth.
-- `run_benchmarks.sh layout`, `analyze.py summarize layout`: generate and summarize the
-  AoS-vs-SoA evidence table.
-- `run_benchmarks.sh energy`, `analyze.py summarize energy`: quantify the cost of different
-  `--energy-every` diagnostic periods.
-- `run_benchmarks.sh memory`, `analyze.py summarize memory`: measure standalone
-  STREAM-style RAM bandwidth for the hardware section of the report.
-- `run_benchmarks.sh osu`: collect OSU latency/bandwidth microbenchmarks for the
-  MPI stack used by the production runs.
-- `run_benchmarks.sh arch`: compare native `-march=native` and portable
-  `-march=x86-64-v3` builds on the same host, isolating code-generation effects
-  from Singularity runtime overhead.
-- `Dockerfile` and `Singularity.def`: starter container recipes for the
-  required native-vs-container comparison. Both images also build OSU
-  Micro-Benchmarks so `osu_latency` and `osu_bw` are available inside the
-  container.
-- `run_benchmarks.sh container`: repeated native-vs-Singularity timing table helper.
-- `analyze.py summarize container`: reduces Singularity/Apptainer overhead CSVs to
-  medians, standard deviations, and overhead percentages.
-- `docs/REPORT_TEMPLATE.md`: checklist-style report skeleton matching the exam
-  deliverables.
-- `generate_ic.c`: initial-condition generator used by the project for Plummer
-  sphere initial conditions (`--model 0`).
-
-## Project layout
-
-The repository is intentionally kept mostly flat for the executable sources and
-benchmark drivers, because the `Makefile`, Slurm jobs, Dockerfile and
-Singularity recipe all compile or call these files directly from the project
-root.
+## What is in this folder
 
 ```text
 Nbody_serial/
-├── *.c, *.h                  source code, benchmarks, and shared definitions
-├── Makefile                  native build, smoke target, vectorization target
-├── run_benchmarks.sh         unified benchmark driver used by jobs and local runs
-├── analyze.py                unified CSV post-processing and SVG plotting CLI
-├── Dockerfile                Docker image recipe
-├── Singularity.def           Singularity/Apptainer recipe
-├── FINAL_REPORT.md           final report with accepted figures and tables
-├── README.md                 quick project overview
-├── docs/                     extended guides, template, static info files
-├── jobs/submit.sh            unified Slurm submission wrapper
-├── results_final/            curated CSV/SVG/TXT files used by the report
-└── runs/                     ignored local run history and Slurm scratch output
+├── nbody_direct_hybrid.c     main solver: MPI ring + OpenMP, KDK leapfrog, energy check, phase timers
+├── nbody_direct_serial.c     serial reference solver (used for the vectorisation report)
+├── nbody_layout_benchmark.c  force-only AoS vs SoA benchmark (OpenMP, no MPI)
+├── memory_bandwidth.c        STREAM-like memory-bandwidth test (OpenMP)
+├── generate_ic.c             initial conditions: Plummer sphere (--model 0) or uniform ball (--model 1)
+├── nbody_common.h            shared types, precision switch, binary file format
+├── Makefile                  builds all programs; `make vec-report` writes the compiler reports
+├── run_benchmarks.sh         benchmark driver: repeats runs and writes one CSV line per run
+├── benchmark_common.sh       helpers used by run_benchmarks.sh (launcher, binding, solver call)
+├── submit.sh                 Slurm wrapper for Orfeo (and LEONARDO) around run_benchmarks.sh
+├── analyze.py                turns raw CSV files into summaries (median, s, speedup) and SVG plots
+├── plot_required_native_strong.py  plots used for the main strong-scaling campaign
+├── collect_system_info.sh    records lscpu, numactl, memory, compiler and MPI versions
+├── Dockerfile                container image (Ubuntu 24.04, -march=x86-64-v3, OSU benchmarks)
+├── Singularity.def           equivalent Singularity recipe
+├── jobs/                     extra Slurm scripts (rank/thread binding check)
+├── results_final/            all data, summaries and figures used by the report (see its README)
+├── docs/                     study notes and guides (in Italian)
+└── FINAL_REPORT.md           the report
 ```
-
-The codes are intended as an explicit, inspectable implementation of the N-body
-exercise.  The scalable production path is still the required direct O(N^2)
-all-pairs algorithm, but the hybrid solver now exposes the optimisation choices
-measured in the report: MPI ring decomposition, coordinated MPI-IO input,
-OpenMP/SIMD force loops, 1/2/4/8 accumulator chains, approximate reciprocal
-square root, and the single-rank Newton-third-law ablation.
-
-## Arithmetic type
-
-All physical quantities in the solver and generators use the typedef `dtype`, defined in `nbody_common.h`.
-
-Default build, double-precision arithmetic:
-
-```sh
-make
-```
-
-Single-precision arithmetic:
-
-```sh
-make clean
-make PRECISION=float
-```
-
-The equivalent manual switches are:
-
-```sh
--DNBODY_USE_DOUBLE
--DNBODY_USE_FLOAT
-```
-
-Only one of the two should be defined. If neither is defined, the header falls back to double precision.
-
-## Binary file format
-
-All programs use the same native-endian binary format. Particle data are stored in single precision, independently of the selected `dtype` used for arithmetic:
-
-```text
-byte 0..7       magic: "NBODYF1\0"
-next 8 bytes    uint64_t particle count N
-then N records  x y z vx vy vz, six float values per particle
-```
-
-The solver assigns one mass to every particle through `--mass`; mass is not stored per particle in the file. This keeps the initial-condition file compact and makes the equal-mass assumption explicit in the command line.
-
-Because the format is deliberately minimal and native-endian, it is intended for same-machine teaching runs and benchmarks, not for long-term archival exchange between heterogeneous systems.
 
 ## Build
 
+On an Orfeo GENOA compute node (so that `-march=native` sees the real processor):
+
 ```sh
-make
+module purge
+module load openMPI/4.1.6
+make                 # nbody_direct_hybrid, nbody_direct_serial, nbody_layout_benchmark, generate_ic, memory_bandwidth
+make vec-report      # compiler vectorisation reports into results_final/
 ```
 
-or explicitly:
+The main solver is compiled as
 
 ```sh
-cc -std=c11 -DNBODY_USE_DOUBLE -O2 -Wall -Wextra -Wpedantic nbody_direct_serial.c -lm -o nbody_direct_serial
-cc -std=c11 -DNBODY_USE_DOUBLE -O2 -Wall -Wextra -Wpedantic generate_ic.c -lm -o generate_ic
+mpicc -std=c11 -DNBODY_USE_DOUBLE -O3 -march=native -Wall -Wextra -Wpedantic -fopenmp \
+      -o nbody_direct_hybrid nbody_direct_hybrid.c -lm
 ```
 
+`make PRECISION=float` builds single-precision arithmetic instead of double.
 
-Part of the assignment is to determine the best compiler’s flags and options, and the CPU bindings. List them in the final report.
-
-## Example runs
-
-Generate a small Plummer sphere and evolve it:
+## Run
 
 ```sh
-./generate_ic --model 0 --n 1000 --seed 123 --scale 1.0 --mass 1.0 --output plummer_1000.bin
-./nbody_direct_serial --input plummer_1000.bin --nsteps 100 --dt 1e-4 --eps 0.05 --mass 1.0 --energy-every 10 --output final_state.bin
+./generate_ic --model 0 --n 10000 --seed 123 --output plummer_10000.bin
+
+export OMP_NUM_THREADS=8 OMP_PLACES=cores OMP_PROC_BIND=spread
+srun -n 8 -c 8 --cpu-bind=verbose,cores ./nbody_direct_hybrid \
+     --input plummer_10000.bin --nsteps 100 --dt 1e-4 --eps 0.05 \
+     --energy-every 10 --comm sendrecv --kernel direct --rsqrt exact --accumulators 4
 ```
 
-Run both smoke tests:
+Main options: `--comm sendrecv|overlap` (blocking or overlapped ring),
+`--kernel direct|newton` (Newton's third law, one rank only),
+`--rsqrt exact|approx1|approx2`, `--accumulators 1|2|4|8`.
+At the end the program prints the largest relative energy drift with an OK/FAIL
+status (tolerance 1e-4), the time of each phase (largest value over the ranks)
+and the pair throughput in Gpairs/s.
+
+## Benchmarks on Orfeo
 
 ```sh
-make run-smoke
+./submit.sh --cluster orfeo --bench scaling --name strong --result-dir $PWD/runs/strong_$(date +%Y%m%d_%H%M%S) -- \
+  SCALING_KINDS=strong STRONG_N=100000 NSTEPS=20 RANKS="1 2 4 8 16 32 64" THREADS=1 \
+  COMM=sendrecv RSQRT=exact ACCUMULATORS=4 ENERGY_EVERY=20 REPEATS=5 WARMUPS=1
 ```
 
-Benchmark scripts use the following numerical defaults unless the environment
-explicitly overrides them:
+Other benchmark families: `hybrid`, `ablation`, `layout`, `energy`, `memory`,
+`container`, `osu`, `arch`. Parameters after `--` are passed to
+`run_benchmarks.sh` as environment variables. Raw output goes to `runs/`
+(ignored by git); curated results are copied to `results_final/`.
 
-| Variable / option | Default | Meaning |
-|---|---:|---|
-| `DT` / `--dt` | `1e-4` | Leapfrog timestep. |
-| `EPS` / `--eps` | `0.05` | Gravitational softening length. |
-| `G` / `--G` | `1.0` | Gravitational constant in code units. |
-| `MASS` / `--mass` | `1.0` | Equal particle mass. |
-| `ENERGY_TOL` / `--energy-tol` | `1e-4` | Relative energy-drift tolerance. |
-
-Run the hybrid solver directly:
+## Container
 
 ```sh
-make nbody_direct_hybrid
-OMP_NUM_THREADS=4 mpirun -np 2 ./nbody_direct_hybrid \
-  --input plummer_1000.bin --nsteps 100 --dt 1e-4 --eps 0.05 \
-  --mass 1.0 --energy-every 10 --comm sendrecv \
-  --output final_state_hybrid.bin
-```
-
-The hybrid solver uses the KDK leapfrog scheme. `--comm sendrecv` uses a simple
-blocking ring exchange, while
-`--comm overlap` posts `MPI_Irecv`/`MPI_Isend` for the next ring chunk before
-computing the current chunk and waits afterwards, so communication can overlap
-with the OpenMP force loop when the MPI implementation and problem size allow it.
-
-For scaling runs, keep `OMP_NUM_THREADS`, `OMP_PLACES`, `OMP_PROC_BIND`, and
-the MPI binding policy in the benchmark log/report together with the exact
-`make` flags. The hybrid executable prints max-rank section timings for I/O,
-drift, force, kick, and energy diagnostics, so strong/weak scaling plots can
-separate force-kernel scalability from diagnostic and communication overhead.
-
-Example benchmark helpers:
-
-```sh
-bash ./collect_system_info.sh docs/system_info.txt
-RANKS="1 2 4" THREADS="1 2" REPEATS=5 STRONG_N=4000 \
-  WEAK_PER_RANK=1000 NSTEPS=50 ENERGY_EVERY=10 \
-  bash ./run_benchmarks.sh scaling
-python3 analyze.py summarize scaling benchmark_results.csv benchmark_summary.csv
-python3 analyze.py plot scaling benchmark_summary.csv scaling
-python3 analyze.py summarize gflops benchmark_summary.csv benchmark_summary_gflops.csv
-make vec-report
-```
-
-The serial solver keeps checked I/O as the default. `--io-mode fast` skips
-per-value finite/range validation for controlled production inputs, while
-`--io-profile` reports separate bulk-read, bulk-write, and conversion/checking
-times. Comparing otherwise identical `checked` and `fast` runs quantifies the
-cost of conversion validation. `make vec-report` also writes
-`docs/vectorization_serial_report.txt` for the serial force kernel.
-
-The generated `benchmark_results.csv` contains one line per run, including
-status, energy drift, section timings, and kernel rate. Use the median (or
-trimmed mean and standard deviation) across the repeated rows in the report.
-`WARMUPS` controls unrecorded warmup repetitions before each measured point.
-`analyze.py summarize scaling` reports MAD-based outlier counts and estimates
-communication bandwidth from the ring traffic and `comm_wait`. `analyze.py plot scaling`
-writes SVG plots for strong/weak speedup, efficiency, and estimated
-communication bandwidth. `analyze.py summarize gflops` converts the reported
-pair-interaction rate to an estimated GFLOP/s column using an explicit
-FLOP-per-pair model, so the report can state both the algorithmic rate
-(`Gpairs/s`) and the derived floating-point rate.
-
-Evidence helpers for the optimization discussion:
-
-```sh
-THREADS="1 2 4" REPEATS=5 WARMUPS=2 N=50000 bash ./run_benchmarks.sh layout
-python3 analyze.py summarize layout layout_results.csv layout_summary.csv
-
-RANKS=8 THREADS=1 REPEATS=5 WARMUPS=2 N=50000 NSTEPS=50 \
-  ENERGY_LIST="1 5 10 50" bash ./run_benchmarks.sh energy
-python3 analyze.py summarize energy energy_overhead.csv energy_overhead_summary.csv
-
-THREADS=64 REPEATS=5 WARMUPS=1 bash ./run_benchmarks.sh memory
-python3 analyze.py summarize memory memory_bandwidth.csv memory_bandwidth_summary.csv
-python3 analyze.py plot memory memory_bandwidth_summary.csv memory_bandwidth
-
-bash ./run_benchmarks.sh osu --mode native
-bash ./run_benchmarks.sh osu --mode container --image nbody.sif
-OUT=osu_microbench_native_vs_container.csv \
-  bash ./run_benchmarks.sh osu --mode both --image nbody.sif
-
-OUT=perf_counters.txt RANKS=1 THREADS=8 N=20000 NSTEPS=20 \
-  bash ./run_benchmarks.sh perf
-```
-
-`run_benchmarks.sh osu` expects `osu_latency` and `osu_bw` in `PATH`, or explicit
-`OSU_LATENCY=/path/to/osu_latency` and `OSU_BW=/path/to/osu_bw`, for native
-runs. Container runs use the OSU binaries installed by `Dockerfile` and
-`Singularity.def`.
-
-Optional kernel experiments:
-
-```sh
-OMP_NUM_THREADS=4 mpirun -np 1 ./nbody_direct_hybrid \
-  --input plummer_1000.bin --nsteps 20 --dt 1e-4 --eps 0.05 \
-  --kernel newton --rsqrt exact --quiet
-
-OMP_NUM_THREADS=4 mpirun -np 2 ./nbody_direct_hybrid \
-  --input plummer_1000.bin --nsteps 20 --dt 1e-4 --eps 0.05 \
-  --kernel direct --rsqrt approx --quiet
-
-OMP_NUM_THREADS=4 mpirun -np 2 ./nbody_direct_hybrid \
-  --input plummer_1000.bin --nsteps 20 --dt 1e-4 --eps 0.05 \
-  --kernel direct --accumulators 1 --quiet
-```
-
-`--kernel newton` is intentionally single-rank only: in a distributed ring,
-Newton-third-law reuse also requires returning the opposite force contribution
-to the remote owner rank. The direct MPI ring path is the main scalable solver.
-The single-rank Newton path uses a pre-allocated thread workspace and clears it
-with `memset` at each force evaluation, so dynamic allocation is not inside the
-timed force kernel.
-`--accumulators 1|2|4|8` isolates the critical-path experiment requested in the
-optimisation discussion; the default remains `4`, matching the production
-kernel, while the wider sweep can identify the saturation point.
-
-Singularity/Apptainer workflow:
-
-```sh
-singularity build nbody.sif Singularity.def
-singularity run nbody.sif --help
-RANKS="1 2 4" THREADS=1 REPEATS=5 bash ./run_benchmarks.sh container
-python3 analyze.py summarize container container_overhead.csv container_overhead_summary.csv
-```
-
-On Orfeo, building a SIF directly from `Singularity.def` is not available to
-normal users because fakeroot/proot support is missing. The reproducible path
-used for the final results is therefore:
-
-```sh
-# Local workstation / WSL with Docker
+# on a computer with Docker
 docker build -t memid01/nbody-hpc:latest .
 docker push memid01/nbody-hpc:latest
 
-# Orfeo login node
-module purge
+# on Orfeo (building from Singularity.def needs fakeroot, not available to users)
 module load singularity/4.3.1
 singularity pull --force nbody.sif docker://memid01/nbody-hpc:latest
-singularity test nbody.sif
+
+export SINGULARITY_BINDPATH=/opt/programs/openMPI/4.1.6:/opt/programs/openMPI/4.1.6,/opt/programs/hwloc/2.12.0:/opt/programs/hwloc/2.12.0
+export SINGULARITYENV_LD_LIBRARY_PATH=/opt/programs/openMPI/4.1.6/lib:/opt/programs/hwloc/2.12.0/lib
+srun -n 8 singularity exec nbody.sif /opt/nbody/nbody_direct_hybrid --input plummer_10000.bin --nsteps 100
 ```
 
-On LEONARDO or another cluster, prefer the site-recommended host-MPI workflow
-when available, and report the exact command and binding policy used for both
-native and container runs.
+The bind paths make the program inside the container use the cluster's own
+Open MPI library; check it with `singularity exec nbody.sif ldd /opt/nbody/nbody_direct_hybrid`.
 
-Unified Slurm submission helper:
+## Binary file format
 
-```sh
-# Orfeo examples
-bash jobs/submit.sh --cluster orfeo --bench probe
-bash jobs/submit.sh --cluster orfeo --bench scaling --partition GENOA --cpus 64 --time 01:59:00 -- RANKS="1 2 4 8 16 32 64"
-bash jobs/submit.sh --cluster orfeo --bench hybrid --partition GENOA --cpus 64
-bash jobs/submit.sh --cluster orfeo --bench ablation --partition GENOA --cpus 64
-bash jobs/submit.sh --cluster orfeo --bench evidence --partition GENOA --cpus 8
-bash jobs/submit.sh --cluster orfeo --bench memory --partition GENOA --cpus 64
-bash jobs/submit.sh --cluster orfeo --bench container --partition GENOA --cpus 4 -- IMAGE=nbody.sif
-bash jobs/submit.sh --cluster orfeo --bench osu --partition GENOA --cpus 2 -- IMAGE=nbody.sif
-
-# Leonardo examples, override account/qos when the active budget differs
-bash jobs/submit.sh --cluster leonardo --bench scaling --cpus 64 --time 01:59:00
-bash jobs/submit.sh --cluster leonardo --bench hybrid --cpus 64 --time 01:59:00
-bash jobs/submit.sh --cluster leonardo --bench container --cpus 4 -- IMAGE=nbody.sif
-```
-
-`jobs/submit.sh` passes cluster-specific account, partition, QoS and module
-settings to `sbatch`, then calls `run_benchmarks.sh` and `analyze.py` inside the
-allocation. Extra benchmark parameters are passed after `--` as environment
-assignments.
-
-## Solver notes
-
-The implemented time integrator is Drift-Kick-Drift:
-
-1. drift positions by `dt/2`;
-2. compute accelerations at the half-step positions;
-3. kick velocities by `dt`;
-4. drift positions by `dt/2` with the updated velocities.
-
-The energy check uses the same softened potential as the force law:
-
-```text
-U = - sum_{i<j} G m^2 / sqrt(|r_i-r_j|^2 + eps^2)
-```
-
-The reported verification metric is
-
-```text
-abs(E(t) - E(0)) / max(abs(E(0)), dtype_min_normal)
-```
-
-A warning is printed if the maximum observed drift exceeds `--energy-tol` (default `1e-4`). This does not terminate the run, because large drift is often an intentional teaching signal: reduce `dt`, increase `eps`, or inspect the initial conditions.
-
-## Intended optimisation path
-
-The baseline is serial on purpose. Natural extensions are:
-
-- **Pay attention to data qualifiers, like `const` and `restrict`, to help the compiler optimize the code**
-
-- convert `compute_accelerations_naive` into an OpenMP loop without inner-loop
-  atomics;
-- compare Newton-third-law reuse against thread-private force buffers;
-  when is it convenient, against the price of using atomics for a non-local write?
-- split accumulators to shorten the floating-point dependency chain;
-- compare scalar `sqrt` with an approximate reciprocal-square-root path and
-  verify that energy conservation remains meaningful;
-- preserve the SoA layout when adding MPI ring-shift communication;
-- can you measure the achieved FLOP/s before and after each change.
-- Instrument your code so that you can tie every section and assess their scalability separately, instead of just the total run-time
+All programs share one native-endian format: an 8-byte magic string `NBODYF1\0`,
+a `uint64_t` particle count N, then N records of six `float` values
+(x y z vx vy vz). All particles have the same mass, given with `--mass`
+(default 1).

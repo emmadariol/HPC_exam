@@ -5,7 +5,7 @@ CFLAGS    ?= -O3 -march=native -Wall -Wextra -Wpedantic
 OMPFLAGS  ?= -fopenmp
 LDLIBS    ?= -lm
 PRECISION ?= double
-PROGRAMS := nbody_direct_serial nbody_direct_hybrid nbody_layout_benchmark generate_ic
+PROGRAMS := nbody_direct_serial nbody_direct_hybrid nbody_layout_benchmark generate_ic memory_bandwidth
 HEADERS  := nbody_common.h
 
 # Compile-time precision is selected through preprocessor symbols consumed by
@@ -55,13 +55,13 @@ run-smoke: all
 # Ask GCC/MPICC which loops were vectorised or missed; the reports are useful
 # when discussing compiler assistance and remaining scalar bottlenecks.
 vec-report:
-	mkdir -p docs
-	$(CC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -fopt-info-vec-optimized -fopt-info-vec-missed -c nbody_direct_serial.c -o /tmp/nbody_direct_serial_vec.o 2> docs/vectorization_serial_report.txt
-	$(MPICC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -fopt-info-vec-optimized -fopt-info-vec-missed -c nbody_direct_hybrid.c -o /tmp/nbody_direct_hybrid_vec.o 2> docs/vectorization_report.txt
+	mkdir -p results_final
+	$(CC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -fopt-info-vec-optimized -fopt-info-vec-missed -c nbody_direct_serial.c -o /tmp/nbody_direct_serial_vec.o 2> results_final/vectorization_serial_report.txt
+	$(MPICC) $(STD) $(PRECISION_CPPFLAGS) $(CFLAGS) $(OMPFLAGS) -fopt-info-vec-optimized -fopt-info-vec-missed -c nbody_direct_hybrid.c -o /tmp/nbody_direct_hybrid_vec.o 2> results_final/vectorization_report.txt
 	rm -f /tmp/nbody_direct_serial_vec.o /tmp/nbody_direct_hybrid_vec.o
 
 # Convenience targets wrap the unified benchmark orchestrator and the unified
-# analysis CLI.  Cluster submission is handled separately by jobs/submit.sh.
+# analysis CLI.  Cluster submission is handled separately by submit.sh.
 bench-scaling: all
 	bash ./run_benchmarks.sh scaling
 	python3 analyze.py summarize scaling benchmark_results.csv benchmark_summary.csv
@@ -105,3 +105,7 @@ bench-perf: all
 
 clean:
 	rm -f $(PROGRAMS) *.o *.bin
+
+# STREAM-like memory-bandwidth test; needs OpenMP (the implicit make rule would omit -fopenmp).
+memory_bandwidth: memory_bandwidth.c
+	$(CC) $(STD) $(CFLAGS) $(OMPFLAGS) -o $@ $< $(LDLIBS)

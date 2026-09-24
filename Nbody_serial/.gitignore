@@ -44,5 +44,8 @@ LAST_ORFEO*_RUN.txt
 singularity_cache/
 runs/*/slurm_*.out
 runs/*/slurm_*.err
-nbody_direct_hybrid
-*.sif
+src_tmp/
+tools/
+*Zone.Identifier
+FINAL_REPORT.*.md
+LAST_*_RUN.txt

@@ -29,3 +29,10 @@ runs/
 # Local report/build scratch files are not required to compile the executables.
 system_info.txt
 vectorization_report.txt
+
+# Report data, study notes and local build trees are not needed to compile.
+results_final/
+docs/
+src_tmp/
+tools/
+memory_bandwidth

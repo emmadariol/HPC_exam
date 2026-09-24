@@ -1,17 +1,11 @@
 # Documentazione
 
-Questa cartella contiene materiale di supporto al progetto N-body.
+Materiale di studio per l'esame, in italiano. Non serve per compilare o eseguire il progetto.
 
 | File | Contenuto |
 |---|---|
-| `EXERCISE1_DETAILED_GUIDE.md` | Guida didattica completa in italiano: concetti, implementazione, risultati e frasi da orale |
-| `PREPARAZIONE_ESAME_COMPLETA.md` | Ripasso strutturato per l'esame e collegamento ai PDF di consegna |
-| `REPORT_TEMPLATE.md` | Template/checklist del report |
-| `system_info.txt` | Snapshot locale informativo; i dati ufficiali curati sono in `../results_final/` |
-| `vectorization_report.txt` | Report di vettorizzazione prodotto da `make vec-report` |
+| `EXERCISE1_DETAILED_GUIDE.md` | Guida didattica: concetti, implementazione, risultati e frasi utili per l'orale |
+| `PREPARAZIONE_ESAME_COMPLETA.md` | Ripasso strutturato per l'esame |
+| `PROJECT_FILES_AND_METRICS_GUIDE.md` | Descrizione dei file del progetto e delle metriche misurate |
 
-Il report finale resta nella root del progetto:
-
-```text
-../FINAL_REPORT.md
-```
+Il report finale è `../FINAL_REPORT.md`; i dati, le tabelle e i grafici su cui si basa sono in `../results_final/`.

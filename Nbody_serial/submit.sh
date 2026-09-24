@@ -6,7 +6,7 @@ set -euo pipefail
 # This prevents maintaining parallel Orfeo/Leonardo copies of the same job.
 usage() {
   cat <<'EOF'
-usage: jobs/submit.sh --cluster orfeo|leonardo --bench BENCH [options]
+usage: ./submit.sh --cluster orfeo|leonardo --bench BENCH [options]
 
 BENCH:
   probe       collect hardware/software information
@@ -35,8 +35,8 @@ Common options:
   -- VAR=VALUE ...      extra environment assignments passed to the job
 
 Examples:
-  jobs/submit.sh --cluster orfeo --bench scaling --partition GENOA --cpus 64 --time 01:59:00 -- RANKS="1 2 4 8 16 32 64"
-  jobs/submit.sh --cluster orfeo --bench container --partition GENOA --cpus 4 -- IMAGE=nbody.sif
+  ./submit.sh --cluster orfeo --bench scaling --partition GENOA --cpus 64 --time 01:59:00 -- RANKS="1 2 4 8 16 32 64"
+  ./submit.sh --cluster orfeo --bench container --partition GENOA --cpus 4 -- IMAGE=nbody.sif
 EOF
 }
 
@@ -218,7 +218,7 @@ $module_block
 export OMP_PLACES=cores
 export OMP_PROC_BIND=spread
 # Export benchmark parameters so child scripts such as run_benchmarks.sh and
-# analyze.py receive the values passed after -- to jobs/submit.sh.
+# analyze.py receive the values passed after -- to submit.sh.
 export $env_block
 $payload
 EOF

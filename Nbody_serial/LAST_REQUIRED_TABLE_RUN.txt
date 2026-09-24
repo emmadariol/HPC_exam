@@ -1,1 +1,0 @@
-/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/required_table_20260912_225819

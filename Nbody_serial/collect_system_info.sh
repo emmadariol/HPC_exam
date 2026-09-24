@@ -49,7 +49,7 @@ fi
 # Collect reproducibility metadata for the node that actually runs a Slurm job.
 # This script is intentionally read-only: it records hardware, compiler, MPI,
 # memory, NUMA, and OpenMP/MPI environment details without changing the system.
-out="${1:-docs/system_info.txt}"
+out="${1:-results_final/system_info.txt}"
 mkdir -p "$(dirname "$out")"
 
 {
