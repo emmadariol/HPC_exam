@@ -1,3 +1,5 @@
+// Shared definitions: precision switch (dtype), math wrappers, binary file format.
+
 #ifndef NBODY_COMMON_H
 #define NBODY_COMMON_H
 
@@ -8,24 +10,24 @@
 #include <stdint.h>
 
 #ifndef NBODY_ALIGNMENT
-#define NBODY_ALIGNMENT 64u
+#define NBODY_ALIGNMENT 64u  // memory alignment in bytes (one AVX-512 register)
 #endif
 
-#define NBODY_BINARY_MAGIC_SIZE 8u
-#define NBODY_BINARY_COMPONENTS 6u
+#define NBODY_BINARY_MAGIC_SIZE 8u  // binary file header: 8-byte magic string
+#define NBODY_BINARY_COMPONENTS 6u  // x y z vx vy vz stored per particle
 #define NBODY_BINARY_VERSION_TEXT "nbody-f32-v1"
 
-#define PLUMMER_SPHERE 0
-#define MAXWELL_BALL   1
+#define PLUMMER_SPHERE 0  // --model 0 in generate_ic
+#define MAXWELL_BALL   1  // --model 1 in generate_ic
 
-static const unsigned char  nbody_binary_magic[NBODY_BINARY_MAGIC_SIZE] =
+static const unsigned char  nbody_binary_magic[NBODY_BINARY_MAGIC_SIZE] =  // first 8 bytes of every particle file
   { 'N', 'B', 'O', 'D', 'Y', 'F', '1', '\0' };
 
 #if defined (NBODY_USE_FLOAT) && defined (NBODY_USE_DOUBLE)
 #error "define only one of NBODY_USE_FLOAT and NBODY_USE_DOUBLE"
 #endif
 
-#if defined (NBODY_USE_FLOAT)
+#if defined (NBODY_USE_FLOAT)  // single precision build
 typedef float  dtype;
 #define DTYPE_NAME "float"
 #define DTYPE_MAX_VALUE FLT_MAX
@@ -69,7 +71,7 @@ static inline dtype dtype_fmax (dtype x,
   return fmaxf (x, y);
 }
 
-#else
+#else  // double precision build (default)
 typedef double dtype;
 #define DTYPE_NAME "double"
 #define DTYPE_MAX_VALUE DBL_MAX

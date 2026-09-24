@@ -1,8 +1,0 @@
-JobID           JobName      State ExitCode    Elapsed AllocNodes   NNodes  AllocCPUS   NTasks      NodeList
-1664668      osu_hostm+  COMPLETED      0:0   00:26:56          2        2          2          2  genoa[012-013]
-1664668.bat+      batch  COMPLETED      0:0   00:26:56          1        1          1          1  genoa012
-1664668.ext+     extern  COMPLETED      0:0   00:26:56          2        2          2          2  genoa[012-013]
-1664668.0    osu_laten+  COMPLETED      0:0   00:24:01          2        2          2          2  genoa[012-013]
-1664668.1    osu_laten+  COMPLETED      0:0   00:00:11          2        2          2          2  genoa[012-013]
-1664668.2    osu_laten+  COMPLETED      0:0   00:00:12          2        2          2          2  genoa[012-013]
-1664668.3    osu_laten+  COMPLETED      0:0   00:00:11          2        2          2          2  genoa[012-013]

@@ -1,3 +1,5 @@
+// STREAM-like memory-bandwidth test (OpenMP).
+
 #define _POSIX_C_SOURCE 200809L
 
 #include <omp.h>
@@ -8,28 +10,22 @@
 #include <stdlib.h>
 #include <time.h>
 
-/* STREAM-style OpenMP memory-bandwidth benchmark.
- *
- * Small benchmark measures bandwidth for the standard copy,
- * scale, add, and triad streaming kernels.
- */
-
 #ifndef STREAM_N
-#define STREAM_N 67108864UL
+#define STREAM_N 67108864UL  // 67M doubles = 512 MB per array, much larger than the caches
 #endif
 
 #ifndef STREAM_INNER
-#define STREAM_INNER 10
+#define STREAM_INNER 10  // repetitions per kernel; the best one is kept
 #endif
 
-static double now_seconds(void)
+static double now_seconds(void)  // monotonic clock in seconds
 {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (double)ts.tv_sec + 1.0e-9 * (double)ts.tv_nsec;
 }
 
-static void *checked_aligned_alloc(size_t alignment, size_t bytes)
+static void *checked_aligned_alloc(size_t alignment, size_t bytes)  // aligned allocation that stops on error
 {
   void *ptr = NULL;
   if (posix_memalign(&ptr, alignment, bytes) != 0 || !ptr)
@@ -40,7 +36,7 @@ static void *checked_aligned_alloc(size_t alignment, size_t bytes)
   return ptr;
 }
 
-static size_t env_size_or_default(const char *name, size_t fallback)
+static size_t env_size_or_default(const char *name, size_t fallback)  // read a positive integer from the environment
 {
   const char *text = getenv(name);
   if (!text || !*text)
@@ -78,9 +74,12 @@ static int env_int_or_default(const char *name, int fallback)
   return (int)value;
 }
 
-static void initialize_arrays(double *a, double *b, double *c, size_t n)
+// ===========================================================================
+// [OpenMP] parallel first touch
+// ===========================================================================
+static void initialize_arrays(double *a, double *b, double *c, size_t n)  // first touch in parallel: pages go to the NUMA domain of each thread
 {
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)  // [OpenMP]
   for (size_t i = 0; i < n; ++i)
   {
     a[i] = 1.0;
@@ -89,11 +88,11 @@ static void initialize_arrays(double *a, double *b, double *c, size_t n)
   }
 }
 
-static double checksum_arrays(const double *a, const double *b, const double *c, size_t n)
+static double checksum_arrays(const double *a, const double *b, const double *c, size_t n)  // sparse checksum so the compiler cannot skip the loops
 {
   double checksum = 0.0;
 
-#pragma omp parallel for reduction(+ : checksum) schedule(static)
+#pragma omp parallel for reduction(+ : checksum) schedule(static)  // [OpenMP]
   for (size_t i = 0; i < n; i += 4096)
   {
     checksum += a[i] + b[i] + c[i];
@@ -107,7 +106,7 @@ int main(void)
   const size_t n = env_size_or_default("STREAM_N", STREAM_N);
   const int inner_repeats = env_int_or_default("STREAM_INNER", STREAM_INNER);
   const double scalar = 3.0;
-  const size_t bytes = n * sizeof(double);
+  const size_t bytes = n * sizeof(double);  // bytes per array
 
   double *a = checked_aligned_alloc(64, bytes);
   double *b = checked_aligned_alloc(64, bytes);
@@ -117,10 +116,11 @@ int main(void)
 
   printf("kernel,N,threads,inner_repeats,best_seconds,GBps,checksum\n");
 
-  for (int kernel = 0; kernel < 4; ++kernel)
+  // ---- STREAM kernels, each an [OpenMP] parallel loop -----------------------
+  for (int kernel = 0; kernel < 4; ++kernel)  // 0 copy, 1 scale, 2 add, 3 triad
   {
     const char *name = "copy";
-    double bytes_moved = 2.0 * (double)n * sizeof(double);
+    double bytes_moved = 2.0 * (double)n * sizeof(double);  // copy/scale: read one array, write one
     double best_seconds = INFINITY;
 
     if (kernel == 1)
@@ -130,7 +130,7 @@ int main(void)
     else if (kernel == 2)
     {
       name = "add";
-      bytes_moved = 3.0 * (double)n * sizeof(double);
+      bytes_moved = 3.0 * (double)n * sizeof(double);  // add/triad: read two arrays, write one
     }
     else if (kernel == 3)
     {
@@ -144,7 +144,7 @@ int main(void)
 
       if (kernel == 0)
       {
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)  // [OpenMP] copy: c = a
         for (size_t i = 0; i < n; ++i)
         {
           c[i] = a[i];
@@ -152,7 +152,7 @@ int main(void)
       }
       else if (kernel == 1)
       {
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)  // [OpenMP] scale: b = k*c
         for (size_t i = 0; i < n; ++i)
         {
           b[i] = scalar * c[i];
@@ -160,7 +160,7 @@ int main(void)
       }
       else if (kernel == 2)
       {
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)  // [OpenMP] add: c = a + b
         for (size_t i = 0; i < n; ++i)
         {
           c[i] = a[i] + b[i];
@@ -168,7 +168,7 @@ int main(void)
       }
       else
       {
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)  // [OpenMP] triad: a = b + k*c
         for (size_t i = 0; i < n; ++i)
         {
           a[i] = b[i] + scalar * c[i];
@@ -176,13 +176,13 @@ int main(void)
       }
 
       const double elapsed = now_seconds() - t0;
-      if (elapsed < best_seconds)
+      if (elapsed < best_seconds)  // keep the fastest repetition
       {
         best_seconds = elapsed;
       }
     }
 
-    const double gbps = bytes_moved / best_seconds / 1.0e9;
+    const double gbps = bytes_moved / best_seconds / 1.0e9;  // bandwidth in GB/s
     const double checksum = checksum_arrays(a, b, c, n);
     printf("%s,%zu,%d,%d,%.9f,%.6f,%.17g\n",
            name, n, omp_get_max_threads(), inner_repeats, best_seconds, gbps, checksum);

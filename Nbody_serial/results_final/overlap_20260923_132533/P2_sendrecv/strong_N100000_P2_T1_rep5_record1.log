@@ -1,5 +1,0 @@
-cpu-bind=MASK - genoa001, task  0  0 [3786198]: mask 0x2 set
-cpu-bind=MASK - genoa001, task  1  1 [3786199]: mask 0x2000000000000000 set
-# final: N=100000 steps=20 ranks=2 threads_per_rank=1 integrator=kdk comm=sendrecv kernel=direct rsqrt=exact arithmetic_dtype=double accumulators=4 max_relative_energy_drift=3.410592058563225e-07 tolerance=0.0001 status=OK
-# timing_max_seconds total=417.445213 io=0.007647 drift=0.001468 force=392.045643 comm_wait=0.435135 kick=0.003538 energy=25.387020
-# kernel_rate pair_interactions_per_second=5.356466e+08 gpair_interactions_per_second=0.535647

@@ -1,24 +1,4 @@
-/*
- * generate_ic.c
- *
- * Stand-alone C11 generator for equal-mass Plummer-sphere initial conditions.
- * The output is the native-endian binary format read by nbody_direct_serial.c:
- *
- *   8 bytes       magic "NBODYF1\0"
- *   uint64_t      number of particles
- *   N records     x y z vx vy vz as six IEEE single-precision floats
- *
- * The generator samples the usual Plummer radius distribution and an isotropic
- * equilibrium velocity distribution.  The velocity scale follows the same
- * dimensionless convention as the solver: total mass M = N * particle_mass and
- * G is user-settable, both defaulting to one in code units.
- *
- * The generated coordinates and velocities use dtype internally.  Select it at
- * compile time with -DNBODY_USE_DOUBLE or -DNBODY_USE_FLOAT; the file is always
- * stored as float32 records.  This reproducibility is important for HPC
- * benchmarking: native, MPI, OpenMP, and container runs must start from the same
- * physical state if their timings and energy drift are to be compared fairly.
- */
+// Initial conditions: Plummer sphere or uniform ball, written in the binary particle format.
 
 #include "nbody_common.h"
 
@@ -34,22 +14,14 @@
 #define NBODY_PI 3.141592653589793238462643383279502884
 #endif
 
-typedef struct rng_s
+typedef struct rng_s  // random number generator state
 {
   uint64_t state;
-  bool has_spare;
+  bool has_spare;  // Box-Muller gives two normals: keep the second one
   dtype spare;
 } rng_t;
 
-/* ··············································································
- * ··············································································
- *
- *  U T I L I T I E S
- *
- * ··············································································
- */
-
-static void die(const char *format, ...)
+static void die(const char *format, ...)  // print an error and exit
 {
   va_list args;
 
@@ -60,7 +32,7 @@ static void die(const char *format, ...)
   exit(EXIT_FAILURE);
 }
 
-static void print_usage(const char *program // argv[0]
+static void print_usage(const char *program
 )
 {
   fprintf(stderr,
@@ -81,13 +53,8 @@ static void print_usage(const char *program // argv[0]
           program, NBODY_BINARY_VERSION_TEXT);
 }
 
-/*
- * Parse a positive particle count or seed-like integer from the command line.
- * The function is intentionally strict so that typos in benchmark scripts do
- * not silently produce a different initial condition.
- */
-static size_t parse_size(const char *text, // decimal text to parse
-                         const char *name  // option name used in errors
+static size_t parse_size(const char *text,  // string -> size_t, stops on invalid input
+                         const char *name
 )
 {
   char *endptr;
@@ -103,13 +70,8 @@ static size_t parse_size(const char *text, // decimal text to parse
   return (size_t)value;
 }
 
-/*
- * Parse a finite floating-point value and cast it to dtype.  All physical
- * parameters pass through this helper before they are used to scale positions
- * or velocities.
- */
-static dtype parse_dtype(const char *text, // decimal text to parse
-                         const char *name  // option name used in errors
+static dtype parse_dtype(const char *text,  // string -> dtype, stops on invalid input
+                         const char *name
 )
 {
   char *endptr;
@@ -125,14 +87,10 @@ static dtype parse_dtype(const char *text, // decimal text to parse
   return (dtype)value;
 }
 
-/*
- * Extract either --key=value or --key value from argv.  This avoids depending on
- * POSIX getopt while still keeping the interface readable in batch scripts.
- */
-static const char *option_value(int *i,         // current argv index, updated on success
-                                int argc,       // argc from main
-                                char **argv,    // argv from main
-                                const char *key // long option name, including "--"
+static const char *option_value(int *i,  // accepts both --key value and --key=value
+                                int argc,
+                                char **argv,
+                                const char *key
 )
 {
   const size_t key_len = strlen(key);
@@ -152,13 +110,8 @@ static const char *option_value(int *i,         // current argv index, updated o
   return NULL;
 }
 
-/*
- * Allocate aligned storage for generated coordinates.  The generator writes a
- * file, but keeping the same alignment convention as the solver makes it easy
- * to reuse the arrays in future in-memory tests.
- */
-static dtype *allocate_array(size_t n,        // number of dtype values
-                             const char *name // array name for diagnostics
+static dtype *allocate_array(size_t n,  // aligned array of n dtype values
+                             const char *name
 )
 {
   const size_t bytes = n * sizeof(dtype);
@@ -178,15 +131,12 @@ static dtype *allocate_array(size_t n,        // number of dtype values
   return ptr;
 }
 
-/*
- * Write exactly nmemb items to a binary stream.
- */
-static void checked_fwrite(const void *ptr,  // source buffer
-                           size_t size,      // item size in bytes
-                           size_t nmemb,     // number of items to write
-                           FILE *fp,         // open output stream
-                           const char *path, // file name for diagnostics
-                           const char *what  // logical record name
+static void checked_fwrite(const void *ptr,  // fwrite that stops the program on error
+                           size_t size,
+                           size_t nmemb,
+                           FILE *fp,
+                           const char *path,
+                           const char *what
 )
 {
   const size_t written = fwrite(ptr, size, nmemb, fp);
@@ -194,19 +144,7 @@ static void checked_fwrite(const void *ptr,  // source buffer
     die("write error while writing %s to '%s'", what, path);
 }
 
-/* ··············································································
- * ··············································································
- *
- *  R A N D O M   N U M B E R S   G E N E R A T I O N
- *
- * ··············································································
- */
-
-/*
- * SplitMix64 step.  It is small, deterministic across platforms, and adequate
- * for generating reproducible teaching initial conditions.
- */
-static uint64_t rng_next_u64(rng_t *rng // generator state, modified in place
+static uint64_t rng_next_u64(rng_t *rng  // SplitMix64: simple, fast 64-bit generator
 )
 {
   uint64_t z;
@@ -218,24 +156,15 @@ static uint64_t rng_next_u64(rng_t *rng // generator state, modified in place
   return z ^ (z >> 31);
 }
 
-/*
- * Uniform variate in the open interval (0, 1).  Avoiding exactly 0 and exactly
- * 1 keeps logarithms, inverse CDFs, and rejection samplers away from singular
- * endpoints.
- */
-static double rng_uniform_open(rng_t *rng // generator state, modified in place
+static double rng_uniform_open(rng_t *rng  // uniform number in (0, 1), never exactly 0 or 1
 )
 {
-  const uint64_t bits = rng_next_u64(rng) >> 11;
+  const uint64_t bits = rng_next_u64(rng) >> 11;  // 53 random bits
 
   return ((double)bits + 0.5) * (1.0 / 9007199254740992.0);
 }
 
-/*
- * Standard normal variate using Box-Muller, with one saved spare value.  Three
- * independent calls produce the Cartesian components of a Maxwellian velocity.
- */
-static dtype rng_normal(rng_t *rng // generator state, modified in place
+static dtype rng_normal(rng_t *rng  // standard normal number (Box-Muller)
 )
 {
   dtype u1;
@@ -243,7 +172,7 @@ static dtype rng_normal(rng_t *rng // generator state, modified in place
   dtype radius;
   dtype angle;
 
-  if (rng->has_spare)
+  if (rng->has_spare)  // use the spare value from the previous call
   {
     rng->has_spare = false;
     return rng->spare;
@@ -251,26 +180,21 @@ static dtype rng_normal(rng_t *rng // generator state, modified in place
 
   u1 = (dtype)rng_uniform_open(rng);
   u2 = (dtype)rng_uniform_open(rng);
-  radius = dtype_sqrt((dtype)-2.0 * dtype_log(u1));
+  radius = dtype_sqrt((dtype)-2.0 * dtype_log(u1));  // Box-Muller radius
   angle = (dtype)(2.0 * NBODY_PI) * u2;
 
-  rng->spare = radius * dtype_sin(angle);
+  rng->spare = radius * dtype_sin(angle);  // keep the second value for the next call
   rng->has_spare = true;
   return radius * dtype_cos(angle);
 }
 
-/*
- * Draw a random unit vector on the sphere.  Positions and velocities both use
- * this helper so that angular sampling is isotropic rather than biased by a
- * naive spherical-coordinate choice.
- */
-static void random_unit_vector(rng_t *rng, // generator state, modified in place
-                               dtype *ux,  // output x component
-                               dtype *uy,  // output y component
-                               dtype *uz   // output z component
+static void random_unit_vector(rng_t *rng,  // random direction, uniform on the sphere
+                               dtype *ux,
+                               dtype *uy,
+                               dtype *uz
 )
 {
-  const dtype cos_theta = (dtype)(2.0 * rng_uniform_open(rng) - 1.0);
+  const dtype cos_theta = (dtype)(2.0 * rng_uniform_open(rng) - 1.0);  // cos(theta) uniform in [-1, 1]
   const dtype phi = (dtype)(2.0 * NBODY_PI * rng_uniform_open(rng));
   const dtype sin_theta = dtype_sqrt(dtype_fmax((dtype)0.0,
                                                 (dtype)1.0 - cos_theta * cos_theta));
@@ -280,31 +204,16 @@ static void random_unit_vector(rng_t *rng, // generator state, modified in place
   *uz = cos_theta;
 }
 
-/* ··············································································
- * ··············································································
- *
- *  A C T U A L    P A R T I C L E S    G E N E R A T I O N
- *
- * ··············································································
- */
-
-/*
- * Fill positions with a uniform ball and velocities with a Maxwellian of
- * one-dimensional dispersion sigma.  The centre-of-mass position and velocity
- * are subtracted at the end.  Subtracting the finite-sample position mean may
- * move a few particles just outside the nominal radius by a tiny amount; for a
- * teaching initial condition this is preferable to carrying a net translation.
- */
-static void generate_ball_maxwell(size_t n,           // number of particles
-                                  dtype ball_radius,  // radius of uniform ball
-                                  dtype sigma,        // 1D velocity dispersion
-                                  rng_t *rng,         // generator state, modified in place
-                                  dtype *restrict x,  // output x positions
-                                  dtype *restrict y,  // output y positions
-                                  dtype *restrict z,  // output z positions
-                                  dtype *restrict vx, // output x velocities
-                                  dtype *restrict vy, // output y velocities
-                                  dtype *restrict vz  // output z velocities
+static void generate_ball_maxwell(size_t n,  // uniform ball with Maxwellian (Gaussian) velocities
+                                  dtype ball_radius,
+                                  dtype sigma,
+                                  rng_t *rng,
+                                  dtype *restrict x,
+                                  dtype *restrict y,
+                                  dtype *restrict z,
+                                  dtype *restrict vx,
+                                  dtype *restrict vy,
+                                  dtype *restrict vz
 )
 {
   long double xcm = 0.0L;
@@ -321,17 +230,17 @@ static void generate_ball_maxwell(size_t n,           // number of particles
     dtype uz;
     dtype radius;
 
-    radius = ball_radius * dtype_pow((dtype)rng_uniform_open(rng), (dtype)(1.0 / 3.0));
+    radius = ball_radius * dtype_pow((dtype)rng_uniform_open(rng), (dtype)(1.0 / 3.0));  // r = R * u^(1/3) gives uniform density
     random_unit_vector(rng, &ux, &uy, &uz);
     x[i] = radius * ux;
     y[i] = radius * uy;
     z[i] = radius * uz;
 
-    vx[i] = sigma * rng_normal(rng);
+    vx[i] = sigma * rng_normal(rng);  // Gaussian velocity components
     vy[i] = sigma * rng_normal(rng);
     vz[i] = sigma * rng_normal(rng);
 
-    xcm += (long double)x[i];
+    xcm += (long double)x[i];  // accumulate the centre of mass
     ycm += (long double)y[i];
     zcm += (long double)z[i];
     vxcm += (long double)vx[i];
@@ -339,14 +248,14 @@ static void generate_ball_maxwell(size_t n,           // number of particles
     vzcm += (long double)vz[i];
   }
 
-  xcm /= (long double)n;
+  xcm /= (long double)n;  // centre-of-mass position and velocity
   ycm /= (long double)n;
   zcm /= (long double)n;
   vxcm /= (long double)n;
   vycm /= (long double)n;
   vzcm /= (long double)n;
 
-  for (size_t i = 0u; i < n; ++i)
+  for (size_t i = 0u; i < n; ++i)  // move to the centre-of-mass frame
   {
     x[i] -= (dtype)xcm;
     y[i] -= (dtype)ycm;
@@ -357,16 +266,9 @@ static void generate_ball_maxwell(size_t n,           // number of particles
   }
 }
 
-/*
- * Sample a Plummer-model radius.  For scale radius a, the cumulative mass
- * profile is M(<r)/M = r^3 / (r^2 + a^2)^(3/2), which inverts to
- * r = a / sqrt(u^(-2/3) - 1).  If rmax > 0, the distribution is rejected until
- * it lies inside the requested truncation radius; by default no truncation is
- * applied.
- */
-static dtype sample_plummer_radius(rng_t *rng,  // generator state, modified in place
-                                   dtype scale, // Plummer scale radius a
-                                   dtype rmax   // optional truncation radius, <=0 disables
+static dtype sample_plummer_radius(rng_t *rng,  // Plummer radius from the inverse of the cumulative mass
+                                   dtype scale,
+                                   dtype rmax
 )
 {
   dtype radius;
@@ -375,50 +277,38 @@ static dtype sample_plummer_radius(rng_t *rng,  // generator state, modified in 
   {
     const dtype u = (dtype)rng_uniform_open(rng);
 
-    radius = scale / dtype_sqrt(dtype_pow(u, (dtype)(-2.0 / 3.0)) - (dtype)1.0);
-  } while ((rmax > (dtype)0.0) && (radius > rmax));
+    radius = scale / dtype_sqrt(dtype_pow(u, (dtype)(-2.0 / 3.0)) - (dtype)1.0);  // r = a / sqrt(u^(-2/3) - 1)
+  } while ((rmax > (dtype)0.0) && (radius > rmax));  // resample if beyond rmax
 
   return radius;
 }
 
-/*
- * Sample the dimensionless speed ratio q = v / v_escape for a Plummer sphere.
- * The density is proportional to q^2 (1 - q^2)^(7/2).  The constant 0.1 is a
- * safe envelope for rejection sampling on 0 <= q <= 1.
- */
-static dtype sample_plummer_q(rng_t *rng // generator state, modified in place
+static dtype sample_plummer_q(rng_t *rng  // speed fraction q = v / v_escape, by rejection sampling
 )
 {
   for (;;)
   {
     const dtype q = (dtype)rng_uniform_open(rng);
     const dtype y = (dtype)(0.1 * rng_uniform_open(rng));
-    const dtype density = q * q * dtype_pow((dtype)1.0 - q * q, (dtype)3.5);
+    const dtype density = q * q * dtype_pow((dtype)1.0 - q * q, (dtype)3.5);  // Plummer distribution of q: q^2 (1 - q^2)^(7/2)
 
     if (y <= density)
       return q;
   }
 }
 
-/*
- * Generate all particle coordinates and velocities.  The arrays are modified in
- * place.  Velocities are drawn from the equilibrium Plummer distribution for
- * the chosen total mass and scale radius, then the centre-of-mass position and
- * velocity are removed so that the solver does not spend the first few steps
- * translating the whole system through the box.
- */
-static void generate_plummer(size_t n,            // number of particles
-                             dtype scale,         // Plummer scale radius
-                             dtype rmax,          // optional position truncation
-                             dtype g,             // gravitational constant
-                             dtype particle_mass, // mass of one particle
-                             rng_t *rng,          // generator state, modified in place
-                             dtype *restrict x,   // output x positions
-                             dtype *restrict y,   // output y positions
-                             dtype *restrict z,   // output z positions
-                             dtype *restrict vx,  // output x velocities
-                             dtype *restrict vy,  // output y velocities
-                             dtype *restrict vz   // output z velocities
+static void generate_plummer(size_t n,  // Plummer sphere in equilibrium
+                             dtype scale,
+                             dtype rmax,
+                             dtype g,
+                             dtype particle_mass,
+                             rng_t *rng,
+                             dtype *restrict x,
+                             dtype *restrict y,
+                             dtype *restrict z,
+                             dtype *restrict vx,
+                             dtype *restrict vy,
+                             dtype *restrict vz
 )
 {
   const dtype total_mass = (dtype)n * particle_mass;
@@ -442,21 +332,21 @@ static void generate_plummer(size_t n,            // number of particles
     dtype psi;
     dtype speed;
 
-    radius = sample_plummer_radius(rng, scale, rmax);
-    random_unit_vector(rng, &ux, &uy, &uz);
+    radius = sample_plummer_radius(rng, scale, rmax);  // radius from the Plummer mass profile
+    random_unit_vector(rng, &ux, &uy, &uz);  // random direction
     x[i] = radius * ux;
     y[i] = radius * uy;
     z[i] = radius * uz;
 
     q = sample_plummer_q(rng);
-    psi = g * total_mass / dtype_sqrt(radius * radius + scale * scale);
-    speed = q * dtype_sqrt((dtype)2.0 * psi);
-    random_unit_vector(rng, &ux, &uy, &uz);
+    psi = g * total_mass / dtype_sqrt(radius * radius + scale * scale);  // potential at radius r
+    speed = q * dtype_sqrt((dtype)2.0 * psi);  // speed = q * escape speed
+    random_unit_vector(rng, &ux, &uy, &uz);  // random velocity direction
     vx[i] = speed * ux;
     vy[i] = speed * uy;
     vz[i] = speed * uz;
 
-    xcm += (long double)x[i];
+    xcm += (long double)x[i];  // accumulate the centre of mass
     ycm += (long double)y[i];
     zcm += (long double)z[i];
     vxcm += (long double)vx[i];
@@ -464,14 +354,14 @@ static void generate_plummer(size_t n,            // number of particles
     vzcm += (long double)vz[i];
   }
 
-  xcm /= (long double)n;
+  xcm /= (long double)n;  // centre-of-mass position and velocity
   ycm /= (long double)n;
   zcm /= (long double)n;
   vxcm /= (long double)n;
   vycm /= (long double)n;
   vzcm /= (long double)n;
 
-  for (size_t i = 0u; i < n; ++i)
+  for (size_t i = 0u; i < n; ++i)  // move to the centre-of-mass frame
   {
     x[i] -= (dtype)xcm;
     y[i] -= (dtype)ycm;
@@ -482,21 +372,13 @@ static void generate_plummer(size_t n,            // number of particles
   }
 }
 
-/* ··············································································
- * ··············································································
- *
- *  V E R I F Y    D A T A    S A N I T Y
- *
- * ··············································································
- */
-
-static int verify_sanity(const size_t n,  // number of particles
-                         const dtype *x,  // x positions
-                         const dtype *y,  // y positions
-                         const dtype *z,  // z positions
-                         const dtype *vx, // x velocities
-                         const dtype *vy, // y velocities
-                         const dtype *vz  // z velocities
+static int verify_sanity(const size_t n,  // check every value can be written as a finite float
+                         const dtype *x,
+                         const dtype *y,
+                         const dtype *z,
+                         const dtype *vx,
+                         const dtype *vy,
+                         const dtype *vz
 )
 {
   size_t failures = 0u;
@@ -557,28 +439,14 @@ static int verify_sanity(const size_t n,  // number of particles
   return 0;
 }
 
-/* ··············································································
- * ··············································································
- *
- *  W R I T E    P A R T I C L E S    F I L E
- *
- * ··············································································
- */
-
-/*
- * Write the generated initial conditions to disk.  The file contains only the
- * compact binary header and float32 particle records; run metadata belong in
- * the benchmark script or reproducibility manifest, not in this minimal binary
- * exchange format.
- */
-static void write_particles_binary(const char *path, // output file path
-                                   size_t n,         // number of particles
-                                   const dtype *x,   // x positions
-                                   const dtype *y,   // y positions
-                                   const dtype *z,   // z positions
-                                   const dtype *vx,  // x velocities
-                                   const dtype *vy,  // y velocities
-                                   const dtype *vz   // z velocities
+static void write_particles_binary(const char *path,  // write the binary file: header + one float record per particle
+                                   size_t n,
+                                   const dtype *x,
+                                   const dtype *y,
+                                   const dtype *z,
+                                   const dtype *vx,
+                                   const dtype *vy,
+                                   const dtype *vz
 )
 {
   FILE *fp;
@@ -595,11 +463,11 @@ static void write_particles_binary(const char *path, // output file path
     if (fp == NULL)
       die("cannot open output file '%s'", path);
 
-    checked_fwrite(nbody_binary_magic, sizeof nbody_binary_magic[0],
+    checked_fwrite(nbody_binary_magic, sizeof nbody_binary_magic[0],  // header: magic string and particle count
                    NBODY_BINARY_MAGIC_SIZE, fp, path, "binary magic");
     checked_fwrite(&n64, sizeof n64, 1u, fp, path, "particle count");
 
-    for (size_t i = 0u; i < n; ++i)
+    for (size_t i = 0u; i < n; ++i)  // six floats per particle
     {
       float record[NBODY_BINARY_COMPONENTS];
 
@@ -627,13 +495,13 @@ int main(int argc, char **argv)
   int model = PLUMMER_SPHERE;
   size_t n = 0u;
   uint64_t seed = 1u;
-  dtype ball_radius = (dtype)1.0; // for MAXWELL_BALL
-  dtype sigma = (dtype)-1.0;      // for MAXWELL_BALL
-  dtype scale = (dtype)1.0;       // for PLUMMER_SPHERE
-  dtype rmax = (dtype)0.0;        // for PLUMMER_SPHERE
+  dtype ball_radius = (dtype)1.0;
+  dtype sigma = (dtype)-1.0;
+  dtype scale = (dtype)1.0;
+  dtype rmax = (dtype)0.0;
   dtype g = (dtype)1.0;
   dtype particle_mass = (dtype)1.0;
-  bool sigma_auto; // for MAXWELL_BALL
+  bool sigma_auto;
   dtype *x;
   dtype *y;
   dtype *z;
@@ -643,8 +511,6 @@ int main(int argc, char **argv)
   rng_t rng;
   int argi;
 
-  /* Parse long options manually to keep this small utility dependency-free on
-   * clusters where extra argument-parsing libraries are not installed. */
   for (argi = 1; argi < argc; ++argi)
   {
     const char *value;
@@ -701,20 +567,18 @@ int main(int argc, char **argv)
     die("--mass must be positive");
   if (!(ball_radius > (dtype)0.0))
     die("--radius must be positive");
-  sigma_auto = (sigma < (dtype)0.0);
+  sigma_auto = (sigma < (dtype)0.0);  // negative sigma means: choose it automatically
   if (sigma_auto)
   {
     const dtype total_mass = (dtype)n * particle_mass;
 
     if (!dtype_isfinite(total_mass) || !(total_mass > (dtype)0.0))
       die("total mass is not finite in the selected dtype");
-    sigma = dtype_sqrt(g * total_mass / ((dtype)5.0 * ball_radius));
+    sigma = dtype_sqrt(g * total_mass / ((dtype)5.0 * ball_radius));  // sigma from the virial estimate for a uniform ball
   }
   if (!(sigma >= (dtype)0.0) || !dtype_isfinite(sigma))
     die("--sigma must be non-negative and finite, or negative to request the auto value");
 
-  /* Allocate one array per physical component.  This mirrors the solver's SoA
-   * layout and avoids an AoS-to-SoA conversion before writing the binary file. */
   x = allocate_array(n, "x");
   y = allocate_array(n, "y");
   z = allocate_array(n, "z");
@@ -722,9 +586,7 @@ int main(int argc, char **argv)
   vy = allocate_array(n, "vy");
   vz = allocate_array(n, "vz");
 
-  /* Every dataset is reproducible from (model, n, seed); this matters when
-   * comparing native vs container or rerunning failed Slurm jobs. */
-  rng.state = seed;
+  rng.state = seed;  // the seed fixes the whole sequence
   rng.has_spare = false;
   rng.spare = (dtype)0.0;
 
@@ -734,8 +596,6 @@ int main(int argc, char **argv)
   else
     generate_ball_maxwell(n, ball_radius, sigma, &rng, x, y, z, vx, vy, vz);
 
-  /* write_particles_binary performs the final finite-value/storage check, then
-   * emits the compact float32 input consumed by every solver benchmark. */
   write_particles_binary(output_path, n, x, y, z, vx, vy, vz);
 
   free(x);
