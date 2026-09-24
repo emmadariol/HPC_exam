@@ -1,0 +1,8 @@
+wrote /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/strong20_P4_16_64_20260923_165910/scaling.csv
+wrote /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/strong20_P4_16_64_20260923_165910/scaling_summary.csv
+wrote /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/strong20_P4_16_64_20260923_165910/scaling_strong_runtime.svg
+wrote /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/strong20_P4_16_64_20260923_165910/scaling_strong_speedup.svg
+wrote /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/strong20_P4_16_64_20260923_165910/scaling_strong_efficiency.svg
+wrote /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/strong20_P4_16_64_20260923_165910/scaling_strong_comm_bandwidth.svg
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/strong20_P4_16_64_20260923_165910/scaling_weak_time.svg: only one x value
+skipping /u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/strong20_P4_16_64_20260923_165910/scaling_weak_normalized_time.svg: only one x value

@@ -1,0 +1,12 @@
+nbody_direct_hybrid.c: In function ‘accumulate_sources_scalar_chains’:
+nbody_direct_hybrid.c:682:7: error: expected expression before ‘/’ token
+  682 |       /
+      |       ^
+nbody_direct_hybrid.c:699:24: error: ‘source_n_unrolled’ undeclared (first use in this function)
+  699 |       for (j = 0u; j < source_n_unrolled; j += 8u)
+      |                        ^~~~~~~~~~~~~~~~~
+nbody_direct_hybrid.c:699:24: note: each undeclared identifier is reported only once for each function it appears in
+nbody_direct_hybrid.c:699:16: error: invalid controlling predicate
+  699 |       for (j = 0u; j < source_n_unrolled; j += 8u)
+      |                ^~
+make: *** [Makefile:32: nbody_direct_hybrid] Error 1

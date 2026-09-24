@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /u/dssc/emmadariol/HPC_exam/Nbody_serial
+module purge; module load openMPI/4.1.6; module load singularity/4.3.1 2>/dev/null || true
+export OMP_PLACES=cores
+export OMP_PROC_BIND=spread
+# Export benchmark parameters so child scripts such as run_benchmarks.sh and
+# analyze.py receive the values passed after -- to jobs/submit.sh.
+export RESULT_DIR=/u/dssc/emmadariol/HPC_exam/Nbody_serial/runs/strong20_P1_20260923_165910 SCALING_KINDS=strong STRONG_N=100000 NSTEPS=20 RANKS=1 THREADS=1 COMM=sendrecv KERNEL=direct RSQRT=exact ACCUMULATORS=4 ENERGY_EVERY=20 REPEATS=5 WARMUPS=1 KEEP_ALL_REPETITIONS=1 USE_CONTAINER=0 DT=0.0001 EPS=0.05
+OUT="${RESULT_DIR}/scaling.csv" bash ./run_benchmarks.sh scaling; python3 analyze.py summarize scaling "$RESULT_DIR/scaling.csv" "$RESULT_DIR/scaling_summary.csv"; python3 analyze.py plot scaling "$RESULT_DIR/scaling_summary.csv" "$RESULT_DIR/scaling"

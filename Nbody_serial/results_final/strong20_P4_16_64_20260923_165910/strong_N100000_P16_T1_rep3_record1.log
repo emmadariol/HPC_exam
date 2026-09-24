@@ -1,0 +1,19 @@
+cpu-bind=MASK - genoa006, task  0  0 [1555393]: mask 0x1 set
+cpu-bind=MASK - genoa006, task  1  1 [1555394]: mask 0x100000000 set
+cpu-bind=MASK - genoa006, task  2  2 [1555395]: mask 0x2 set
+cpu-bind=MASK - genoa006, task  3  3 [1555396]: mask 0x200000000 set
+cpu-bind=MASK - genoa006, task  4  4 [1555397]: mask 0x4 set
+cpu-bind=MASK - genoa006, task  5  5 [1555398]: mask 0x400000000 set
+cpu-bind=MASK - genoa006, task  6  6 [1555399]: mask 0x8 set
+cpu-bind=MASK - genoa006, task  7  7 [1555400]: mask 0x800000000 set
+cpu-bind=MASK - genoa006, task  8  8 [1555401]: mask 0x10 set
+cpu-bind=MASK - genoa006, task  9  9 [1555402]: mask 0x1000000000 set
+cpu-bind=MASK - genoa006, task 10 10 [1555403]: mask 0x20 set
+cpu-bind=MASK - genoa006, task 11 11 [1555404]: mask 0x2000000000 set
+cpu-bind=MASK - genoa006, task 12 12 [1555405]: mask 0x40 set
+cpu-bind=MASK - genoa006, task 13 13 [1555406]: mask 0x4000000000 set
+cpu-bind=MASK - genoa006, task 14 14 [1555407]: mask 0x80 set
+cpu-bind=MASK - genoa006, task 15 15 [1555408]: mask 0x8000000000 set
+# final: N=100000 steps=20 ranks=16 threads_per_rank=1 integrator=kdk comm=sendrecv kernel=direct rsqrt=exact arithmetic_dtype=double accumulators=4 max_relative_energy_drift=3.4569224916184542e-07 tolerance=0.0001 status=OK
+# timing_max_seconds total=52.972232 io=0.022058 drift=0.000244 force=48.921358 comm_wait=0.083480 kick=0.000501 energy=4.028549
+# kernel_rate pair_interactions_per_second=4.292561e+09 gpair_interactions_per_second=4.292561
