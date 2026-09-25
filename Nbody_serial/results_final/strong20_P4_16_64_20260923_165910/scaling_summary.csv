@@ -1,4 +1,0 @@
-kind,N,nsteps,ranks,threads,resources,integrator,comm,kernel,rsqrt,accumulators,dtype,runs,failed_runs,used_runs,outliers,total_mad,total_median,total_stdev,force_median,comm_wait_median,comm_bandwidth_GBps,gpairs_median,speedup,efficiency,weak_normalized_time,all_ok
-strong,100000,20,4,1,4,kdk,sendrecv,direct,exact,4,double,5,0,5,0,0.16446899999999687,210.474138,0.18885393007215887,195.827575,0.447008,0.08456224497100723,1.072361,1.0,1.0,,True
-strong,100000,20,16,1,16,kdk,sendrecv,direct,exact,4,double,5,0,5,0,0.023339,52.995571,0.0811418172756804,48.921358,0.081782,0.5777554963194835,4.292561,3.9715420369751278,0.9928855092437819,,True
-strong,100000,20,64,1,64,kdk,sendrecv,direct,exact,4,double,5,0,5,0,0.02074700000000007,13.447604,0.06396256983814808,12.318361,0.09417,0.5270083466071998,17.047552,15.651422959807562,0.9782139349879726,,True

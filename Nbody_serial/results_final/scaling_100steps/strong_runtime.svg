@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="450.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">Strong scaling N=100000, 100 steps: run time</text>
+<line x1="82" y1="445" x2="865" y2="445" stroke="black"/>
+<line x1="82" y1="42" x2="82" y2="445" stroke="black"/>
+<text x="450.0" y="502" text-anchor="middle" font-family="sans-serif" font-size="14">MPI ranks P (one thread each)</text>
+<text transform="translate(24,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">median total time (s)</text>
+<text x="82.0" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">1</text>
+<text x="238.6" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">2</text>
+<text x="395.2" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">4</text>
+<text x="551.8" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">8</text>
+<text x="708.4" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">16</text>
+<text x="865.0" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">32</text>
+<line x1="77" y1="445.0" x2="82" y2="445.0" stroke="black"/>
+<text x="72" y="449.0" text-anchor="end" font-family="sans-serif" font-size="12">0</text>
+<line x1="77" y1="364.4" x2="82" y2="364.4" stroke="black"/>
+<text x="72" y="368.4" text-anchor="end" font-family="sans-serif" font-size="12">1000</text>
+<line x1="77" y1="283.8" x2="82" y2="283.8" stroke="black"/>
+<text x="72" y="287.8" text-anchor="end" font-family="sans-serif" font-size="12">2000</text>
+<line x1="77" y1="203.2" x2="82" y2="203.2" stroke="black"/>
+<text x="72" y="207.2" text-anchor="end" font-family="sans-serif" font-size="12">3000</text>
+<line x1="77" y1="122.6" x2="82" y2="122.6" stroke="black"/>
+<text x="72" y="126.6" text-anchor="end" font-family="sans-serif" font-size="12">4000</text>
+<line x1="77" y1="42.0" x2="82" y2="42.0" stroke="black"/>
+<text x="72" y="46.0" text-anchor="end" font-family="sans-serif" font-size="12">5000</text>
+<polyline points="82.0,136.8 238.6,290.9 395.2,368.0 551.8,406.5 708.4,425.7 865.0,435.4" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="6,4"/>
+<text x="855" y="62" text-anchor="end" font-family="sans-serif" font-size="13" fill="#555">ideal T(1)/P</text>
+<polyline points="82.0,136.8 238.6,290.2 395.2,367.6 551.8,406.3 708.4,425.6 865.0,435.0" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<circle cx="82.0" cy="136.8" r="4" fill="#1f77b4"/>
+<circle cx="238.6" cy="290.2" r="4" fill="#1f77b4"/>
+<circle cx="395.2" cy="367.6" r="4" fill="#1f77b4"/>
+<circle cx="551.8" cy="406.3" r="4" fill="#1f77b4"/>
+<circle cx="708.4" cy="425.6" r="4" fill="#1f77b4"/>
+<circle cx="865.0" cy="435.0" r="4" fill="#1f77b4"/>
+<text x="855" y="82" text-anchor="end" font-family="sans-serif" font-size="13" fill="#1f77b4">measured</text>
+</svg>

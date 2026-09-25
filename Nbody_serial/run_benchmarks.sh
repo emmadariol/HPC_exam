@@ -161,7 +161,7 @@ bench_scaling() {
       [[ "$kind" == "weak" ]] && n=$((weak_per_rank * ranks))
       for threads in $threads_list; do
         for rep in $(seq 1 "$warmups"); do run_case "$kind" "$n" "$ranks" "$threads" "$rep" 0 >/dev/null; done
-        for rep in $(seq 1 "$repeats"); do run_case "$kind" "$n" "$ranks" "$threads" "$rep"; done
+        for rep in ${REP_LIST:-$(seq 1 "$repeats")}; do run_case "$kind" "$n" "$ranks" "$threads" "$rep"; done  # REP_LIST="3 4" runs only those repeats (same seeds)
       done
     done
   done

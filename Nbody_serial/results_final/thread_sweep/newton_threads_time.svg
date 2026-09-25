@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="450.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">Newton vs direct kernel: force time, N=10000, 1 rank</text>
+<line x1="82" y1="445" x2="865" y2="445" stroke="black"/>
+<line x1="82" y1="42" x2="82" y2="445" stroke="black"/>
+<text x="450.0" y="502" text-anchor="middle" font-family="sans-serif" font-size="14">OpenMP threads</text>
+<text transform="translate(24,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">median force time (s)</text>
+<text x="82.0" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">1</text>
+<text x="277.8" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">2</text>
+<text x="473.5" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">4</text>
+<text x="669.2" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">8</text>
+<text x="865.0" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">16</text>
+<line x1="77" y1="445.0" x2="82" y2="445.0" stroke="black"/>
+<text x="72" y="449.0" text-anchor="end" font-family="sans-serif" font-size="12">0</text>
+<line x1="77" y1="364.4" x2="82" y2="364.4" stroke="black"/>
+<text x="72" y="368.4" text-anchor="end" font-family="sans-serif" font-size="12">0.5</text>
+<line x1="77" y1="283.8" x2="82" y2="283.8" stroke="black"/>
+<text x="72" y="287.8" text-anchor="end" font-family="sans-serif" font-size="12">1</text>
+<line x1="77" y1="203.2" x2="82" y2="203.2" stroke="black"/>
+<text x="72" y="207.2" text-anchor="end" font-family="sans-serif" font-size="12">1.5</text>
+<line x1="77" y1="122.6" x2="82" y2="122.6" stroke="black"/>
+<text x="72" y="126.6" text-anchor="end" font-family="sans-serif" font-size="12">2</text>
+<line x1="77" y1="42.0" x2="82" y2="42.0" stroke="black"/>
+<text x="72" y="46.0" text-anchor="end" font-family="sans-serif" font-size="12">2.5</text>
+<polyline points="82.0,84.6 277.8,264.8 473.5,354.9 669.2,399.9 865.0,422.5" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="6,4"/>
+<text x="855" y="62" text-anchor="end" font-family="sans-serif" font-size="13" fill="#555">direct, ideal</text>
+<polyline points="82.0,84.6 277.8,264.9 473.5,354.9 669.2,399.8 865.0,422.3" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<circle cx="82.0" cy="84.6" r="4" fill="#1f77b4"/>
+<circle cx="277.8" cy="264.9" r="4" fill="#1f77b4"/>
+<circle cx="473.5" cy="354.9" r="4" fill="#1f77b4"/>
+<circle cx="669.2" cy="399.8" r="4" fill="#1f77b4"/>
+<circle cx="865.0" cy="422.3" r="4" fill="#1f77b4"/>
+<text x="855" y="82" text-anchor="end" font-family="sans-serif" font-size="13" fill="#1f77b4">direct (every pair twice)</text>
+<polyline points="82.0,219.1 277.8,275.5 473.5,346.0 669.2,390.2 865.0,407.5" fill="none" stroke="#d62728" stroke-width="2"/>
+<circle cx="82.0" cy="219.1" r="4" fill="#d62728"/>
+<circle cx="277.8" cy="275.5" r="4" fill="#d62728"/>
+<circle cx="473.5" cy="346.0" r="4" fill="#d62728"/>
+<circle cx="669.2" cy="390.2" r="4" fill="#d62728"/>
+<circle cx="865.0" cy="407.5" r="4" fill="#d62728"/>
+<text x="855" y="102" text-anchor="end" font-family="sans-serif" font-size="13" fill="#d62728">Newton (every pair once)</text>
+<polyline points="82.0,219.1 277.8,275.6 473.5,346.2 669.2,392.1 865.0,417.6" fill="none" stroke="#d62728" stroke-width="2" stroke-dasharray="2,4"/>
+<text x="855" y="122" text-anchor="end" font-family="sans-serif" font-size="13" fill="#d62728">Newton, imbalance model</text>
+</svg>

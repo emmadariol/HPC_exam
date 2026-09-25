@@ -18,7 +18,6 @@ Nbody_serial/
 ├── benchmark_common.sh       helpers used by run_benchmarks.sh (launcher, binding, solver call)
 ├── submit.sh                 Slurm wrapper for Orfeo (and LEONARDO) around run_benchmarks.sh
 ├── analyze.py                turns raw CSV files into summaries (median, s, speedup) and SVG plots
-├── plot_required_native_strong.py  plots used for the main strong-scaling campaign
 ├── collect_system_info.sh    records lscpu, numactl, memory, compiler and MPI versions
 ├── Dockerfile                container image (Ubuntu 24.04, -march=x86-64-v3, OSU benchmarks)
 ├── Singularity.def           equivalent Singularity recipe
@@ -69,10 +68,16 @@ and the pair throughput in Gpairs/s.
 ## Benchmarks on Orfeo
 
 ```sh
-./submit.sh --cluster orfeo --bench scaling --name strong --result-dir $PWD/runs/strong_$(date +%Y%m%d_%H%M%S) -- \
-  SCALING_KINDS=strong STRONG_N=100000 NSTEPS=20 RANKS="1 2 4 8 16 32 64" THREADS=1 \
-  COMM=sendrecv RSQRT=exact ACCUMULATORS=4 ENERGY_EVERY=20 REPEATS=5 WARMUPS=1
+# strong scaling, N = 100000, 100 steps (as in the report); one job per group of points
+./submit.sh --cluster orfeo --bench scaling --partition GENOA --cpus 64 --time 01:59:00 \
+  --name strong_P8_32 --result-dir runs/strong_P8_32 -- \
+  SCALING_KINDS=strong STRONG_N=100000 NSTEPS=100 RANKS="8 16 32" THREADS=1 \
+  COMM=sendrecv ENERGY_EVERY=100 REPEATS=5 WARMUPS=0 REP_LIST="1 2 3 4 5"
 ```
+
+`REP_LIST` runs only the listed repetitions (each repetition always uses the same seed),
+so a long point such as P = 1 (about 64 minutes per run) can be split over several jobs.
+Adding `USE_CONTAINER=1 IMAGE=$PWD/nbody.sif` runs the same case inside Singularity.
 
 Other benchmark families: `hybrid`, `ablation`, `layout`, `energy`, `memory`,
 `container`, `osu`, `arch`. Parameters after `--` are passed to

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="450.0" y="28" text-anchor="middle" font-family="sans-serif" font-size="20">Weak scaling, 10000 particles per rank: run time</text>
+<line x1="82" y1="445" x2="865" y2="445" stroke="black"/>
+<line x1="82" y1="42" x2="82" y2="445" stroke="black"/>
+<text x="450.0" y="502" text-anchor="middle" font-family="sans-serif" font-size="14">MPI ranks P (N = 10000 x P)</text>
+<text transform="translate(24,260.0) rotate(-90)" text-anchor="middle" font-family="sans-serif" font-size="14">median total time (s)</text>
+<text x="82.0" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">1</text>
+<text x="277.8" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">2</text>
+<text x="473.5" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">4</text>
+<text x="669.2" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">8</text>
+<text x="865.0" y="473" text-anchor="middle" font-family="sans-serif" font-size="12">16</text>
+<line x1="77" y1="445.0" x2="82" y2="445.0" stroke="black"/>
+<text x="72" y="449.0" text-anchor="end" font-family="sans-serif" font-size="12">0</text>
+<line x1="77" y1="387.4" x2="82" y2="387.4" stroke="black"/>
+<text x="72" y="391.4" text-anchor="end" font-family="sans-serif" font-size="12">100</text>
+<line x1="77" y1="329.9" x2="82" y2="329.9" stroke="black"/>
+<text x="72" y="333.9" text-anchor="end" font-family="sans-serif" font-size="12">200</text>
+<line x1="77" y1="272.3" x2="82" y2="272.3" stroke="black"/>
+<text x="72" y="276.3" text-anchor="end" font-family="sans-serif" font-size="12">300</text>
+<line x1="77" y1="214.7" x2="82" y2="214.7" stroke="black"/>
+<text x="72" y="218.7" text-anchor="end" font-family="sans-serif" font-size="12">400</text>
+<line x1="77" y1="157.1" x2="82" y2="157.1" stroke="black"/>
+<text x="72" y="161.1" text-anchor="end" font-family="sans-serif" font-size="12">500</text>
+<line x1="77" y1="99.6" x2="82" y2="99.6" stroke="black"/>
+<text x="72" y="103.6" text-anchor="end" font-family="sans-serif" font-size="12">600</text>
+<line x1="77" y1="42.0" x2="82" y2="42.0" stroke="black"/>
+<text x="72" y="46.0" text-anchor="end" font-family="sans-serif" font-size="12">700</text>
+<polyline points="82.0,423.1 277.8,401.1 473.5,357.2 669.2,269.5 865.0,93.9" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="6,4"/>
+<text x="92" y="62" text-anchor="start" font-family="sans-serif" font-size="13" fill="#555">ideal: time grows like P</text>
+<polyline points="82.0,423.1 277.8,400.9 473.5,356.7 669.2,268.2 865.0,91.0" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<circle cx="82.0" cy="423.1" r="4" fill="#1f77b4"/>
+<circle cx="277.8" cy="400.9" r="4" fill="#1f77b4"/>
+<circle cx="473.5" cy="356.7" r="4" fill="#1f77b4"/>
+<circle cx="669.2" cy="268.2" r="4" fill="#1f77b4"/>
+<circle cx="865.0" cy="91.0" r="4" fill="#1f77b4"/>
+<text x="92" y="82" text-anchor="start" font-family="sans-serif" font-size="13" fill="#1f77b4">measured</text>
+</svg>

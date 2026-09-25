@@ -1,9 +1,10 @@
 """Kernel ablation vs OpenMP threads: N=10000, 5 steps, P=1, T=1,2,4,8,16.
 T=1 from ../ablation_complete_20260922_083515, T>1 from ../ablation_T*_20260923_165910."""
 import csv, glob, statistics as st
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # svgplot.py lives in results_final
+from svgplot import Chart, PALETTE, GREY
 
 rows = []
 for f in glob.glob("../ablation_T*_20260923_165910/ablation.csv") + ["../ablation_complete_20260922_083515/ablation.csv"]:
@@ -32,31 +33,26 @@ for T in Ts:
 with open("thread_sweep_summary.csv", "w", newline="") as fh:
     w = csv.DictWriter(fh, fieldnames=list(out[0])); w.writeheader(); w.writerows(out)
 
-C1, C2 = "#2a78d6", "#eb6834"
-plt.rcParams.update({"font.family": "sans-serif", "font.size": 11, "axes.edgecolor": "#8a8a85",
-                     "axes.labelcolor": "#333", "xtick.color": "#555", "ytick.color": "#555"})
-fig, (a, b) = plt.subplots(1, 2, figsize=(12, 4.8))
-d = [o["Kernel_direct_force_median"] for o in out]; n = [o["Kernel_newton_force_median"] for o in out]
-a.plot(Ts, [d[0] / T for T in Ts], ls="--", color="#8a8a85", lw=1.2, label="direct, ideal")
-a.plot(Ts, d, marker="o", ms=8, lw=2, color=C1, label="direct (every pair twice)", markeredgecolor="white", markeredgewidth=1.2)
-a.plot(Ts, n, marker="s", ms=8, lw=2, color=C2, label="Newton (every pair once)", markeredgecolor="white", markeredgewidth=1.2)
-a.plot(Ts, [o["newton_force_model_static_imbalance"] for o in out], ls=":", color=C2, lw=1.5, label="Newton, imbalance model")
-a.set_xscale("log", base=2); a.set_yscale("log"); a.set_xticks(Ts, [str(t) for t in Ts]); a.minorticks_off()
-a.set_yticks([0.1, 0.2, 0.5, 1, 2], ["0.1", "0.2", "0.5", "1", "2"])
-a.set_xlabel("OpenMP threads"); a.set_ylabel("median force time (s)")
-a.set_title("(a) Force time: Newton wins only up to 2 threads", fontsize=11, loc="left"); a.legend(frameon=False, loc="lower left", fontsize=10)
+xl = [str(t) for t in Ts]
+xi = list(range(len(Ts)))
+d = [o["Kernel_direct_force_median"] for o in out]
+n = [o["Kernel_newton_force_median"] for o in out]
+c = Chart("Newton vs direct kernel: force time, N=10000, 1 rank", "OpenMP threads", "median force time (s)",
+          xl, 0, max(d + n) * 1.05, legend="tr")
+c.line(xi, [d[0] / T for T in Ts], GREY, dash="6,4", r=0, label="direct, ideal")
+c.line(xi, d, PALETTE[0], label="direct (every pair twice)")
+c.line(xi, n, PALETTE[1], label="Newton (every pair once)")
+c.line(xi, [o["newton_force_model_static_imbalance"] for o in out], PALETTE[1], dash="2,4", r=0, label="Newton, imbalance model")
+c.save("newton_threads_time.svg")
 r = [o["newton_over_direct_force"] for o in out]
-b.axhline(1, ls="--", color="#8a8a85", lw=1.2)
-b.plot(Ts, r, marker="s", ms=8, lw=2, color=C2, markeredgecolor="white", markeredgewidth=1.2)
-for T, v in zip(Ts, r):
-    b.annotate(f"{v:.2f}", (T, v), xytext=(6, 6), textcoords="offset points", color="#333")
-b.text(1.05, 1.08, "Newton slower", color="#555", fontsize=10); b.text(1.05, 0.75, "Newton faster", color="#555", fontsize=10)
-b.set_xscale("log", base=2); b.set_xticks(Ts, [str(t) for t in Ts]); b.minorticks_off()
-b.set_xlabel("OpenMP threads"); b.set_ylabel("Newton force time / direct force time")
-b.set_title("(b) Ratio: crossover between 2 and 4 threads", fontsize=11, loc="left")
-for ax in (a, b):
-    ax.grid(color="#e6e6e1"); ax.set_axisbelow(True); ax.spines[["top", "right"]].set_visible(False)
-fig.suptitle("Newton's third law vs direct kernel, N=10000, 1 rank, exact sqrt (medians of 5 runs)", fontsize=12)
-fig.tight_layout(); fig.savefig("newton_threads.svg")
+c = Chart("Newton force time / direct force time", "OpenMP threads", "ratio Newton / direct",
+          xl, 0, 2.0, yticks=[0, 0.5, 1.0, 1.5, 2.0])
+c.hline(1.0)
+c.line(xi, r, PALETTE[1])
+for i, v in zip(xi, r):
+    c.text(i, v, f"{v:.2f}", dx=8, dy=-8 if v > 1 else 20)
+c.text(0, 1.0, "Newton slower", dx=10, dy=-10, color=GREY, size=13)
+c.text(0, 1.0, "Newton faster", dx=10, dy=22, color=GREY, size=13)
+c.save("newton_threads_ratio.svg")
 for o in out:
     print(o["threads"], round(o["Kernel_direct_force_median"],4), round(o["Kernel_newton_force_median"],4), round(o["newton_force_model_static_imbalance"],4), round(o["newton_over_direct_force"],3), round(o["approx1_force_speedup"],2), round(o["approx2_force_speedup"],2))
