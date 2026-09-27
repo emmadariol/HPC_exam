@@ -437,7 +437,6 @@ accumulate_row_partial_sums(const dtype *restrict sx,  // one target against all
                             size_t source_n,
                             dtype xi, dtype yi, dtype zi,
                             dtype gm, dtype eps2,
-                            rsqrt_mode_t rsqrt_mode,
                             const size_t K,  // compile-time constant after inlining: 1, 2, 4 or 8
                             dtype *ax_out, dtype *ay_out, dtype *az_out)
 {
@@ -457,7 +456,7 @@ accumulate_row_partial_sums(const dtype *restrict sx,  // one target against all
       const dtype dy = sy[j + lane] - yi;
       const dtype dz = sz[j + lane] - zi;
       const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;  // q = |d|^2 + eps^2 (self-pair: d = 0, zero force)
-      const dtype invr = invsqrt_force(r2, rsqrt_mode);  // 1/sqrt(q)
+      const dtype invr = (dtype)1.0 / dtype_sqrt(r2);  // exact 1/sqrt(q)
       const dtype s = gm * invr * invr * invr;  // G*m / q^(3/2)
 
       axp[lane] += dx * s;  // add to chain 'lane'
@@ -480,7 +479,7 @@ accumulate_row_partial_sums(const dtype *restrict sx,  // one target against all
     const dtype dy = sy[j] - yi;
     const dtype dz = sz[j] - zi;
     const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;
-    const dtype invr = invsqrt_force(r2, rsqrt_mode);
+    const dtype invr = (dtype)1.0 / dtype_sqrt(r2);
     const dtype s = gm * invr * invr * invr;
     ax += dx * s;
     ay += dy * s;
@@ -492,13 +491,12 @@ accumulate_row_partial_sums(const dtype *restrict sx,  // one target against all
   *az_out = az;
 }
 
-static void accumulate_sources_scalar_chains(const particles_t *home,  // scalar force loop with 1, 2, 4 or 8 partial sums
+static void accumulate_sources_scalar_chains(const particles_t *home,  // exact scalar force loop with 1, 2, 4 or 8 partial sums
                                              const dtype *restrict sx,
                                              const dtype *restrict sy,
                                              const dtype *restrict sz,
                                              size_t source_n, dtype g,
                                              dtype mass, dtype eps2,
-                                             rsqrt_mode_t rsqrt_mode,
                                              size_t chains)
 {
   size_t i;
@@ -515,16 +513,16 @@ static void accumulate_sources_scalar_chains(const particles_t *home,  // scalar
     switch (chains)  // constant K in each call, so the lane loops are fully unrolled and axp[] stays in registers
     {
     case 2u:
-      accumulate_row_partial_sums(sx, sy, sz, source_n, xi, yi, zi, gm, eps2, rsqrt_mode, 2u, &ax, &ay, &az);
+      accumulate_row_partial_sums(sx, sy, sz, source_n, xi, yi, zi, gm, eps2, 2u, &ax, &ay, &az);
       break;
     case 4u:
-      accumulate_row_partial_sums(sx, sy, sz, source_n, xi, yi, zi, gm, eps2, rsqrt_mode, 4u, &ax, &ay, &az);
+      accumulate_row_partial_sums(sx, sy, sz, source_n, xi, yi, zi, gm, eps2, 4u, &ax, &ay, &az);
       break;
     case 8u:
-      accumulate_row_partial_sums(sx, sy, sz, source_n, xi, yi, zi, gm, eps2, rsqrt_mode, 8u, &ax, &ay, &az);
+      accumulate_row_partial_sums(sx, sy, sz, source_n, xi, yi, zi, gm, eps2, 8u, &ax, &ay, &az);
       break;
     default:
-      accumulate_row_partial_sums(sx, sy, sz, source_n, xi, yi, zi, gm, eps2, rsqrt_mode, 1u, &ax, &ay, &az);
+      accumulate_row_partial_sums(sx, sy, sz, source_n, xi, yi, zi, gm, eps2, 1u, &ax, &ay, &az);
       break;
     }
 
@@ -533,6 +531,43 @@ static void accumulate_sources_scalar_chains(const particles_t *home,  // scalar
     home->az[i] += az;
   }
 }
+
+#if !(defined(__AVX512F__) && !defined(NBODY_USE_FLOAT))
+static void accumulate_sources_scalar_approx(const particles_t *home,  // approximate modes without AVX-512: plain scalar loop
+                                             const dtype *restrict sx,
+                                             const dtype *restrict sy,
+                                             const dtype *restrict sz,
+                                             size_t source_n, dtype g,
+                                             dtype mass, dtype eps2,
+                                             rsqrt_mode_t rsqrt_mode)
+{
+  size_t i;
+  const dtype gm = g * mass;
+
+#pragma omp parallel for schedule(static)  // [OpenMP] each thread owns different targets
+  for (i = 0u; i < home->n; ++i)
+  {
+    const dtype xi = home->x[i], yi = home->y[i], zi = home->z[i];
+    dtype ax = (dtype)0.0, ay = (dtype)0.0, az = (dtype)0.0;
+    size_t j;
+    for (j = 0u; j < source_n; ++j)
+    {
+      const dtype dx = sx[j] - xi;
+      const dtype dy = sy[j] - yi;
+      const dtype dz = sz[j] - zi;
+      const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;
+      const dtype invr = invsqrt_force(r2, rsqrt_mode);  // float estimate + Newton steps
+      const dtype s = gm * invr * invr * invr;
+      ax += dx * s;
+      ay += dy * s;
+      az += dz * s;
+    }
+    home->ax[i] += ax;
+    home->ay[i] += ay;
+    home->az[i] += az;
+  }
+}
+#endif
 
 // ===========================================================================
 // [AVX-512] HAND-WRITTEN VECTOR KERNEL
@@ -634,7 +669,7 @@ static void accumulate_sources_rsqrt14_pd(const particles_t *home,  // force loo
 
 // ===========================================================================
 // KERNEL DISPATCH
-// Approximate rsqrt -> AVX-512 kernel; exact rsqrt -> scalar kernel with unrolling.
+// Exact rsqrt -> scalar kernel with partial accumulators; approximate rsqrt -> AVX-512 kernel (or plain scalar loop).
 // ===========================================================================
 static void accumulate_sources(const particles_t *home,  // dispatch: AVX-512 routine or scalar chains
                                const dtype *restrict sx,
@@ -647,16 +682,18 @@ static void accumulate_sources(const particles_t *home,  // dispatch: AVX-512 ro
 {
   const dtype eps2 = eps * eps;  // softening squared
 
-#if defined(__AVX512F__) && !defined(NBODY_USE_FLOAT)
-  if (rsqrt_mode != RSQRT_EXACT)  // approximate modes use the AVX-512 routine
+  if (rsqrt_mode == RSQRT_EXACT)  // exact mode: scalar loop with partial accumulators, exact square root only
   {
-    accumulate_sources_rsqrt14_pd(home, sx, sy, sz, source_n, g, mass, eps2, rsqrt_mode);
+    accumulate_sources_scalar_chains(home, sx, sy, sz, source_n, g, mass, eps2,
+                                     (size_t)accumulator_mode);
     return;
   }
-#endif
 
-  accumulate_sources_scalar_chains(home, sx, sy, sz, source_n, g, mass, eps2,  // exact mode (or no AVX-512): scalar chains
-                                   rsqrt_mode, (size_t)accumulator_mode);
+#if defined(__AVX512F__) && !defined(NBODY_USE_FLOAT)
+  accumulate_sources_rsqrt14_pd(home, sx, sy, sz, source_n, g, mass, eps2, rsqrt_mode);  // approximate modes: AVX-512
+#else
+  accumulate_sources_scalar_approx(home, sx, sy, sz, source_n, g, mass, eps2, rsqrt_mode);  // approximate modes, no AVX-512
+#endif
 }
 
 // ===========================================================================
