@@ -10,7 +10,7 @@ Dariol Emma - SM3800118
 
 ## Explanation of the experiment
 
-This report is about a computer program that simulates how a group of bodies, N particles, move because of their gravity. The program runs in parallel on many processor cores at the same time. The goal of the work is not only to make the program fast. The goal is also to understand why it is fast or slow, and to check that it still gives correct physical results when it uses many cores and a test of the same program inside a software container. All the measurements were done on the Orfeo cluster of Area Science Park, on its GENOA nodes. The exercise mentions the LEONARDO supercomputer, but it was not available for these runs so the whole work was done on Orfeo with the same methods.
+This report is about a computer program that simulates how a group of bodies moves because of their gravity. The program runs in parallel on many processor cores at the same time. The goal of the work is not only to make the program fast. The goal is also to understand why it is fast or slow, and to check that it still gives correct physical results when it uses many cores and a test of the same program inside a software container. All the measurements were done on the Orfeo cluster of Area Science Park, on its GENOA nodes. All runs were done on Orfeo; the LEONARDO supercomputer was not available.
 
 We have N particles in empty space, and each particle pulls every other particle with the force of gravity. If we know where the particles are and how fast they move at the beginning, we want to know where they will be later. With more than two bodies there is no simple formula for this, so the program moves forward in many small time steps. At every step it computes the total pull on each particle and then moves all the particles a little. The difficult part is that every particle interacts with every other particle. With N particles there are about N times N pairs to compute at each step, so if we double the number of particles, each step becomes about four times more expensive. This is called an O(N^2) cost. The acceleration of particle i is computed with this formula, where we use G = 1 and all masses equal to 1:
 
@@ -18,64 +18,63 @@ We have N particles in empty space, and each particle pulls every other particle
 a_i = sum over all j != i of  G m_j (r_j - r_i) / (|r_j - r_i|^2 + epsilon^2)^(3/2)
 ```
 
-The small number epsilon in the formula is called the softening length. In pure Newtonian gravity the force between two particles becomes infinite when they get very close, and in a simulation this creates huge and unrealistic jumps. Adding epsilon to the distance keeps the force finite. When two particles are far apart compared with epsilon, the force is almost exactly Newton's force. When they are very close, the force becomes weak and goes to zero at zero distance, as if every particle were a small soft ball of size epsilon instead of a point.
+The epsilon in the formula is the softening length: in pure Newtonian gravity the force between two particles becomes infinite when they get very close, and in a simulation this creates huge and unrealistic jumps. Adding epsilon to the distance keeps the force finite. When two particles are far apart compared with epsilon, the force is almost exactly Newton's force. When they are very close, the force becomes weak and goes to zero at zero distance, as if every particle were a small soft ball of size epsilon instead of a point.
 
-- If epsilon is much smaller than this distance, close meetings between particles are very sharp and need very small time steps. 
-- If epsilon is much larger, the small details of the system are smoothed away. 
+Epsilon has to be compared with the typical distance between neighbouring particles, d = n^(-1/3), where n is the number of particles per unit volume. For a Plummer sphere of scale radius a (a = 1 in our runs) the density is largest in the centre, n = 3N / (4 pi a^3), so there:
 
-Epsilon does not change the number of pairs to compute, but a larger epsilon makes the motion smoother and can allow a larger time step, so fewer steps are needed for the same physical time. Our program does not change the time step by itself. In all experiments we use epsilon = 0.05 and a time step dt = 1e-4, always the same, so that every run simulates the same physics. These values give a stable simulation for our inputs, but we do not claim that they are the best physical choice.
+```text
+d_centre = (4 pi / (3 N))^(1/3) x a        (0.075 for N = 10,000; 0.035 for N = 100,000)
+```
+
+- epsilon much smaller than d: particles behave like points, close meetings produce very large forces for a very short time and need very small time steps;
+- epsilon of the same order as d: the pull of the nearest neighbours is smoothed, while the pull of the rest of the cluster stays Newtonian. This is our case (epsilon = 0.05);
+- epsilon much larger than d: structure smaller than epsilon is lost, for example the dense centre is flattened.
 
 Every run starts from a Plummer sphere. This is a classic model of a spherical cluster: it is dense in the centre and thinner towards the edge, and the velocities are chosen so that the cluster neither collapses nor explodes. A separate program creates the starting positions and velocities from a random seed. 
 
-To move the particles forward in time we use the leapfrog method in its Kick-Drift-Kick form. In each step the program first changes the velocities with half a step of the current acceleration (a "kick"), then moves the particles for a full step with these velocities (a "drift"), then computes the new accelerations at the new positions, which is the expensive part, and finally gives a second half kick with the new accelerations. This method is simple and needs only one force computation per step: in practice this means that the energy does not slowly drift up or down during a long simulation; it only oscillates a little around the correct value.
+To move the particles forward in time we use the leapfrog method in its Kick-Drift-Kick form. Each step does:
 
-This property is the reason why we use energy to check correctness. A group of particles that only attract each other must keep its total energy E = T + U constant, where T is the energy of motion and U is the gravitational energy, computed with the same softening as the forces. So the program computes the total energy at the start and at regular times during the run, and it reports the largest relative change, |E(t) - E(0)| / |E(0)|, which we call the energy drift. A run is considered OK only if the drift stays below 1e-4, which is stricter than the 1e-3 suggested by the exercise. The energy is checked only at the sampled times and not at every moment, and computing the energy costs as much as computing the forces, so in performance runs it cannot be done very often.
+1. kick: v += a x dt/2, with the current accelerations;
+2. drift: x += v x dt;
+3. new accelerations at the new positions (the expensive part);
+4. kick: v += a x dt/2, with the new accelerations.
 
-One processor core needs about an hour to simulate 100 steps of 100,000 particles, so the work is split among many cores using MPI: it starts many independent copies of the program, called ranks or processes. Each rank has its own memory and cannot see the data of the others; if it needs something, it must receive it as a message. We divide the N particles into P equal groups, one for each rank, and each rank owns its group, its "home" particles, for the whole run. When N cannot be divided exactly by P, the first ranks get one extra particle. The problem is that to compute the forces on its home particles a rank needs the positions of all the particles. Instead of sending everything to everybody, the ranks are placed in a circle, a "ring". Each rank holds one travelling block of particles. At every ring step each rank computes the forces between its home particles and the block it holds, then passes the block to its neighbour on one side and receives a new block from the neighbour on the other side. After P steps every block has visited every rank, and every rank has the complete force on its home particles. Only the positions travel around the ring. The home particles never move to another rank, so nobody else ever writes their forces, and no final combination of results is needed.
+Kick and drift update every particle independently, so they are split among the threads with `#pragma omp parallel for schedule(static)`. The method needs only one force computation per step, and the energy does not slowly drift up or down during a long simulation: it only oscillates a little around the correct value.
 
-The exchange of blocks can be done in two ways, and both are in the program. In the blocking version, called `sendrecv`, each rank computes with its current block, then stops and exchanges it with `MPI_Sendrecv`, so it stays idle while the message travels. In the overlapped version, called `overlap`, each rank first starts sending the current block and receiving the next one with `MPI_Isend` and `MPI_Irecv`, then computes, and only at the end waits for the exchange to finish with `MPI_Waitall`. In the best case the message travels while the rank is busy, and the waiting time disappears.
+This property is the reason why we use energy to check correctness. A group of particles that only attract each other must keep its total energy E = T + U constant, where T is the energy of motion and U is the gravitational energy, computed with the same softening as the forces. So the program computes the total energy at the start and at regular times during the run, and it reports the largest relative change, |E(t) - E(0)| / |E(0)|, which we call the energy drift. A run is considered OK only if the drift stays below 1e-4, a stricter limit than 1e-3. The energy is checked only at the sampled times and not at every moment, and computing the energy costs as much as computing the forces, so in performance runs it cannot be done very often.
 
-Also OpenMP is used: inside each rank, OpenMP starts several threads that share the same memory, and the force loop is divided so that each thread takes care of different home particles. Because each thread only writes the forces of its own particles, two threads never write to the same place, and no locks are needed. 
-The two tools can be used together, with P ranks and T threads per rank, which gives P times T cores in total. 
+One processor core needs about an hour to simulate 100 steps of 100,000 particles, so the work is split among many cores using MPI: it starts many independent copies of the program, called ranks or processes. Each rank has its own memory and cannot see the data of the others; if it needs something, it must receive it as a message. The work is divided like this:
+
+- the N particles are split into P equal groups, one per rank; each rank owns its "home" particles for the whole run (when N is not a multiple of P, the first ranks get one extra particle);
+- the ranks form a ring, and each rank holds one travelling block of particles;
+- at every ring step each rank computes the forces between its home particles and the block it holds, then passes the block to one neighbour and receives a new block from the other;
+- after P steps every block has visited every rank, and every rank has the complete force on its home particles;
+- only the positions travel; the home particles never leave their rank, so nobody else writes their forces and no final combination of results is needed.
+
+Inside each rank, OpenMP starts several threads that share the same memory and split the home particles among them. The two tools can be used together, with P ranks and T threads per rank, which gives P times T cores in total. 
 
 - N is the total number of particles, 
 - P the number of MPI ranks
 - T the number of threads per rank. 
 
-The particle data are stored as a structure of arrays: one array for all x positions, one for all y positions, and so on, instead of one record per particle. The force loop only needs the positions, so this layout lets it read just the data it uses, and it lets the ring send the positions as three plain arrays without any packing. The arrays are allocated with 64-byte alignment, the size of one AVX-512 register, so that vector instructions can load them efficiently. The input file is read with MPI's parallel file functions (`MPI_File_read_at_all`): every rank reads only its own block of particles directly from the shared file, so no single process ever has to hold the whole system in memory. The final state, when it is requested, is collected on rank 0 with `MPI_Gatherv`, which also handles blocks of unequal size.
+Data and input/output:
+
+- structure of arrays: one array for all x positions, one for all y, and so on; the force loop reads only the positions, and the ring sends them as three plain arrays without packing;
+- arrays aligned to 64 bytes, the size of one AVX-512 register, so that vector instructions load them efficiently;
+- input read with `MPI_File_read_at_all`: each rank reads only its own block from the shared file, so no process holds the whole system;
+- final state, when requested, collected on rank 0 with `MPI_Gatherv`, which also handles blocks of unequal size.
 
 The ring was chosen instead of the simpler alternative of sending every particle to every rank at each step (for example with `MPI_Allgather`). Both approaches move the same amount of data per rank, but with the ring each rank only needs memory for its own block and one travelling block, not for all N particles, and the exchange happens in P small steps that can be overlapped with computation. Only the three position arrays travel: velocities and accelerations always stay with their owner.
 
-All physics is computed in double precision, while the input file stores single-precision numbers to keep it small. The energy check adds up its many small terms in `long double`, an extended precision, and always uses the exact square root, so that the correctness check is as accurate as possible and is never affected by the optimisations being tested. The partial sums of the ranks are combined with `MPI_Allreduce`.
+To understand where the time goes, the program measures itself with the MPI clock, `MPI_Wtime()`. Each rank records:
 
-The parallel parts of the code use the following MPI calls and OpenMP pragmas:
+- `io`: reading the input;
+- `force`: computing the forces, including `comm_wait`, the time spent waiting for ring messages;
+- `kick` and `drift`: moving the particles;
+- `energy`: computing the energy;
+- `total`: from reading the input to the end of the simulation (without the start of the program and of MPI).
 
-| Where | Construct | What it does |
-|---|---|---|
-| Start of the program | `MPI_Init_thread(..., MPI_THREAD_FUNNELED, ...)` | MPI is called only by the main thread, never inside an OpenMP parallel region |
-| Reading the input | `MPI_File_read_at_all` | every rank reads only its own block from the shared file |
-| Ring exchange, blocking | `MPI_Sendrecv` | send the current block to the right neighbour and receive the next one from the left |
-| Ring exchange, overlapped | `MPI_Irecv`, `MPI_Isend`, then `MPI_Waitall` | start the exchange, compute, then wait for it |
-| Force loop over home particles | `#pragma omp parallel for schedule(static)` | each thread gets an equal, contiguous block of target particles |
-| Inner loop over the sources | `#pragma omp simd reduction(+ : ax0, ay0, az0) ...` | asks the compiler to vectorise the loop; the partial sums are reductions |
-| Approximate square root | AVX-512 intrinsics (`_mm512_rsqrt14_pd`, `_mm512_fmadd_pd`) | hand-written vector loop, 8 source particles at a time |
-| Kick and drift | `#pragma omp parallel for schedule(static)` | each particle is updated independently |
-| Energy check | `#pragma omp parallel for reduction(+ : sum) schedule(static)` | each thread adds its part in `long double`, OpenMP combines the thread sums |
-| Energy check, all ranks | `MPI_Allreduce` with `MPI_SUM` | sum of the kinetic and potential energy of all ranks |
-| Newton kernel | `#pragma omp parallel`, then `#pragma omp for schedule(static)`, then a second `#pragma omp parallel for` | each thread writes into its own private copy of the forces; the copies are summed at the end |
-| Timers | `MPI_Reduce` with `MPI_MAX` | for each phase, the time of the slowest rank |
-| Final state | `MPI_Gatherv` | collect the particles of all ranks on rank 0 |
-
-There are no `critical` or `atomic` sections and no locks: in every parallel loop each thread writes only its own data, and all sums between threads are OpenMP reductions. The only points where the ranks must wait for each other are the ring exchanges, the energy reduction and the final gather.
-
-The benchmarks are organised as follows:
-
-- All benchmarks are driven by the same small set of scripts. 
-- A driver script runs every configuration the requested number of times, with optional warm-up runs, and appends one line per run to a CSV file with the configuration, the timers, the energy drift and the status. 
-- A Slurm wrapper submits these drivers as jobs with the right account, partition, modules and binding settings. 
-- A Python script then turns the raw CSV files into the medians, standard deviations, speedups and figures. Keeping every single run in the raw files, and computing the statistics afterwards, means that every number in the report can be checked and recomputed.
-
-To understand where the time goes, the program measures itself with the MPI clock, `MPI_Wtime()`. Each rank records how long it spends reading the input (`io`), computing forces (`force`), waiting for ring messages (`comm_wait`, which is already part of `force`), moving the particles (`kick` and `drift`) and computing the energy (`energy`). The `total` time goes from reading the input to the end of the simulation, and it does not include the start of the program and of MPI. At the end, for each phase the largest value among all ranks is reported, because the slowest rank decides when the job ends. Different phases can be slowest on different ranks, so the phases do not have to add up exactly to the total. From the force time the program also computes a throughput, the number of particle pairs processed per second:
+For each phase the largest value among the ranks is collected on rank 0 with `MPI_Reduce` and `MPI_MAX`, because the slowest rank decides when the job ends. Different phases can be slowest on different ranks, so the phases do not add up exactly to the total. From the force time the program also computes a throughput, the number of particle pairs processed per second:
 
 ```text
 Gpairs/s = (number of steps + 1) x N x (N - 1) / (T_force x 1e9)
@@ -123,7 +122,14 @@ This means:
 - OpenMP turned on
 - No profile-guided optimisation is used
 
-The initial conditions are created by a small serial generator, and the memory-layout test uses a separate OpenMP program without MPI, so that communication cannot disturb the comparison between the two layouts. The vectorisation reports are produced by compiling the same sources with two extra GCC options that print which loops were turned into vector code and which were not. For the compilation-target test the main program is built twice, changing only the `-march` option. The commands are:
+Other programs and builds:
+
+- initial conditions: a small serial generator;
+- memory-layout test: a separate OpenMP program without MPI, so that communication cannot disturb the comparison;
+- vectorisation reports: the same sources compiled with two extra GCC options that print which loops were vectorised;
+- compilation-target test: the main program built twice, changing only `-march`.
+
+The commands are:
 
 ```sh
 # initial-condition generator (Plummer sphere)
@@ -144,50 +150,31 @@ mpicc -std=c11 -DNBODY_USE_DOUBLE -O3 -Wall -Wextra -Wpedantic -march=x86-64-v3 
 ./configure CC=mpicc --prefix=$HOME/osu && make -j && make install
 ```
 
-The programs are started with Slurm (`srun`). Each rank is fixed to its own cores with `srun --cpu-bind=verbose,cores`, and inside each rank the threads are fixed with `OMP_PLACES=cores` and `OMP_PROC_BIND=spread`. Fixing processes and threads to cores stops the operating system from moving them around during the run, which would make the timings noisy and could move a thread away from its memory. The `verbose` option prints the real CPU mask of every rank, so we check the placement instead of only asking for it. This is our equivalent of the `MPI_BIND` setting mentioned in the exercise.
-
-HPC centres use Singularity, which can run images made with Docker: it starts from a standard Ubuntu 24.04 image, installs the compiler, the OpenMPI development packages, the OSU micro-benchmarks (version 7.5.2) and our source code, and compiles the program inside the image. The image was sent to Docker Hub and converted on Orfeo into a Singularity image file. We chose Ubuntu 24.04 and not 22.04 because the Orfeo MPI libraries need a C library at least as new as glibc 2.38: Ubuntu 22.04 has glibc 2.35, and an early image without glibc 2.38 could not load the cluster MPI, while Ubuntu 24.04 has glibc 2.39 and works.
-
-OpenMPI is installed inside the image because the `mpicc` compiler wrapper and the MPI header files are needed to build the program, but at run time the cluster's own MPI library replaces it. This is the key point for MPI programs in containers: MPI must talk to the cluster's launcher and network, which the container does not know, so the program is built with the container's MPI and run with the cluster's MPI, mounted inside the container. Finally, the container program is compiled with `-march=x86-64-v3` instead of `-march=native`, because the image should run on other machines too. With `native` it would only work on processors like the one that built it, while `x86-64-v3` (AVX2 without AVX-512) runs on almost every recent x86 server. The price is that AVX-512 is not used, and one experiment looks at this cost. The container build command, checked with `make -nB` inside the image, is:
+Run configuration. Every solver run is started in the same way, with P processes (MPI ranks) and T threads per process:
 
 ```sh
-mpicc -std=c11 -DNBODY_USE_DOUBLE -O3 -march=x86-64-v3 -Wall -Wextra -Wpedantic -fopenmp -o nbody_direct_hybrid nbody_direct_hybrid.c -lm
+export OMP_NUM_THREADS=T
+export OMP_PLACES=cores
+export OMP_PROC_BIND=spread
+srun --ntasks=P --cpus-per-task=T --cpu-bind=verbose,cores ./nbody_direct_hybrid ...
 ```
 
-The image itself is built with Docker on a personal computer, sent to Docker Hub, and then converted into a Singularity image on Orfeo. The recipe uses `x86-64-v3` as its default target, and inside the image the OSU micro-benchmarks are compiled with the image's `mpicc`, in the same way as the native ones. The commands are:
+- number of processes: `srun --ntasks=P`, one MPI rank per process;
+- threads per process: `OMP_NUM_THREADS=T`, and `srun --cpus-per-task=T` gives each rank T cores of its own, so that P x T is never larger than the cores reserved for the job;
+- `OMP_PLACES=cores`: each OpenMP thread is placed on one physical core (not on a hardware thread);
+- `OMP_PROC_BIND=spread`: the T threads of a rank are spread evenly over the T cores of that rank and cannot move to other cores;
+- `MPI_BIND` equivalent: `srun --cpu-bind=cores` binds every rank to its own set of cores. We use Slurm's binding and not `mpirun --bind-to`, because on Orfeo the ranks are started by Slurm. The option `verbose` prints the real CPU mask of every rank, so the placement is checked, not only requested;
+- each job runs on one GENOA node (two nodes only for the OSU test, with one process per node) and reserves at least P x T cores through Slurm, so no other job shares the cores we use.
 
-```sh
-# on a personal computer
-docker build -t .../nbody-hpc:latest .
-docker push .../nbody-hpc:latest
+With T = 1 the two OpenMP variables have no effect, because each rank has only one thread and one core; they matter in the experiments with several threads per rank.
 
-# on Orfeo
-module load singularity/4.3.1
-singularity pull --force nbody.sif docker://.../nbody-hpc:latest
-```
+Fixing processes and threads to cores stops the operating system from moving them during the run, which would make the timings noisy and could move a thread away from its memory.
 
-So the native and the container environments are not identical, and it is honest to say it clearly:
+Statistics:
 
-| Component | Native | Container |
-|---|---|---|
-| Build environment | Orfeo (Fedora 41 based) | Ubuntu 24.04.5 LTS |
-| Compiler | GCC 14.3.1 | GCC 13.3.0 |
-| Compilation target | `-march=native` (AVX-512) | `-march=x86-64-v3` (AVX2) |
-| MPI used to build | Orfeo Open MPI 4.1.6rc4 | Ubuntu OpenMPI 4.1.6-7ubuntu2 |
-| MPI used to run | Orfeo Open MPI 4.1.6rc4 | the same Orfeo Open MPI, mounted into the image |
-| OpenMP runtime | libgomp 14.3.1 (Orfeo) | libgomp 14.2.0 (Ubuntu) |
-| Other libraries | libm, hwloc 2.12.0 | Ubuntu glibc 2.39 and libm, Orfeo hwloc 2.12.0 |
-
-The cluster's MPI and hwloc folders are mounted inside the container with `SINGULARITY_BINDPATH`, and `SINGULARITYENV_LD_LIBRARY_PATH` tells the program to look for libraries there first:
-
-```sh
-export SINGULARITY_BINDPATH=/opt/programs/openMPI/4.1.6:/opt/programs/openMPI/4.1.6,/opt/programs/hwloc/2.12.0:/opt/programs/hwloc/2.12.0
-export SINGULARITYENV_LD_LIBRARY_PATH=/opt/programs/openMPI/4.1.6/lib:/opt/programs/hwloc/2.12.0/lib
-```
-
-As the exercise asks, we checked the result with `ldd`, which lists the libraries a program really loads. Inside the container the program loads `libmpi.so.40`, `libopen-rte.so.40` and `libopen-pal.so.40` from `/opt/programs/openMPI/4.1.6/lib` and `libhwloc.so.15` from `/opt/programs/hwloc/2.12.0/lib`, which are exactly the same files used by the native program, while OpenMP (`libgomp.so.1`) comes from the image. If the container had silently used its own MPI, runs on several nodes could fail or use slow communication without any clear error. Getting to this point was not easy, and the problems teach something. The first images failed because they did not have glibc 2.38, and later a part of the cluster MPI loaded an incompatible version of the UCX communication library from the image. 
-
-Every configuration is run five times, and we report the median, which is the middle value when the five runs are sorted; unlike the average, the median is not moved much by one unusually slow run. Next to the median we give the sample standard deviation, which we call the spread:
+- every configuration is run five times;
+- we report the median, the middle value of the five sorted runs, which is not moved much by one unusually slow run;
+- next to it we give the sample standard deviation, which we call the spread:
 
 ```text
 s = sqrt( sum over the n runs of (x_i - mean)^2 / (n - 1) )
@@ -266,63 +253,12 @@ Some examples from this report:
 | Long validation run | 2000 | 10 | 201 |
 | Time-step convergence | 100-400 | 1 | 101-401 (every step) |
 
-The check sits at the end of each step of the time loop:
+The check works like this:
 
-```c
-energy0 = total_energy_ring(...);                     // E(0), before the first step
-compute_accelerations_ring(...);                      // a(0)
-
-for (size_t step = 1; step <= nsteps; ++step)
-{
-  kick(&local, 0.5 * dt);                             // v += a * dt/2
-  drift(&local, dt);                                  // x += v * dt
-  compute_accelerations_ring(...);                    // new a at the new positions
-  kick(&local, 0.5 * dt);                             // v += a * dt/2
-
-  if ((step % energy_every) == 0 || step == nsteps)   // energy check
-  {
-    energy = total_energy_ring(...);
-    rel = fabs(energy - energy0) / fabs(energy0);     // relative drift
-    if (rel > max_rel_drift)
-      max_rel_drift = rel;                            // keep the largest value
-  }
-}
-```
-
-The energy itself is computed in three parts. The kinetic energy needs only the home particles of each rank, so it needs no communication. Each thread adds its part in `long double`, and OpenMP combines the thread sums:
-
-```c
-long double sum = 0.0L;
-#pragma omp parallel for reduction(+ : sum) schedule(static)
-for (i = 0; i < p->n; ++i)
-  sum += vx[i]*vx[i] + vy[i]*vy[i] + vz[i]*vz[i];     // |v|^2
-return 0.5L * mass * sum;                             // T = m/2 * sum |v|^2
-```
-
-The potential energy needs all pairs, so it uses the same ring as the force, with blocking exchanges. For each block that visits the rank, each pair is added only once, when the global index of the home particle is smaller than the global index of the source particle, and always with the exact square root:
-
-```c
-#pragma omp parallel for reduction(+ : sum) schedule(static)
-for (i = 0; i < home->n; ++i)
-{
-  const size_t gi = home_start + i;                   // global index of the home particle
-  for (j = 0; j < source_n; ++j)
-    if (gi < source_start + j)                        // count each pair once
-    {
-      dx = sx[j] - xi;  dy = sy[j] - yi;  dz = sz[j] - zi;
-      r2 = dx*dx + dy*dy + dz*dz + eps*eps;           // same softening as the force
-      sum -= G * mass * mass * (1.0 / sqrt(r2));      // U_ij = -G m^2 / sqrt(r^2 + eps^2)
-    }
-}
-```
-
-Finally the kinetic and potential sums of all ranks are added together, and every rank gets the result:
-
-```c
-MPI_Allreduce(&kin_local, &kin_global, 1, MPI_LONG_DOUBLE, MPI_SUM, comm);
-MPI_Allreduce(&pot_local, &pot_global, 1, MPI_LONG_DOUBLE, MPI_SUM, comm);
-E = kin_global + pot_global;
-```
+- E(0) is computed once before the first step; after every step that is a multiple of `energy-every`, and after the last step, the program computes E again and keeps the largest relative drift;
+- kinetic energy: each rank sums |v|^2 over its own particles, so no communication is needed. The threads split the particles with `#pragma omp parallel for reduction(+ : sum) schedule(static)`, and the sum is kept in `long double`;
+- potential energy: it needs all pairs, so it uses the same ring as the force, with blocking `MPI_Sendrecv` exchanges. Each pair is counted once, only when the global index of the home particle is smaller than that of the source particle ("i smaller than j"), always with the exact square root, and with the same OpenMP directive;
+- total: `MPI_Allreduce` with `MPI_SUM` (in `MPI_LONG_DOUBLE`) adds the kinetic and potential sums of all ranks, and every rank gets E.
 
 The rule "i smaller than j" makes the work uneven between ranks: the rank with the first particles accepts almost all its pairs, the rank with the last ones almost none. The strong-scaling section measures the effect of this.
 
@@ -340,21 +276,34 @@ The largest values seen in each group of runs are:
 | Time-step convergence | 10000 | 100-400 | 1 x 8 | 2.5e-7 |
 | Long validation run | 10000 | 2000 | 1 x 8 | 5.0e-7 |
 
-All values are far below the tolerance of 1e-4. Two more observations make the check stronger.
+All values are below the tolerance of 1e-4: the largest one, 4.7e-6, is about 20 times smaller.
 
-First, the drift does not depend on the number of ranks. In the strong-scaling runs the same five initial conditions were run with every number of ranks from 1 to 32, and each input gives the same drift at every rank count, to about nine significant digits. The same holds between the blocking and overlapped ring, and between the native and the container runs. Splitting the problem differently only changes the order in which the forces are added, which changes the last digits but not the physics. If a block of particles were lost or counted twice in the ring, the drift would jump by orders of magnitude.
+The drift also does not depend on how the work is divided. In the strong-scaling runs the same five initial conditions were run with every number of ranks from 1 to 32. For each input the drift is the same at every rank count to about nine significant digits:
 
-Second, larger systems drift a little more: in the weak-scaling series, from 2.7e-7 for 10,000 particles to 4.7e-6 for 160,000. More particles mean more close encounters at the same softening and time step.
+| Input | P = 1 | P = 2 | P = 4 | P = 8 | P = 16 | P = 32 |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 1.7159563851e-6 | 1.7159563855e-6 | 1.7159563845e-6 | 1.7159563851e-6 | 1.7159563848e-6 | 1.7159563848e-6 |
+| 2 | 1.4472776047e-6 | 1.4472776086e-6 | 1.4472776063e-6 | 1.4472776070e-6 | 1.4472776070e-6 | 1.4472776070e-6 |
+| 3 | 2.1184062564e-6 | 2.1184062617e-6 | 2.1184062643e-6 | 2.1184062633e-6 | 2.1184062633e-6 | 2.1184062633e-6 |
+| 4 | 1.6823944506e-6 | 1.6823944516e-6 | 1.6823944512e-6 | 1.6823944509e-6 | 1.6823944512e-6 | 1.6823944509e-6 |
+| 5 | 1.3408127421e-6 | 1.3408127438e-6 | 1.3408127428e-6 | 1.3408127428e-6 | 1.3408127428e-6 | 1.3408127428e-6 |
+
+Only the last digits change, because a different number of ranks adds the forces in a different order. The drift is also identical between the blocking and the overlapped ring (section on hiding communication) and between the native and the container runs (cloud part).
 
 ### A longer validation run
 
-The runs above are short (5 to 100 steps). The exercise asks to check energy conservation "over the whole run" for a Plummer sphere of 10,000 particles, so we also ran one long simulation: N = 10,000, 2000 steps of dt = 1e-4 (twenty times longer than the scaling runs), one rank with 8 threads, exact square root, energy checked every 10 steps (201 checks). Only the energy matters here, so this job ran on a shared node with 8 cores, and its timings are not used as performance data.
+The runs above are short (5 to 100 steps). To check energy conservation over a longer run for a Plummer sphere of 10,000 particles, we also ran one long simulation:
+
+- N = 10,000, 2000 steps of dt = 1e-4 (twenty times longer than the scaling runs);
+- one rank with 8 threads, exact square root;
+- energy checked every 10 steps (201 checks);
+- only the energy matters here, so the job ran on a shared node with 8 cores and its timings are not used.
 
 | N | Steps | dt | Simulated time | Energy checks | Largest energy drift |
 |---:|---:|---:|---:|---:|---:|
 | 10000 | 2000 | 1e-4 | 0.2 | every 10 steps | 4.99e-7 |
 
-Over the whole run the energy never moved by more than 5 parts in 10 million: about 200 times below our tolerance and 2000 times below the 1e-3 of the exercise. The same kind of input followed for 100 steps shows a drift of about 2.3e-7, so running twenty times longer only about doubles the largest drift. This is what we expect from the leapfrog method: the energy error oscillates in a bounded range instead of growing with time. The program records only the maximum drift, not the full history E(t), so this is an indication rather than a proof.
+Over the whole run the largest drift is 4.99e-7: about 200 times below our tolerance of 1e-4 and 2000 times below 1e-3. The time-step convergence runs, with the same N, dt and threads but only 100 steps, reach at most 2.5e-7 (table above). Running twenty times longer therefore only doubles the largest drift, instead of multiplying it by twenty. This agrees with the leapfrog method, whose energy error oscillates in a bounded range instead of growing with time. The program records only the largest drift, not the full history E(t), so this is an indication rather than a proof.
 
 ---
 
@@ -362,11 +311,11 @@ Over the whole run the energy never moved by more than 5 parts in 10 million: ab
 
 ```mermaid
 flowchart LR
-  A["<b>Input</b><br/>Plummer sphere, N =<br/>10,000, 5 seeds"]
-  B["<b>Run</b><br/>1 rank x 8 threads, 5<br/>steps: energy_every = 1<br/>(every step) and<br/>energy_every = 5 (start<br/>and end)"]
-  C["<b>Measure</b><br/>total time and energy<br/>time of each run"]
-  D["<b>Analyse</b><br/>median; share = T_energy<br/>/ T_total; extra cost =<br/>T(every step) / T(start<br/>and end) - 1"]
-  E["<b>Result</b><br/>+41% with the energy at<br/>every step -> performance<br/>runs check the energy<br/>rarely"]
+  A["<b>Input</b><br/>Plummer sphere, N =<br/>10,000, same input for<br/>every run"]
+  B["<b>Run</b><br/>1 rank x 8 threads, 5<br/>steps: energy_every = 1<br/>(every step) and<br/>energy_every = 5 (start<br/>and end); 5 runs each"]
+  C["<b>Measure</b><br/>total, force and energy<br/>time of each run"]
+  D["<b>Analyse</b><br/>medians; extra cost =<br/>T(every step) / T(start<br/>and end) - 1"]
+  E["<b>Result</b><br/>+40.8% with the energy<br/>at every step, same<br/>force time and same drift"]
   A --> B --> C --> D --> E
   classDef io fill:#e8f1fb,stroke:#1f77b4,color:#111;
   classDef step fill:#f7f7f7,stroke:#555,color:#111;
@@ -374,20 +323,31 @@ flowchart LR
   class B,C,D step;
 ```
 
-The potential energy needs every pair of particles, exactly like the force. Frequent energy checks are good for correctness but can distort the timing of a performance run, so we measured their cost. The test used N = 10,000, 5 steps, one rank with 8 threads and five repetitions. We compared computing the energy at every step (`energy_every=1`) with computing it only at the start and at the end (`energy_every=5`). With T_total the median total time and T_energy the median time of the energy phase, the two columns of the table are:
+The potential energy needs every pair of particles, like the force, so checking it often can change the timing of a performance run. We measured how much:
+
+- N = 10,000, 5 steps, one rank with 8 threads, the same input for every run, five runs per setting;
+- energy at every step (`energy_every = 1`, 6 energy evaluations: the start and steps 1-5) against energy only at the start and at the end (`energy_every = 5`, 2 evaluations).
+
+With medians over the five runs:
 
 ```text
-share of time on energy = T_energy / T_total
 extra cost              = T_total(every step) / T_total(start and end only) - 1
+time per evaluation     = T_energy / number of energy evaluations
 ```
 
-| N | Steps | Ranks | Threads | Energy computed | Median total (s) | Share of time on energy | Extra cost | Largest drift |
-|---:|---:|---:|---:|---|---:|---:|---:|---:|
-| 10000 | 5 | 1 | 8 | every step | 0.554580 | 44.64% | +40.83% | 9.62e-8 |
-| 10000 | 5 | 1 | 8 | start and end only | 0.393790 | 22.35% | baseline | 9.62e-8 |
+| Energy computed | Energy evaluations | Median total (s) | Median force (s) | Median energy (s) | Time per evaluation (s) | Extra cost | Largest drift |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| every step | 6 | 0.5546 | 0.3012 | 0.2476 | 0.0413 | +40.8% | 9.62e-8 |
+| start and end only | 2 | 0.3938 | 0.3019 | 0.0880 | 0.0440 | baseline | 9.62e-8 |
 
+The table shows:
 
-Frequent energy checks are a useful debugging tool but cost a lot. For this reason all performance runs compute the energy only rarely, for example once at the start and once at the end. Even so, the energy still takes a small part of the total time (about 1-2% in the 100-step scaling runs and 6-9% in the 20-step runs, growing with the number of ranks), and this time is included in all reported totals.
+- the force time is the same in both settings (0.3012 s and 0.3019 s), so the whole difference in total time comes from the energy phase;
+- one energy evaluation costs about the same in both settings (0.041-0.044 s), so the energy time grows with the number of evaluations: 6 instead of 2 evaluations take 0.2476 s instead of 0.0880 s;
+- computing the energy at every step makes the run 40.8% slower;
+- the largest drift is the same, 9.62e-8, in both settings: in this run, checking at every step finds no larger deviation than checking only at the start and at the end.
+
+For this reason all performance runs compute the energy only at the start and at the end.
 
 ---
 
@@ -407,7 +367,7 @@ flowchart LR
   class B,C,D step;
 ```
 
-The exercise asks for evidence behind the claim about the bottleneck. Hardware counters were not available, so we use the program's own instrumentation: the phase timers described in the methods, and the throughput of the force kernel. The throughput is our "memory-bandwidth-style" measure of performance. A memory-bound code is naturally measured in bytes per second; for an O(N^2) kernel the natural unit of useful work is one particle pair, so we measure pairs per second:
+To identify the bottleneck we need measurements. Hardware counters were not available, so we use the program's own instrumentation: the phase timers described in the methods, and the throughput of the force kernel. The throughput is our "memory-bandwidth-style" measure of performance. A memory-bound code is naturally measured in bytes per second; for an O(N^2) kernel the natural unit of useful work is one particle pair, so we measure pairs per second:
 
 ```text
 Gpairs/s = (number of steps + 1) x N x (N - 1) / (T_force x 1e9)
@@ -431,7 +391,7 @@ flowchart LR
   A["<b>Input</b><br/>Plummer sphere, N =<br/>100,000, seeds 1-5 (the<br/>same at every P)"]
   B["<b>Run</b><br/>P = 1, 2, 4, 8, 16, 32<br/>ranks x 1 thread, 100<br/>steps, sendrecv ring,<br/>exact sqrt, energy at<br/>start and end; 30 runs<br/>split into Slurm jobs of<br/>at most 2 hours"]
   C["<b>Measure</b><br/>total and phase times,<br/>energy drift"]
-  D["<b>Analyse</b><br/>median and spread -><br/>S(P), E(P), E_phase(P);<br/>Amdahl f_eff; energy<br/>imbalance model"]
+  D["<b>Analyse</b><br/>median and spread -><br/>S(P), E(P), E_energy(P);<br/>Amdahl f_eff; energy<br/>imbalance model"]
   E["<b>Result</b><br/>table + run time, speedup<br/>and efficiency plots<br/>(30.9x, 96.7% at 32<br/>ranks)"]
   A --> B --> C --> D --> E
   classDef io fill:#e8f1fb,stroke:#1f77b4,color:#111;
@@ -442,41 +402,45 @@ flowchart LR
 
 Strong scaling measures how much faster a problem of fixed size runs when we add cores. Ideally, 32 cores would be 32 times faster. In practice some parts do not speed up: communication between ranks, work that every rank repeats, and waiting for the slowest rank. The way the efficiency drops as cores are added shows where these limits are.
 
-The set-up follows the configuration of the exercise:
+Set-up:
 
 - N = 100,000 particles, 100 time steps of dt = 1e-4;
 - P = 1, 2, 4, 8, 16 and 32 ranks, one thread each, on GENOA nodes;
 - blocking ring (`sendrecv`), direct kernel, exact square root, energy checked only at the start and at the end;
+- the ranks wait for each other only in the ring exchanges (`MPI_Sendrecv`), in the energy reduction (`MPI_Allreduce`) and in the final gather of the particles;
 - five repetitions per point, with the same five initial conditions (seeds) at every P, no warm-up;
-- the same executable for every P, with all phase timers recorded.
+- the same executable for every P, with all phase timers recorded;
+- 30 runs split into Slurm jobs of at most two hours (one run on one core takes about 64 minutes): one job per repetition at P = 1, fewer jobs for the faster points; P = 8, 16 and 32 in one job on the same node;
+- largest energy drift 2.1e-6.
 
-One run on one core takes about 64 minutes, and a job can last at most two hours, so the runs were split into several jobs: one job for each repetition at P = 1, and fewer jobs for the faster points. The points P = 8, 16 and 32 ran in one job on the same node. All 30 runs have status OK, with a largest energy drift of 2.1e-6.
-
-Besides the speedup and efficiency of the total time, the table gives the efficiency of each phase, computed in the same way from the median time of that phase, and the waiting time as a share of the total:
+Besides the speedup and efficiency of the total time, the table gives the efficiency of the energy check, computed in the same way from the median time of that phase, the waiting time as a share of the total, and the speed of the force computation of each rank:
 
 ```text
-E_phase(P) = T_phase(1) / (P x T_phase(P))
-waiting    = T_comm_wait(P) / T_total(P)
+E_energy(P)        = T_energy(1) / (P x T_energy(P))
+waiting            = T_comm_wait(P) / T_total(P)
+Gpairs/s per rank  = (number of steps + 1) x N x (N - 1) / (T_force(P) x 1e9 x P)
 ```
 
-| MPI ranks P | N/P | Median total (s) | Spread s (s) | Speedup | Efficiency (total) | Efficiency (force) | Efficiency (energy check) | Waiting for messages | Gpairs/s per rank |
-|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 100000 | 3823.47 | 2.27 | 1.00 | 100.0% | 100.0% | 100.0% | 0.00% | 0.2667 |
-| 2 | 50000 | 1920.50 | 0.63 | 1.99 | 99.5% | 100.0% | 69.6% | 0.27% | 0.2665 |
-| 4 | 25000 | 960.53 | 0.86 | 3.98 | 99.5% | 100.1% | 60.6% | 0.27% | 0.2670 |
-| 8 | 12500 | 480.42 | 1.01 | 7.96 | 99.5% | 100.2% | 56.9% | 0.19% | 0.2672 |
-| 16 | 6250 | 240.56 | 1.67 | 15.89 | 99.3% | 100.1% | 55.1% | 0.26% | 0.2670 |
-| 32 | 3125 | 123.59 | 0.02 | 30.94 | 96.7% | 97.5% | 52.9% | 0.24% | 0.2599 |
+The force computation needs no separate efficiency: the number of pairs is fixed, so if the Gpairs/s per rank stay the same as with one rank, the force computation has an efficiency of 100%.
+
+| MPI ranks P | N/P | Median total (s) | Spread s (s) | Speedup | Efficiency (total) | Efficiency (energy check) | Waiting for messages | Gpairs/s per rank |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 100000 | 3823.47 | 2.27 | 1.00 | 100.0% | 100.0% | 0.00% | 0.2667 |
+| 2 | 50000 | 1920.50 | 0.63 | 1.99 | 99.5% | 69.6% | 0.27% | 0.2665 |
+| 4 | 25000 | 960.53 | 0.86 | 3.98 | 99.5% | 60.6% | 0.27% | 0.2670 |
+| 8 | 12500 | 480.42 | 1.01 | 7.96 | 99.5% | 56.9% | 0.19% | 0.2672 |
+| 16 | 6250 | 240.56 | 1.67 | 15.89 | 99.3% | 55.1% | 0.26% | 0.2670 |
+| 32 | 3125 | 123.59 | 0.02 | 30.94 | 96.7% | 52.9% | 0.24% | 0.2599 |
 
 <p align="center"><img src="results_final/scaling_100steps/strong_runtime.svg" alt="Strong-scaling run time at N=100000" width="60%"></p>
 
 _The run time falls from about 64 minutes on one core to about 2 minutes on 32 cores, following the ideal line T(1)/P._
 
-<p align="center"><img src="results_final/scaling_100steps/strong_speedup.svg" alt="Strong-scaling speedup at N=100000" width="49%"> <img src="results_final/scaling_100steps/strong_efficiency.svg" alt="Strong-scaling efficiency of each phase at N=100000" width="49%"></p>
+<p align="center"><img src="results_final/scaling_100steps/strong_speedup.svg" alt="Strong-scaling speedup at N=100000" width="49%"> <img src="results_final/scaling_100steps/strong_efficiency.svg" alt="Strong-scaling efficiency at N=100000" width="49%"></p>
 
-_Left: the speedup reaches 30.9 at 32 ranks, against an ideal of 32. Right: the force computation keeps about 100% efficiency; the energy check falls to about 55%, but it takes only 1-2% of the run, so the total efficiency stays above 99% up to 16 ranks._
+_Left: the speedup reaches 30.9 at 32 ranks, against an ideal of 32. Right: the efficiency stays above 99% up to 16 ranks and falls to 96.7% at 32 ranks (note the vertical scale, from 0.90 to 1.02)._
 
-Up to 16 ranks the efficiency stays above 99%, and 32 ranks are 30.9 times faster than one, an efficiency of 96.7%. The force computation, the heart of the program, keeps about 100% efficiency: each rank processes 0.267 billion pairs per second whether it works alone or with 15 others. The waiting time for ring messages stays below 0.3% of the run at every P.
+Up to 16 ranks the efficiency stays above 99%, and 32 ranks are 30.9 times faster than one, an efficiency of 96.7%. The force computation processes 0.267 billion pairs per second per rank both with 1 and with 16 ranks. The waiting time for ring messages stays below 0.3% of the run at every P.
 
 The only point clearly below 99% is P = 32. The waiting time there is still 0.24%, but the force computation of each rank is slower: 0.260 billion pairs per second, about 2.5% less than at all the other rank counts. This looks like a property of the node, not of the scaling. The runs with 8, 16 and 32 ranks ran in the same job on the same node (genoa004), and with 8 and 16 ranks the speed per rank is normal. So some of the extra cores used only at 32 ranks are probably slower, for example because they run at a lower clock. The timers cannot confirm the cause.
 
@@ -500,7 +464,7 @@ The losses behave as if about 0.05-0.1% of the work were serial: a mix of the un
 
 ### Limits of strong scaling
 
-The exercise asks where the scaling would break down. Two limits are expected as P grows with N fixed:
+Two limits are expected as P grows with N fixed:
 
 - Too little work per rank for vector instructions. Modern cores process several numbers at once (SIMD). When a rank has only a few hundred particles, loop start-up and leftover iterations become a large part of the work. At 32 ranks each rank still has 3,125 particles, so we do not expect this effect, and we do not see it: the force efficiency is about 100% up to 16 ranks, and the lower value at 32 ranks comes from the node, not from the size of the blocks.
 - The ring becomes too long. With P ranks, each force evaluation does P message exchanges, one after each block. Only P - 1 are needed: the last one just brings every rank's own block back home, and the code does it anyway to keep the loop simple. The computation per rank shrinks like N^2/P, while the number of messages grows like P. A simple model is:
@@ -514,11 +478,7 @@ The exercise asks where the scaling would break down. Two limits are expected as
 
 ### Growth of the cost with N
 
-The exercise asks by what factor the time per step should grow when N is multiplied by 10. For the direct method the number of pairs grows by
-
-```text
-(10N)(10N - 1) / (N (N - 1)) = 100.009   for N = 10,000
-```
+For the direct method the time per step grows like N^2, so multiplying N by 10 should multiply the time by 10^2 = 100.
 
 We check this with two sets of runs that differ only in N, with the same executable and settings: one rank, one thread, 100 steps, N = 10,000 (the first point of the weak-scaling series) and N = 100,000 (the first point of the strong-scaling series).
 
@@ -526,9 +486,9 @@ We check this with two sets of runs that differ only in N, with the same executa
 |---:|---:|
 | 10,000 | 38.11 |
 | 100,000 | 3823.47 |
-| Ratio | 100.32 (expected 100.01) |
+| Ratio | 100.32 (expected 100) |
 
-The measured ratio is within 0.3% of the prediction, well within what we expect from the different initial conditions and the different amount of data in the caches. This confirms that the program has the quadratic cost of the direct method.
+The measured ratio is within 0.3% of the prediction, a difference compatible with the different initial conditions and the different amount of data in the caches. This confirms that the program has the quadratic cost of the direct method.
 
 ---
 
@@ -558,7 +518,7 @@ The set-up was:
 - P = 1, 2, 4, 8 and 16 ranks, one thread each, 100 time steps, GENOA nodes;
 - five repetitions per point, no warm-up; the same executable and settings as the strong-scaling runs (blocking ring, exact square root, energy checked only at the start and at the end).
 
-All 25 runs have status OK. To compare each point with the ideal, we scale the one-rank time T(1) with the number of pairs:
+To compare each point with the ideal, we scale the one-rank time T(1) with the number of pairs:
 
 ```text
 pairs ratio  R(P) = N_P (N_P - 1) / (N_1 (N_1 - 1))
@@ -585,18 +545,24 @@ _The time grows with P even though each rank keeps the same number of particles,
 
 _Left: the work-normalised speedup reaches 15.9 at 16 ranks, against an ideal of 16. Right: the work-normalised efficiency stays above 99% at every P._
 
-The weak-scaling result agrees with the strong-scaling one: the time grows exactly like the number of pairs per rank, and at 16 ranks the extra cost is only 0.8%. Waiting for messages takes at most 0.25% of the run, and the energy check, whose imbalance also appears here, takes at most 1.7%.
+The weak-scaling result agrees with the strong-scaling one: the time grows exactly like the number of pairs per rank, and at 16 ranks the extra cost is 0.8%. Waiting for messages takes at most 0.25% of the run, and the energy check, whose imbalance also appears here, takes at most 1.7%.
 
-Gustafson's law is the natural way to read this: when the problem grows with the machine, the parallel part dominates and good scaling is possible. For direct N-body, the balance between computation and communication stays constant in theory. Per force evaluation each rank computes about n x N = n^2 x P pairs (with n = N/P) and receives n x P particles (P blocks of n, the last one being its own block coming back), so both grow linearly with P. In practice other effects can appear:
+Gustafson's law is the natural way to read this: when the problem grows with the machine, the parallel part dominates. For direct N-body, the balance between computation and communication stays constant in theory. Per force evaluation each rank computes about n x N = n^2 x P pairs (with n = N/P) and receives n x P particles (P blocks of n, the last one being its own block coming back), so both grow linearly with P. The measurements follow this: the time for messages stays at 0.14-0.25% of the run at every P and does not grow. The small departure from the ideal comes from somewhere else, the energy check, as shown below.
 
-- shared caches, memory bandwidth and frequency limits when more cores are busy;
-- the lock-step ring, where one delayed rank delays all the others;
-- operating-system noise ("jitter");
-- on several nodes, the limited bandwidth of the network card, shared by all ranks of a node.
+The uneven density of the Plummer sphere does not cause load imbalance in the direct method: every particle interacts with every other one wherever it is, so all ranks have exactly the same number of pairs. Density would matter for a tree code or for any method with a distance cutoff. Imbalance can still come from differences between cores, not from the particle positions.
 
-The exercise asks whether the uneven density of the Plummer sphere causes load imbalance. In the direct method it does not: every particle interacts with every other one wherever it is, so all ranks have exactly the same number of pairs. Density would matter for a tree code or for any method with a distance cutoff. Imbalance can still come from differences between cores, not from the particle positions.
+### The energy check
 
-These are single-node measurements. They show that on one node the effects listed above are small for this program, but they cannot predict the behaviour of a run over several nodes, where the network would matter.
+At 16 ranks the run is 0.8% slower than the ideal. The force computation is within 0.1% of the ideal (604.5 s against 603.9 s) and the waiting for messages stays at 0.14-0.25% at every P, so almost all of the difference comes from the energy check, which is computed twice per run (start and end):
+
+| P | N | Energy time (s) | Share of total | Energy / force, per evaluation |
+|---:|---:|---:|---:|---:|
+| 1 | 10000 | 0.36 | 0.94% | 0.48 |
+| 16 | 160000 | 10.4 | 1.70% | 0.87 |
+
+With one rank an energy evaluation costs about half a force evaluation, as expected, because it counts each pair once. With 16 ranks it costs 1.7 times more than that. This is the same "i smaller than j" imbalance seen in strong scaling: the rank with the lowest indices has the most pairs, up to (2 - 1/P) times the average, and `MPI_Allreduce` waits for it. A balanced energy check would take about 6 s instead of 10.4 s at P = 16; the 4.4 s of difference are 0.7% of the run, almost all of the 0.8%. The loss stays bounded (the efficiency of the energy check tends to 50%) and could be removed by computing the energy less often or by dividing the pairs evenly.
+
+These are single-node measurements: they cannot predict the behaviour over several nodes, where the network would matter.
 
 ---
 
@@ -616,15 +582,20 @@ flowchart LR
   class B,C,D step;
 ```
 
-The same 64 cores can be used in many ways: 64 ranks with one thread, 8 ranks with 8 threads, 2 ranks with 32 threads, and so on. Fewer ranks mean fewer and shorter ring exchanges, but more threads sharing memory. The natural guess, suggested by the exercise, is one rank per NUMA domain, so that the threads of each rank use nearby memory. The exercise also asks to try one rank per socket and one rank per core, and to measure the difference. We compared three mappings of the same 64 cores:
+The same 64 cores can be used in many ways: 64 ranks with one thread, 8 ranks with 8 threads, 2 ranks with 32 threads, and so on. Fewer ranks mean fewer and shorter ring exchanges, but more threads sharing memory. A common choice is one rank per NUMA domain, so that the threads of each rank use nearby memory. We compared it with one rank per socket and one rank per core, using the same 64 cores:
 
 - one rank per NUMA domain: P = 8 ranks x T = 8 threads;
 - one rank per socket: P = 2 x T = 32;
 - one rank per core: P = 64 x T = 1.
 
-The CPU masks printed by Slurm confirm that each rank received its own, non-overlapping set of cores (for example, in the NUMA mapping each rank owns exactly one block of 8 cores). They also show that Slurm places consecutive ranks alternately on the two sockets.
+Set-up:
 
-Workload: N = 100,000, 20 steps, overlapped ring, exact square root, four partial sums, double precision; one warm-up and five measured runs per mapping.
+- N = 100,000, 20 steps, overlapped ring, exact square root, four partial sums, double precision;
+- inside each rank the loop over the home particles is split among the threads with `#pragma omp parallel for schedule(static)`, which gives each thread an equal, contiguous block of particles;
+- MPI is started with `MPI_Init_thread(..., MPI_THREAD_FUNNELED, ...)`: only the main thread calls MPI, never inside an OpenMP parallel region;
+- no `critical` or `atomic` sections and no locks: each thread writes only its own particles, and all sums between threads are OpenMP reductions;
+- one warm-up and five measured runs per mapping;
+- the CPU masks printed by Slurm confirm that each rank received its own, non-overlapping set of cores (in the NUMA mapping each rank owns exactly one block of 8 cores), and that consecutive ranks are placed alternately on the two sockets.
 
 | Mapping | Ranks P | Threads T | Median total (s) | Mean total (s) | Spread s (s) | Median force (s) | Median waiting for messages (s) | Median Gpairs/s |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -632,11 +603,13 @@ Workload: N = 100,000, 20 steps, overlapped ring, exact square root, four partia
 | One rank per socket | 2 | 32 | 13.986056 | 13.988024 | 0.012181 | 12.905388 | 0.051432 | 16.272110 |
 | One rank per core | 64 | 1 | 14.025092 | 14.045257 | 0.054429 | 12.852373 | 0.101077 | 16.339232 |
 
-The three mappings are very close. One rank per socket is the fastest: 2.0% faster than one rank per NUMA domain and 0.3% faster than one rank per core.
+The three mappings are very close: one rank per socket is the fastest, 2.0% faster than one rank per NUMA domain and 0.3% faster than one rank per core.
 
-The force throughput is about 16.3 billion pairs per second in all three cases, and the force computation takes about 90-92% of the total time in each. So the way the cores are organised barely changes the speed of the main computation. What changes is mostly the communication: the socket mapping has only 2 ranks in the ring and the lowest waiting time. Even so, waiting is less than 1% of the time, so it cannot explain the 2% difference between the socket and the NUMA mapping. The phase timers show where most of it comes from: the energy check takes about 1.34 s with the NUMA mapping and 1.07 s with the socket mapping, while the force phase is practically the same (12.91 s in both). The one-rank-per-core mapping is in between, with 1.09 s. The uneven split of the energy work, seen in strong scaling, does not explain this difference: with the "i smaller than j" rule, the busiest thread of the node gets about twice the average work in all three mappings. The cause of the extra 0.3 s of the NUMA mapping in the energy phase cannot be found from these data.
+- The force computation is the same in all three: about 16.3 billion pairs per second, 90-92% of the total time, 12.91 s with both the NUMA and the socket mapping.
+- Waiting for messages is lowest with the socket mapping (only 2 ranks in the ring), but it is below 1% of the time in all cases, so it cannot explain the 2% difference.
+- Most of the difference is in the energy check: 1.34 s with the NUMA mapping, 1.07 s with the socket mapping and 1.09 s with one rank per core. The uneven split of the energy work does not explain it, because the busiest thread gets about twice the average work in all three mappings. From these data we cannot tell where the extra 0.3 s of the NUMA mapping come from.
 
-The "obvious" NUMA-based choice is correct but not automatically the fastest. For a program that is limited by arithmetic and whose working data fit in the caches, memory locality matters less than one might expect, and the best mapping has to be measured for the actual problem. The largest energy drift of these runs is 4.94e-7.
+So one rank per NUMA domain is not the fastest mapping in this test. For a program limited by arithmetic, whose data fit in the caches, memory locality matters less than expected, and the best mapping has to be measured. The largest energy drift of these runs is 4.94e-7.
 
 ---
 
@@ -656,15 +629,28 @@ flowchart LR
   class B,C,D step;
 ```
 
-The force computation takes 90% or more of the run time, so it is the obvious place to look for speed. The exercise lists several classic ideas and asks to measure each one and explain the result, also when an idea does not pay off. The next sections test them one at a time.
+The force computation takes 90% or more of the run time, so it is the obvious place to look for speed. The next sections test several classic optimisations one at a time, and report the result also when an idea does not pay off.
 
-For this section and the next two, unless stated otherwise, the tests use a small, quick configuration so that many variants can be compared under the same conditions: N = 10,000 particles, 5 steps, one rank, first with one thread and then with 2, 4, 8 and 16 threads, dt = 1e-4, epsilon = 0.05, energy computed only at the start and end, five repetitions per variant, no warm-up. Each thread count repeats the same 55 runs (11 variants x 5), and all 275 runs have status OK. A single rank keeps communication out of the picture, and starting from one thread shows the effect of each idea on the computation before thread effects come in.
+For this section and the next two, unless stated otherwise, the tests use a small, quick configuration so that many variants can be compared under the same conditions:
+
+- N = 10,000 particles, 5 steps, dt = 1e-4, epsilon = 0.05, energy only at the start and end;
+- one rank, first with one thread and then with 2, 4, 8 and 16 threads;
+- five repetitions per variant, no warm-up; 55 runs per thread count (11 variants x 5), 275 runs in total.
+
+A single rank keeps communication out of the picture, and starting from one thread shows the effect of each idea on the computation before thread effects come in.
 
 Newton's third law says that the force of particle j on particle i is equal and opposite to the force of i on j. The direct loop computes both, so in principle we could compute each pair once and use the result twice, halving the arithmetic.
 
 In the direct loop each thread writes only the forces of its own particles. With the third law, a thread that handles the pair (i, j) must also update particle j, which may belong to another thread. Two threads could then update the same particle at the same time, and one update would be lost. This must be prevented, and that has a cost.
 
-In our implementation each thread has its own private copy of the force arrays. Inside one `#pragma omp parallel` region, the rows i are split among the threads with `#pragma omp for schedule(static)`; each thread computes the pairs (i, j) with j > i once and writes into its own copy. A second `#pragma omp parallel for` then adds all the copies together. There are no locks or atomic operations in the pair loop. The price is extra memory (three arrays per thread) and the work of clearing and summing the copies, which grows like T x N. The saving grows like N^2, so the trade-off is good when N is large compared with the number of threads, and worse with many threads and small N.
+Our implementation:
+
+- each thread has its own private copy of the force arrays;
+- inside one `#pragma omp parallel` region, the rows i are split among the threads with `#pragma omp for schedule(static)`; each thread computes the pairs (i, j) with j > i once and writes into its own copy;
+- a second `#pragma omp parallel for` adds all the copies together;
+- no locks or atomic operations in the pair loop.
+
+The price is extra memory (three arrays per thread) and the work of clearing and summing the copies, which grows like T x N. The saving grows like N^2, so the trade-off favours the third law when N is large compared with the number of threads, and the copies weigh more with many threads and small N.
 
 The first test uses 1 rank and 1 thread.
 
@@ -675,7 +661,7 @@ The first test uses 1 rank and 1 thread.
 
 The third law reduces the total time by 32% (a speedup of 1.47x), and the force phase alone by 37% (1.60x). This is less than the ideal factor of 2 because only the arithmetic is halved: the loop still has to read the particles, and the extra bookkeeping adds some work. Both kernels give the same energy drift (1.2974058e-7).
 
-With one thread there is no conflict between threads, so this test shows the benefit of the idea but not its full cost. The real trade-off appears with several threads, so the comparison was repeated with 2, 4, 8 and 16 threads (five runs each, all OK). The table uses the force time, where the two kernels differ. The last column is a simple model explained below the figures.
+With one thread there is no conflict between threads, so this test shows the benefit of the idea but not its full cost. The real trade-off appears with several threads, so the comparison was repeated with 2, 4, 8 and 16 threads (five runs each). The table uses the force time, where the two kernels differ. The last column is a simple model explained below the figures.
 
 | Threads | Direct force (s) | Newton force (s) | Newton / direct | Newton, simple imbalance model (s) |
 |---:|---:|---:|---:|---:|
@@ -689,7 +675,7 @@ With one thread there is no conflict between threads, so this test shows the ben
 
 _Left: the direct kernel follows the ideal line, halving its time at every doubling of threads, while Newton's kernel improves much less. Right: Newton is faster with 1 and 2 threads and slower from 4 threads on, 1.65 times slower with 16._
 
-The trade-off asked about in the exercise is clearly visible. With one thread, computing each pair once saves 37% of the force time. With two threads the saving has almost disappeared (6%), and from four threads on Newton's kernel is slower than the direct one, by 10% with 4 threads and by 65% with 16. The direct kernel instead scales almost perfectly: with 16 threads it is 15.9 times faster than with one.
+With one thread, computing each pair once saves 37% of the force time. With two threads the saving has almost disappeared (6%), and from four threads on Newton's kernel is slower than the direct one, by 10% with 4 threads and by 65% with 16. The direct kernel with 16 threads is 15.9 times faster than with one.
 
 The main reason is not the private copies but how the work is divided. In Newton's kernel, row i contains only the pairs with j > i, so the first rows are long and the last rows almost empty. `schedule(static)` gives each thread an equal number of rows, so the thread with the first rows has much more work than the thread with the last rows, and everybody waits for it. The busiest thread has 2 - 1/T times the average work, which gives the model in the last column:
 
@@ -699,7 +685,38 @@ T_model(T) = T_newton(1) / T x (2 - 1/T)
 
 Using only this rule and the one-thread time, the model predicts the measured times within 0.5% for 2 and 4 threads and within 4% for 8 threads. At 16 threads the measured time is higher than the model, because the fixed cost of clearing and adding the 16 private copies is no longer small compared with the shrinking pair work. The energy check shows the same kind of imbalance between MPI ranks: whenever pairs are counted once with an "i smaller than j" rule and the work is split in equal blocks, the first worker gets too much.
 
-So Newton's third law pays off only when few threads share the work. To make it useful with many threads, the imbalance must be removed, for example with `schedule(dynamic)` or an interleaved distribution of the rows, or by pairing a row from the start with one from the end, and the cost of combining the private copies must be kept small. For our production runs the direct kernel, which needs no synchronisation at all, is the better choice.
+### When the saving outweighs the cost of the conflict, and when it does not
+
+The measurements allow a simple budget. Call D(T) the force time of the direct kernel with T threads; the measurements give D(T) = D(1) / T within 1%. For Newton's kernel three terms add up:
+
+```text
+Newton(T) = r x D(1) / T  x  (2 - 1/T)   +   overhead of the private copies
+            ^ saved flops    ^ imbalance      ^ conflict resolution
+```
+
+- r = Newton(1) / D(1) = 1.4014 / 2.2359 = 0.63 is the real saving per pair. It is not 0.5, because each pair now also writes the force of particle j back to memory, while the direct loop keeps its sums in registers and never writes inside the inner loop.
+- (2 - 1/T) is the load imbalance of `schedule(static)` on the triangular loop j > i.
+- The overhead is clearing the T private copies before the loop and adding them after it.
+
+Newton's kernel is faster only if Newton(T) / D(T) < 1. Ignoring the overhead, this means r x (2 - 1/T) < 1, that is 2 - 1/T < 1.6, so T < 2.5. The measurements agree: Newton wins with 1 and 2 threads (0.63 and 0.94) and loses from 4 threads on (1.10, 1.21, 1.65). With the static schedule, the imbalance alone cancels the saving from three threads on, before the copies cost anything.
+
+The overhead of the copies is small up to 8 threads (0.012 s, 4% of the direct time) but reaches 0.063 s at 16 threads, 45% of the direct time. Each thread must clear and add arrays of size N, work that does not shrink when threads are added, while its share of pairs, N^2 / T, does. The copies therefore cost more as T grows and less as N grows.
+
+The saving in flops outweighs the conflict resolution when:
+
+- few threads write into the same arrays (1-2 threads with our static schedule);
+- the work is balanced, for example with `schedule(dynamic)` or by pairing a long row with a short one. Then the imbalance factor disappears and the saving r = 0.63 is kept, as long as the copies stay cheap;
+- N per thread is large, so the pair work (N^2 / T) is much larger than clearing and adding the copies (N per thread);
+- the cost per pair is high, as with the exact square root and division: saving half of an expensive operation is worth more than the extra writes.
+
+It does not pay off when:
+
+- many threads work on a small N: at N = 10,000 and 16 threads the imbalance and the copies make Newton 1.65 times slower;
+- the conflict is resolved with `atomic` or `critical`: every pair would then pay a synchronised update, which costs more than the arithmetic it saves;
+- the pair computation is cheap, for example with the vectorised approximate square root: the direct loop becomes about eight times faster, while the writes to particle j, scattered in memory, do not become faster and are harder to vectorise;
+- the particles are on different MPI ranks: the force on j would have to be sent back to its owner, adding communication.
+
+For our production runs the direct kernel is the better choice. With many threads per rank Newton loses, as measured. With one thread per rank and many ranks, each rank spends only 1/P of its pair work on its own particles; the other P - 1 blocks belong to other ranks, where the third law would require sending forces back. The direct kernel does twice the arithmetic, but needs no synchronisation, and its force time decreases as 1/T.
 
 Using the idea across MPI ranks would be even harder: the force computed for a particle owned by another rank would have to be sent back to its owner, adding communication. Our production solver does not do this. Note also that the Newton kernel computes N(N-1)/2 pairs, while the Gpairs/s formula counts N(N-1), so its throughput is an effective value.
 
@@ -712,8 +729,8 @@ flowchart LR
   A["<b>Input</b><br/>Plummer sphere, N =<br/>10,000, 5 steps, 1 rank"]
   B["<b>Run</b><br/>exact, approx1 (rsqrt14 +<br/>1 Newton step), approx2<br/>(+ 2 steps); T = 1-16<br/>threads, 5 runs each"]
   C["<b>Measure</b><br/>force and total time,<br/>energy drift"]
-  D["<b>Analyse</b><br/>speedup = T(exact) /<br/>T(approx); drift<br/>difference from exact"]
-  E["<b>Result</b><br/>force phase 8.3x<br/>(approx1) and 6.3x<br/>(approx2) faster at every<br/>thread count"]
+  D["<b>Analyse</b><br/>median force and total<br/>time; drift difference<br/>from exact"]
+  E["<b>Result</b><br/>force time 2.24 s (exact),<br/>0.27 s (approx1), 0.35 s<br/>(approx2) with 1 thread"]
   A --> B --> C --> D --> E
   classDef io fill:#e8f1fb,stroke:#1f77b4,color:#111;
   classDef step fill:#f7f7f7,stroke:#555,color:#111;
@@ -733,17 +750,18 @@ The solver offers three options:
 - `approx1`: hardware approximation plus one correction step;
 - `approx2`: hardware approximation plus two correction steps.
 
-The approximate options are implemented in a separate hand-written loop that processes eight pairs at once with AVX-512 instructions (`_mm512_rsqrt14_pd` for the estimate, `_mm512_fmadd_pd` for the fused multiply-adds), while the exact option uses the ordinary loop. So the comparison is between two complete implementations, not only between two square-root instructions. The speedups in the tables are ratios of median times:
+Implementation:
 
-```text
-speedup vs exact = T(exact) / T(approx)
-```
+- approximate options: a separate hand-written loop that processes eight pairs at once with AVX-512 intrinsics (`_mm512_rsqrt14_pd` for the estimate, `_mm512_fmadd_pd` for the fused multiply-adds);
+- exact option: the ordinary loop.
 
-| Method | Median total (s) | Mean total (s) | Spread s (s) | Median force (s) | Total speedup vs exact | Largest energy drift |
-|---|---:|---:|---:|---:|---:|---:|
-| exact | 2.602213 | 2.603644 | 0.004365 | 2.235830 | 1.000 | 1.2974058018291037e-7 |
-| approx1 | 0.635762 | 0.637167 | 0.003193 | 0.270813 | 4.093 | 1.2974022806770565e-7 |
-| approx2 | 0.723951 | 0.722741 | 0.002251 | 0.354722 | 3.594 | 1.2974058018291037e-7 |
+So the comparison is between two complete implementations, not only between two square-root instructions.
+
+| Method | Median total (s) | Mean total (s) | Spread s (s) | Median force (s) | Largest energy drift |
+|---|---:|---:|---:|---:|---:|
+| exact | 2.602213 | 2.603644 | 0.004365 | 2.235830 | 1.2974058018291037e-7 |
+| approx1 | 0.635762 | 0.637167 | 0.003193 | 0.270813 | 1.2974022806770565e-7 |
+| approx2 | 0.723951 | 0.722741 | 0.002251 | 0.354722 | 1.2974058018291037e-7 |
 
 The five single runs:
 
@@ -755,23 +773,23 @@ The five single runs:
 
 The gain is large: the force phase becomes 8.3 times faster with one correction step and 6.3 times faster with two. The whole solver becomes about 4 times faster; it cannot gain as much as the force phase because the remaining 0.37 s (reading input, energy checks, moving particles) is not accelerated. The second correction step costs about 0.08 s more, as expected from the extra arithmetic.
 
-This is much more than the "2-3 times" suggested by the exercise for the square root alone. Most of the gain comes from the fully vectorised loop, which handles eight pairs per instruction, while the exact path does one pair at a time. The timings do not allow us to split the gain between "faster square root" and "vector instructions".
+This is more than the 2-3 times usually quoted for the square root alone. Most of the gain comes from the fully vectorised loop, which handles eight pairs per instruction, while the exact path does one pair at a time. The timings do not allow us to split the gain between "faster square root" and "vector instructions".
 
 The same comparison with 2, 4, 8 and 16 threads gives:
 
-| Threads | Exact force (s) | approx1 force (s) | approx2 force (s) | approx1 force speedup | approx2 force speedup | approx1 total speedup |
-|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 2.2358 | 0.2708 | 0.3547 | 8.26 | 6.30 | 4.09 |
-| 2 | 1.1175 | 0.1356 | 0.1774 | 8.24 | 6.30 | 3.48 |
-| 4 | 0.5590 | 0.0680 | 0.0888 | 8.22 | 6.29 | 3.23 |
-| 8 | 0.2803 | 0.0345 | 0.0450 | 8.12 | 6.22 | 3.06 |
-| 16 | 0.1413 | 0.0178 | 0.0231 | 7.94 | 6.13 | 2.94 |
+| Threads | Exact force (s) | approx1 force (s) | approx2 force (s) | Exact total (s) | approx1 total (s) |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 2.2358 | 0.2708 | 0.3547 | 2.6022 | 0.6358 |
+| 2 | 1.1175 | 0.1356 | 0.1774 | 1.3790 | 0.3960 |
+| 4 | 0.5590 | 0.0680 | 0.0888 | 0.7122 | 0.2203 |
+| 8 | 0.2803 | 0.0345 | 0.0450 | 0.3649 | 0.1194 |
+| 16 | 0.1413 | 0.0178 | 0.0231 | 0.1874 | 0.0638 |
 
-The gain in the force computation stays at about 8 times (one correction) and 6 times (two corrections) at every thread count, so the fast version parallelises as well as the exact one. The gain on the total time, however, falls from 4.1 to 2.9 times as threads are added. This is Amdahl's law on a small scale: the force phase shrinks by a factor of 8, but the other parts of the run (reading the input and the energy check, which always uses the exact square root) are not accelerated, so they become a larger share of what remains.
+The gain in the force computation stays at about 8 times (one correction) and 6 times (two corrections) at every thread count, so the fast version parallelises in the same way as the exact one. The gain on the total time, however, falls from 4.1 to 2.9 times as threads are added. This is Amdahl's law on a small scale: the force phase shrinks by a factor of 8, but the other parts of the run (reading the input and the energy check, which always uses the exact square root) are not accelerated, so they become a larger share of what remains.
 
 One correction step brings the approximation to roughly 8 significant digits, not the 16 of full double precision; two steps come much closer but do not guarantee identical results. In our runs the energy drift of `approx1` differs from the exact one by only 3.5e-13, and `approx2` gives the same printed value as `exact`. The drift is a single number for the whole system, so equal drifts show that energy conservation is equally good, not that the particles follow identical trajectories. That would require comparing the positions directly, which the program does not output.
 
-The exercise asks how to make sure that the energy check really tests the integrator and is not blind to the approximation error. We took two precautions:
+To make sure that the energy check really tests the integrator and is not blind to the approximation error, we took two precautions:
 
 - The energy is computed independently of the approximation: the energy routine always uses the exact double-precision square root, so the approximation cannot hide its own error in the check.
 - The drift does not change when the approximation is refined: if the approximation error dominated, `approx1` would show a clearly larger drift than `approx2` and `exact`. It does not.
@@ -803,7 +821,13 @@ difference vs exact = | drift(approx) - drift(exact) |   (same initial condition
 
 With the exact square root the drift should keep falling by four at each halving. An approximate square root adds an extra error that does not shrink with the time step. As long as this extra error is small, all three methods fall together. If an approximate version stopped improving while the exact one kept going, we would have found the point where the approximation becomes the limiting error.
 
-The study used N = 10,000 Plummer particles, one rank with 8 threads and a fixed physical time of 0.01, simulated with dt = 1e-4 (100 steps), dt/2 = 5e-5 (200 steps) and dt/4 = 2.5e-5 (400 steps). The energy was checked at every step, with three initial conditions (seeds) per point, for each of `exact`, `approx1` and `approx2`: 27 runs in total, all OK. As with the long run, these jobs used 8 cores of a shared node, and their timings are not used.
+Set-up:
+
+- N = 10,000 Plummer particles, one rank with 8 threads, fixed physical time 0.01;
+- dt = 1e-4 (100 steps), dt/2 = 5e-5 (200 steps), dt/4 = 2.5e-5 (400 steps);
+- energy checked at every step, three initial conditions (seeds) per point;
+- `exact`, `approx1` and `approx2`: 27 runs in total;
+- 8 cores of a shared node, so the timings are not used.
 
 | dt | Steps | exact: largest drift | Drop vs previous dt | approx1: largest drift | approx2: largest drift | Largest difference approx1 vs exact |
 |---:|---:|---:|---:|---:|---:|---:|
@@ -822,15 +846,15 @@ At the time steps we tested, the energy check is limited by the integrator, not 
 
 ---
 
-## Independent partial sums and the limits of the processor
+## Independent partial sums and the limits of the processor - FMA
 
 ```mermaid
 flowchart LR
   A["<b>Input</b><br/>Plummer sphere, N =<br/>10,000, 5 steps, 1 rank"]
   B["<b>Run</b><br/>exact loop with 1, 2, 4,<br/>8 independent partial<br/>sums; T = 1-16 threads, 5<br/>runs each"]
   C["<b>Measure</b><br/>force time"]
-  D["<b>Analyse</b><br/>speedup = T(1 chain) /<br/>T(k chains); theoretical<br/>peak = cores x frequency<br/>x FLOP per cycle"]
-  E["<b>Result</b><br/>about 1% gain at 2<br/>chains, nothing more;<br/>loop limited by sqrt and<br/>division"]
+  D["<b>Analyse</b><br/>median force time;<br/>theoretical peak = cores<br/>x frequency x FLOP per<br/>cycle"]
+  E["<b>Result</b><br/>chains: at most 1%;<br/>threads: 15.9x at 16;<br/>loop limited by sqrt and<br/>division"]
   A --> B --> C --> D --> E
   classDef io fill:#e8f1fb,stroke:#1f77b4,color:#111;
   classDef step fill:#f7f7f7,stroke:#555,color:#111;
@@ -838,41 +862,75 @@ flowchart LR
   class B,C,D step;
 ```
 
-For each particle the force is a long sum: a_x = a_x + (contribution of source 1) + (contribution of source 2) + ... Each addition must wait for the previous one, forming a chain of dependent operations. A modern core could do several additions at the same time, but not if each one depends on the last. Splitting the sum into 2, 4 or 8 independent partial sums, for example one for the even and one for the odd sources, and adding them at the end removes this dependency. In the code the source loop is unrolled by hand into 1, 2, 4 or 8 independent sums (ax0, ax1, ...), and all of them are listed in the `reduction` clause of the `#pragma omp simd` of that loop.
+For each particle the force is a long sum, a_x = a_x + (source 1) + (source 2) + ..., and each addition must wait for the previous one (latency about 4 cycles). With one sum the loop cannot add faster than one term every 4 cycles; with k independent partial sums, k chains advance at the same time and are added at the end. For a loop made only of multiply-adds the gain grows until all arithmetic units are busy, at k = latency x instructions per cycle = 4 x 2 = 8.
 
-The test uses the exact square-root loop with 1, 2, 4 and 8 partial sums ("chains"), 1 rank and 1 thread. The speedup is T(1 chain) / T(k chains).
+The exact force loop is unrolled by hand into 1, 2, 4 or 8 partial sums (`--accumulators`). The version with two sums per component:
 
-| Chains | Median total (s) | Mean total (s) | Spread s (s) | Median force (s) | Speedup vs 1 chain |
-|---:|---:|---:|---:|---:|---:|
-| 1 | 2.620428 | 2.626081 | 0.013853 | 2.256599 | 1.0000 |
-| 2 | 2.601374 | 2.601668 | 0.003138 | 2.233969 | 1.0073 |
-| 4 | 2.602371 | 2.602451 | 0.002038 | 2.235518 | 1.0069 |
-| 8 | 2.617220 | 2.616939 | 0.002793 | 2.248771 | 1.0012 |
-
-The effect is tiny: two or four chains save about 0.7%, eight chains only 0.1%. The difference between two and four chains (0.001 s) is smaller than the run-to-run variation, so there is at best a plateau at two to four chains. All variants give the same energy drift.
-
-The gain is small because the chain of additions matters only if the additions are the slowest part of each iteration. In the exact loop every pair also needs a square root and a division, which are much slower and must finish before the addition can start. As long as the square root dominates, independent additions cannot help much. The partial sums should matter more once the square root is cheap, but the fast AVX-512 loop uses its own vector accumulators and ignores this setting, so the combination could not be tested. With more chains, extra registers are needed and the final combination costs a little, which fits with eight chains being slightly worse than four.
-
-To see if the picture changes with several cores, the test was repeated with 2, 4, 8 and 16 threads. The table shows the median force time for each number of chains:
-
-| Threads | 1 chain (s) | 2 chains (s) | 4 chains (s) | 8 chains (s) | Best gain vs 1 chain |
-|---:|---:|---:|---:|---:|---:|
-| 1 | 2.2566 | 2.2340 | 2.2355 | 2.2488 | 1.0% (2 chains) |
-| 2 | 1.1274 | 1.1165 | 1.1174 | 1.1240 | 1.0% (2 chains) |
-| 4 | 0.5638 | 0.5581 | 0.5588 | 0.5621 | 1.0% (2 chains) |
-| 8 | 0.2828 | 0.2799 | 0.2800 | 0.2819 | 1.0% (2 chains) |
-| 16 | 0.1420 | 0.1406 | 0.1412 | 0.1416 | 1.0% (2 chains) |
-
-The result is the same at every thread count: two chains give about 1% and more chains give nothing more, with eight chains always slightly worse than two or four. The gain saturates immediately, at two chains, because the loop is limited by the square root and the division, not by the chain of additions.
-
-The exercise also asks what sets the peak floating-point speed of one socket. The fastest arithmetic instruction is the fused multiply-add (FMA), which computes a x b + c in one step and counts as two operations. On the Zen 4 cores of the EPYC 9374F each core can issue two FMA instructions per cycle, each working on 4 double-precision numbers (Zen 4 executes 512-bit AVX-512 instructions as two 256-bit halves, so the width must not be counted twice). That gives 2 x 4 x 2 = 16 operations per cycle per core. For one socket at the 3.85 GHz base frequency:
-
-```text
-peak FP64 = cores x frequency x operations per cycle
-          = 32 x 3.85e9 x 16 = 1.97 TFLOP/s
+```c
+#pragma omp parallel for schedule(static)                 // threads split the targets i
+for (i = 0; i < home->n; ++i)
+{
+  dtype ax0 = 0, ay0 = 0, az0 = 0, ax1 = 0, ay1 = 0, az1 = 0;
+  #pragma omp simd reduction(+ : ax0, ay0, az0) reduction(+ : ax1, ay1, az1)
+  for (j = 0; j < source_n_unrolled; j += 2)              // two sources per iteration
+  {
+    /* pair (i, j):   dx0, dy0, dz0, r2_0, invr0 = 1/sqrt(r2_0), s0 = G m invr0^3 */
+    ax0 += dx0 * s0;  ay0 += dy0 * s0;  az0 += dz0 * s0;  // chain 0
+    /* pair (i, j+1): same formulas */
+    ax1 += dx1 * s1;  ay1 += dy1 * s1;  az1 += dz1 * s1;  // chain 1
+  }
+  ax += ax0 + ax1;  ay += ay0 + ay1;  az += az0 + az1;    // combine; then a tail loop
+}
 ```
 
-This is a theoretical ceiling that only a program made entirely of independent FMAs could approach. Our force loop also contains square roots, divisions, loads and dependent sums, and its exact form is not vectorised, so it reaches only a fraction of this. We report pairs per second rather than FLOP/s, because converting one into the other requires deciding how many operations a square root "counts" for, and this differs between the exact and approximate versions. The 16.3 Gpairs/s of the mapping experiment refer to the whole node (two sockets), not to one socket.
+- threads: `#pragma omp parallel for schedule(static)` gives each thread different targets, so no synchronisation is needed;
+- vectorisation: `#pragma omp simd` with the partial sums in `reduction` asks the compiler to process several sources at once;
+- partial sums: k independent chains of additions per component.
+
+Set-up: N = 10,000, 5 steps, one rank, exact square root, energy only at the start and at the end; 1, 2, 4, 8 partial sums with 1, 2, 4, 8, 16 threads; five runs per case, same energy drift in every case.
+
+| Threads | 1 chain (s) | 2 chains (s) | 4 chains (s) | 8 chains (s) |
+|---:|---:|---:|---:|---:|
+| 1 | 2.2566 | 2.2340 | 2.2355 | 2.2488 |
+| 2 | 1.1274 | 1.1165 | 1.1174 | 1.1240 |
+| 4 | 0.5638 | 0.5581 | 0.5588 | 0.5621 |
+| 8 | 0.2828 | 0.2799 | 0.2800 | 0.2819 |
+| 16 | 0.1420 | 0.1406 | 0.1412 | 0.1416 |
+
+Along a row the time changes by at most 1%: two and four chains save 1.0%, eight chains 0.3-0.4%, so the gain saturates at two chains. Down a column the time halves at every doubling of the threads: 16 threads are 15.9 times faster than one.
+
+Why more threads help and more partial sums do not:
+
+- each thread runs on its own core, with its own square-root and division unit; the pairs of each thread are N x N / T, so the limiting work is divided by T. Partial sums stay inside one core and add no such unit;
+- one pair costs about 14 cycles (0.266 billion pairs per second per core: 6 x 10,000 x 9,999 pairs in 2.2566 s at 3.85 GHz), almost all in the exact square root and division, against about 4 cycles for one addition. A new term reaches the sum only every 14 cycles, so even one chain waits for the square root, not for the previous addition;
+- with one partial sum there are already three independent chains (ax, ay, az), and the next pairs do not depend on the sums, so the core already overlaps them;
+- the loop runs one pair at a time with separate multiplications and additions (with `-std=c11` GCC does not fuse them into FMAs), so FMA throughput is not the active limit;
+- with eight chains the loop is eight times longer and has 24 sums plus eight pairs of temporaries, which probably forces more values into memory and cancels the small gain.
+
+Partial sums would matter in a loop where one iteration costs less than the latency of an addition, such as a vectorised multiply-add loop with a cheap inverse square root. In our code that is the AVX-512 loop, which does not use this setting.
+
+### Peak floating-point speed of the kernel
+
+The machine peak is set by the fused multiply-add (FMA, a x b + c, two operations). Each Zen 4 core issues two FMAs per cycle on 4 doubles (AVX-512 runs as two 256-bit halves), 16 operations per cycle, so one socket at 3.85 GHz gives
+
+```text
+machine peak FP64 = 32 cores x 3.85e9 x 16 = 1.97 TFLOP/s
+```
+
+A kernel reaches this only if it is made of independent vector FMAs. Our kernel is limited by the slowest resource it uses: kernel peak = cores x (pairs per second per core) x (operations per pair).
+
+- memory is not the limit: each source is reused for all targets, the data fit in the caches, and the throughput per core is the same from 1 to 32 cores (profiling section);
+- exact kernel: the square root and the division, scalar, about 14 cycles per pair;
+- approximate kernel: `rsqrt14` plus Newton steps in an AVX-512 loop (8 pairs per instruction), mostly multiplications and FMAs, so the limit moves towards the FMA and multiply units; this kernel is 8.3 times faster.
+
+With the conventional count of about 20 operations per pair (square root and division counted as one each; only a convention) and the one-core throughput multiplied by 32:
+
+| Kernel | Pairs/s per core | Pairs/s per socket | Equivalent FLOP/s | Fraction of machine peak |
+|---|---:|---:|---:|---:|
+| exact | 0.266e9 | 8.5e9 | 0.17 TFLOP/s | about 9% |
+| approx1 (AVX-512) | about 2.2e9 | about 71e9 | about 1.4 TFLOP/s | about 70% |
+
+On one socket the peak of our kernel is therefore set by its bottleneck: the square-root and division unit for the exact version, the vector FMA and multiply units for the approximate one.
 
 ---
 
@@ -892,9 +950,18 @@ flowchart LR
   class B,C,D step;
 ```
 
-There are two natural ways to store particles. The array of structures (AoS) keeps all data of one particle together: {x, y, z, vx, vy, vz, m}, then the next particle, and so on. The structure of arrays (SoA) keeps one array for all x values, one for all y values, and so on. SoA is usually recommended for vector instructions, because consecutive x values are next to each other in memory and can be loaded into a vector register in one go. The exercise calls AoS a "vectorisation killer" and asks to measure the difference.
+There are two natural ways to store particles. The array of structures (AoS) keeps all data of one particle together: {x, y, z, vx, vy, vz, m}, then the next particle, and so on. The structure of arrays (SoA) keeps one array for all x values, one for all y values, and so on. SoA is usually recommended for vector instructions, because consecutive x values are next to each other in memory and can be loaded into a vector register in one go. AoS is often called a "vectorisation killer"; we measured the difference.
 
-A separate small benchmark computes the same forces with both layouts. In both layouts the loop over the target particles uses `#pragma omp parallel for schedule(static)`. The SoA version also puts `#pragma omp simd reduction(+ : ax, ay, az)` on the loop over the sources; the AoS version has no `simd` pragma. N = 10,000; 1, 2, 4 and 8 threads; exact square root; each run does one warm-up and then three timed force evaluations; five runs per layout and thread count. Only the force computation is timed, with the OpenMP clock. It was built with the same compiler and flags as the solver. At the end the program prints a checksum, the sum of all acceleration components. This is only a weak check: by Newton's third law the forces between pairs cancel, so the total is close to zero (about 8.5e-10 here) whatever the single forces are. Equal checksums exclude gross errors, such as missing particles or invalid numbers, but do not prove that the two layouts compute identical forces; a sum of absolute values, or a direct element-by-element comparison, would be needed for that.
+A separate small benchmark computes the same forces with both layouts:
+
+- loop over the target particles: `#pragma omp parallel for schedule(static)` in both layouts;
+- loop over the sources: `#pragma omp simd reduction(+ : ax, ay, az)` in the SoA version, no `simd` pragma in the AoS version;
+- one process (OpenMP only, no MPI) with 1, 2, 4 and 8 threads;
+- N = 10,000, exact square root;
+- one warm-up and three timed force evaluations per run; five runs per layout and thread count;
+- only the force computation is timed, with the OpenMP clock; same compiler and flags as the solver.
+
+At the end the program prints a checksum, the sum of all acceleration components. This is only a weak check: by Newton's third law the forces between pairs cancel, so the total is close to zero (about 8.5e-10 here) whatever the single forces are. Equal checksums exclude gross errors, such as missing particles or invalid numbers, but do not prove that the two layouts compute identical forces; a sum of absolute values, or a direct element-by-element comparison, would be needed for that.
 
 | Layout | N | Threads | Median force time (s) | Median Gpairs/s | Checksum difference vs AoS |
 |---|---:|---:|---:|---:|---|
@@ -911,9 +978,22 @@ A separate small benchmark computes the same forces with both layouts. In both l
 
 _Against the usual expectation, the SoA layout is about 10% slower than AoS at every thread count. The two layouts give the same checksum, which excludes gross errors but does not prove identical forces._
 
-With the time ratio T(AoS) / T(SoA) = 0.89-0.91, SoA takes about 10-12% more time in this benchmark, and the gap is the same at every thread count. The textbook advantage of SoA appears only if the compiler really turns the loop into vector instructions. When it does not, and the loop processes one pair at a time, SoA has no special advantage. A likely reason why it is even a little slower is that reading x, y and z of one particle from three different arrays uses three separate memory streams instead of one block. With only 10,000 particles all data fit easily in the caches, so memory bandwidth is not a limit either.
+Which layout should be faster? SoA, but only if the inner loop is vectorised. With SoA the x values of consecutive particles are next to each other, and one vector instruction loads 4 (AVX2) or 8 (AVX-512) of them. With AoS the same values are 72 bytes apart (one particle struct), and the processor must collect them one by one ("gather"). This is why AoS is called a vectorisation killer. If the loop is not vectorised, both layouts process one pair at a time and SoA has no special advantage.
 
-The compiler can report which loops it vectorised (`-fopt-info-vec`). The reports show that several loops are vectorised, while at least one of the force loops is reported as not vectorised because of branches inside it ("unsupported control flow"). So the `#pragma omp simd` is only a request: the compiler can refuse it. This fits the layout result, and the large gain of the approximate square root once the loop is vectorised by hand. To prove the explanation, however, one would need hardware counters of the vector instructions actually executed (for example `fp_arith_inst_retired.512b_packed_double`), with `perf` or PAPI. We checked on the Orfeo login node: `perf` is not installed, and no PAPI module or command is available:
+To see what really happens, we looked at the compiler report (`-fopt-info-vec`) and at the generated assembly of the benchmark (GCC 11, same options):
+
+- in neither layout is the force loop vectorised. The body contains only scalar instructions (`vsqrtsd`, `vdivsd`, `vmulsd`), one pair at a time; there is no vector square root or division (`vsqrtpd`, `vdivpd`) in the whole file;
+- the cause is the branches inside the loop, such as the `if` that chooses between the exact and the approximate square root. The compiler reports "control flow in loop";
+- the report does say "loop vectorized" for the SoA version, but that message refers to a small helper loop created by `#pragma omp simd` (clearing the partial sums), not to the force loop;
+- the failed `#pragma omp simd reduction(+ : ax, ay, az)` leaves a cost behind. In the AoS loop the three sums ax, ay, az stay in registers. In the SoA loop they are kept in memory (on the stack): at every pair each sum is read, updated and written back (`vaddsd -80(%rbp), ...` followed by `vmovsd ..., -80(%rbp)`).
+
+This explains the result. Both layouts run the same scalar arithmetic, and SoA is about 10% slower (T(AoS) / T(SoA) = 0.89-0.91 at every thread count) because every pair waits for three sums to go through memory instead of staying in registers. The benchmark therefore does not measure an advantage of AoS over SoA: it measures a vectorisation request that fails and leaves extra work behind.
+
+In summary, SoA is faster only when the loop is really vectorised. The main solver shows this case: it uses SoA with a hand-written AVX-512 loop and the approximate inverse square root (`_mm512_rsqrt14_pd`), loads 8 consecutive x, y and z values at once, and makes the force computation about eight times faster. With AoS that loop would need gathers. To see the SoA advantage in this benchmark, the branches would have to be removed from the inner loop.
+
+Limit of this check: the report and the assembly come from GCC 11 on a workstation, not from GCC 14 on Orfeo, because the Orfeo report for this benchmark was not saved. The conclusion should be confirmed with the Orfeo compiler.
+
+To prove the explanation, however, one would need hardware counters of the vector instructions actually executed (for example `fp_arith_inst_retired.512b_packed_double`), with `perf` or PAPI. We checked on the Orfeo login node: `perf` is not installed, and no PAPI module or command is available:
 
 ```text
 command -v perf                      -> not found
@@ -947,7 +1027,10 @@ The option `-march=native` lets the compiler use every instruction of the build 
 portable vs native = T(x86-64-v3) / T(native) - 1
 ```
 
-The same solver was built both ways and compared in two tests. A first short test used N = 10,000, 5 steps, 8 ranks with one thread each and the exact square root. Because it was very short and used only the exact square root, the comparison was repeated on a larger problem, N = 100,000, 10 steps, 32 ranks with one thread each, both with the exact square root and with the fast approximate one (one correction step). In the larger test each target has one warm-up and five measured runs; all runs of both tests have status OK.
+The same solver was built both ways and compared in two tests:
+
+- short test: N = 10,000, 5 steps, 8 ranks with one thread each, exact square root;
+- larger test (the first was very short and used only the exact square root): N = 100,000, 10 steps, 32 ranks with one thread each, exact square root and approx1; one warm-up and five measured runs per target;
 
 | Test | Square root | native median ± s (s) | x86-64-v3 median ± s (s) | Portable vs native |
 |---|---|---:|---:|---:|
@@ -955,13 +1038,33 @@ The same solver was built both ways and compared in two tests. A first short tes
 | N = 100,000, 10 steps, 32 ranks | exact | 15.010416 ± 0.106892 | 15.061305 ± 0.011998 | +0.3% |
 | N = 100,000, 10 steps, 32 ranks | approximate (approx1) | 3.723728 ± 0.005836 | 17.980670 ± 0.006151 | +383% (4.83 times slower) |
 
-The two results look contradictory at first, but they tell one story.
+Results:
 
-With the exact square root the two builds are equally fast, within 0.3% and within the spread, for both problem sizes. This is not a general statement about AVX-512: in the exact version both builds run the ordinary loop, which the compiler does not turn into vector code anyway, so the wider AVX-512 vectors have nothing to improve.
+- exact square root: the two builds are equally fast, within 0.3% and within the spread, for both problem sizes. In both builds the exact loop is ordinary scalar code, so the wider AVX-512 vectors have nothing to improve;
+- approximate square root (approx1): the portable build is 4.8 times slower (17.98 s against 3.72 s), and even 19% slower than its own exact version (15.06 s). The speed of approx1 comes from the hand-written AVX-512 loop, which processes eight pairs at once and exists only when the compiler targets AVX-512. In the portable build it is replaced by a scalar loop (single-precision estimate plus correction steps), which is slower than the exact square root;
+- energy drift: the exact runs agree to all printed digits, and the approximate runs differ by about 3e-12.
 
-With the approximate square root the difference is huge: the portable build is 4.8 times slower. The portable build with the "fast" approximation is even 19% slower than the portable build with the exact square root (17.98 s against 15.06 s). The speed of the approximate option comes entirely from the hand-written AVX-512 loop, which processes eight pairs at once. This loop exists only when the compiler targets AVX-512, as in the native build. In the portable build it is replaced by a simple one-pair-at-a-time version that starts from a single-precision estimate and adds correction steps, and that version is more expensive than the exact square root.
+What this experiment measures, and what it does not:
 
-In theory, going from 4 to 8 doubles per vector could at most double the speed of a perfectly vectorised loop, and on Zen 4, which executes AVX-512 as two 256-bit halves, the real gain would be smaller. We do not measure this factor of 2, because the portable build has no AVX2 vector version of the fast loop at all: the comparison is between a hand-vectorised loop and a scalar one. For the exact version the loss is zero; for the fast version it is almost a factor of 5. A portable build that wanted to keep the benefit would need its own AVX2 version of the vector loop, chosen at run time according to the processor. The energy drift is consistent with both builds computing the same physics: the exact runs agree to all printed digits, and the approximate runs differ by only about 3e-12, the same small approximation error seen in the time-step study.
+- it measures how much the portable build loses for our code as it is written: the same source, compiler and node, with only `-march` changed;
+- it does not measure the value of AVX-512 over AVX2 for the same vector code. The portable build has no AVX2 version of the fast loop, so the approx1 comparison is between a vector loop and a scalar one, and its result was predictable from the code. Measuring it would need the same kernel in an AVX2 version (4 doubles per vector) and an AVX-512 version (8 doubles per vector), timed on the same node; in theory the gain is at most a factor of 2, and less on Zen 4, which executes AVX-512 as two 256-bit halves.
+
+### Portability versus performance
+
+The choice of the compilation target is a trade-off between portability and performance:
+
+- `-march=native`: the fastest build, because it can use every instruction of the build machine (AVX-512 on Zen 4). But it runs only on processors with the same instructions: on an older or different CPU it stops with an "illegal instruction" error. It must be rebuilt on each machine.
+- `-march=x86-64-v3`: one build that runs on almost every x86 processor of the last decade. This is what a container needs, because the same image must run on a laptop, in the cloud and on Orfeo. The price is that AVX-512 and the code written for it are not available.
+
+How much this price is depends on the code, not on the flag alone:
+
+- for code that the compiler writes by itself (the exact square root) the price is almost zero: +0.3%;
+- for code written by hand for one instruction set (the AVX-512 approximate square root) the price is very large: 4.8 times slower, because without AVX-512 that code disappears and a slow scalar fallback is used.
+
+So the portable build loses almost nothing for the version used in all scaling and container runs, and the loss appears only when the program relies on processor-specific code. There are ways to keep both, which we did not implement:
+
+- build one image per target (for example `BUILD_MARCH=znver4` for Orfeo and `x86-64-v3` elsewhere), trading portability of a single image for speed;
+- compile the fast loop for several instruction sets in the same executable (for example AVX-512 and AVX2, with GCC `target_clones` or a check of the processor at start-up), keeping one portable image at the cost of more code to write and test.
 
 ---
 
@@ -981,7 +1084,10 @@ flowchart LR
   class B,C,D step;
 ```
 
-In the blocking ring, each rank computes, stops to exchange its block with `MPI_Sendrecv`, and then computes again. The time spent waiting for messages is lost. The overlapped version starts the exchange of the next block with `MPI_Irecv` and `MPI_Isend` before computing the current one, so that ideally the message travels in the background while the processor is busy, and the next block has already arrived when the computation ends. The rank then calls `MPI_Waitall`.
+The ring exchange exists in two versions in the program:
+
+- blocking (`sendrecv`): the rank computes with its current block, then calls `MPI_Sendrecv`, which sends the block to the right neighbour and receives the next one from the left neighbour; the rank is idle while the message travels;
+- overlapped (`overlap`): the rank starts the exchange of the next block with `MPI_Irecv` and `MPI_Isend`, computes with the current block, and at the end waits with `MPI_Waitall`; ideally the message travels while the rank is busy and has already arrived when the computation ends.
 
 We want to measure how much of the communication is really hidden; it is rarely as much as a simple estimate predicts. The waiting time (`comm_wait`) is the time spent inside the exchange call: `MPI_Sendrecv` for the blocking version, `MPI_Waitall` for the overlapped one. We compare the waiting time of the two versions:
 
@@ -997,7 +1103,7 @@ The set-up was:
 - one warm-up and five measured runs for each version and each P;
 - the two versions at the same P ran one after the other on the same node (P = 2 on genoa001, P = 8 on genoa003, P = 32 on genoa004), with the same executable, so each pair is a like-for-like comparison.
 
-All 30 runs have status OK, and for each initial condition the energy drift is identical in the two versions, consistent with the overlapped exchange not changing the results (both versions add the blocks in the same order).
+For each initial condition the energy drift is identical in the two versions, consistent with the overlapped exchange not changing the results (both versions add the blocks in the same order).
 
 | P | Blocking total (s) | Overlapped total (s) | Overlapped / blocking | Blocking wait (s) | Overlapped wait (s) | Hidden (s) | Fraction hidden | Blocking wait as % of total |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1028,6 +1134,64 @@ Two more details are visible in the raw data. Reading the input file varies from
 
 ---
 
+## Building and running the container
+
+HPC centres use Singularity, which can run images made with Docker. Our image:
+
+- starts from Ubuntu 24.04 and installs the compiler, the OpenMPI development packages, the OSU micro-benchmarks (version 7.5.2) and our source code, then compiles the program inside the image;
+- is sent to Docker Hub and converted on Orfeo into a Singularity image file;
+- uses Ubuntu 24.04 and not 22.04 because the Orfeo MPI libraries need glibc 2.38 or newer: Ubuntu 22.04 has glibc 2.35 and could not load the cluster MPI, Ubuntu 24.04 has glibc 2.39 and works.
+
+We chose a plain Ubuntu image and not a vendor HPC image, such as the NVIDIA HPC SDK images on `nvcr.io`, for four reasons:
+
+- The program runs only on CPUs. Vendor HPC images are made for GPUs: they contain CUDA, GPU libraries and the vendor compiler, and weigh several gigabytes. The GENOA nodes have AMD CPUs and no GPU, so we need only GCC, OpenMP and the MPI headers. A small image is faster to download, to convert into a Singularity file and to start.
+- The cluster MPI must replace the MPI of the image. This works because the image is built with Ubuntu's OpenMPI 4.1.6, which is compatible with Orfeo's OpenMPI 4.1.6. A vendor image brings its own MPI stack (for example HPC-X with UCX, in other versions). We would have to either use that MPI inside the container, losing the link with Slurm and the cluster network, or replace it with the cluster MPI and risk incompatible libraries.
+- We control and document every component. The image contains only what the Dockerfile installs (see the table below), and anyone can rebuild it with `docker build`, without an account on a vendor registry.
+- The comparison with the native build stays fair. Both builds use GCC (13.3 in the image, 14.3 on Orfeo). A vendor image would use a different compiler, and the native-versus-container comparison would mostly measure the compiler instead of the container.
+
+A vendor image would be the better choice for a GPU code, or for multi-node runs on InfiniBand without a cluster MPI to mount, where its tuned MPI and network libraries are ready to use. The price is a much larger image tied to one vendor.
+
+OpenMPI is installed inside the image because the `mpicc` compiler wrapper and the MPI header files are needed to build the program, but at run time the cluster's own MPI library replaces it. This is the key point for MPI programs in containers: MPI must talk to the cluster's launcher and network, which the container does not know, so the program is built with the container's MPI and run with the cluster's MPI, mounted inside the container. Finally, the container program is compiled with `-march=x86-64-v3` instead of `-march=native`, because the image should run on other machines too. With `native` it would only work on processors like the one that built it, while `x86-64-v3` (AVX2 without AVX-512) runs on almost every recent x86 server. The price is that AVX-512 is not used, and one experiment looks at this cost. The container build command, checked with `make -nB` inside the image, is:
+
+```sh
+mpicc -std=c11 -DNBODY_USE_DOUBLE -O3 -march=x86-64-v3 -Wall -Wextra -Wpedantic -fopenmp -o nbody_direct_hybrid nbody_direct_hybrid.c -lm
+```
+
+The image itself is built with Docker on a personal computer, sent to Docker Hub, and then converted into a Singularity image on Orfeo. The recipe uses `x86-64-v3` as its default target, and inside the image the OSU micro-benchmarks are compiled with the image's `mpicc`, in the same way as the native ones. The commands are:
+
+```sh
+# on a personal computer
+docker build -t .../nbody-hpc:latest .
+docker push .../nbody-hpc:latest
+
+# on Orfeo
+module load singularity/4.3.1
+singularity pull --force nbody.sif docker://.../nbody-hpc:latest
+```
+
+So the native and the container environments are not identical, and it is honest to say it clearly:
+
+| Component | Native | Container |
+|---|---|---|
+| Build environment | Orfeo (Fedora 41 based) | Ubuntu 24.04.5 LTS |
+| Compiler | GCC 14.3.1 | GCC 13.3.0 |
+| Compilation target | `-march=native` (AVX-512) | `-march=x86-64-v3` (AVX2) |
+| MPI used to build | Orfeo Open MPI 4.1.6rc4 | Ubuntu OpenMPI 4.1.6-7ubuntu2 |
+| MPI used to run | Orfeo Open MPI 4.1.6rc4 | the same Orfeo Open MPI, mounted into the image |
+| OpenMP runtime | libgomp 14.3.1 (Orfeo) | libgomp 14.2.0 (Ubuntu) |
+| Other libraries | libm, hwloc 2.12.0 | Ubuntu glibc 2.39 and libm, Orfeo hwloc 2.12.0 |
+
+The cluster's MPI and hwloc folders are mounted inside the container with `SINGULARITY_BINDPATH`, and `SINGULARITYENV_LD_LIBRARY_PATH` tells the program to look for libraries there first:
+
+```sh
+export SINGULARITY_BINDPATH=/opt/programs/openMPI/4.1.6:/opt/programs/openMPI/4.1.6,/opt/programs/hwloc/2.12.0:/opt/programs/hwloc/2.12.0
+export SINGULARITYENV_LD_LIBRARY_PATH=/opt/programs/openMPI/4.1.6/lib:/opt/programs/hwloc/2.12.0/lib
+```
+
+We checked the result with `ldd`, which lists the libraries a program really loads. Inside the container the program loads `libmpi.so.40`, `libopen-rte.so.40` and `libopen-pal.so.40` from `/opt/programs/openMPI/4.1.6/lib` and `libhwloc.so.15` from `/opt/programs/hwloc/2.12.0/lib`, which are exactly the same files used by the native program, while OpenMP (`libgomp.so.1`) comes from the image. If the container had silently used its own MPI, runs on several nodes could fail or use slow communication without any clear error. The first images failed because they did not have glibc 2.38, and later a part of the cluster MPI loaded an incompatible version of the UCX communication library from the image. 
+
+---
+
 ## Native versus container
 
 ```mermaid
@@ -1044,15 +1208,16 @@ flowchart LR
   class B,C,D step;
 ```
 
-This is the main container test: does running the program inside Singularity make it slower? The N-body program is a good test case, because almost all its time is spent computing and communication is small. So a slowdown could not come from the network: it would have to come from the container itself, or from the different software inside it.
+This is the main container test: does running the program inside Singularity make it slower? The N-body program is a useful test case, because almost all its time is spent computing and communication is small. So a slowdown could not come from the network: it would have to come from the container itself, or from the different software inside it.
 
 We ran the strong- and weak-scaling experiments inside Singularity with the same settings, the same inputs (the same seeds) and five repetitions per point:
 
 - strong scaling: N = 100,000, 100 steps, P = 4, 8, 16, 32;
 - weak scaling: 10,000 particles per rank, 100 steps, P = 1, 2, 4, 8, 16;
-- one thread per rank.
-
-The image was built from the same source code as the native executable, with the container's own compiler and the portable target x86-64-v3, and it uses the cluster's MPI library as described in the methods. The strong-scaling points with 1 and 2 ranks were not repeated in the container: each of their runs takes 30-64 minutes, and the overhead can be measured just as well on the shorter points, which all last more than half a minute. The native values are the runs of the strong- and weak-scaling experiments. All 45 container runs have status OK.
+- one thread per rank;
+- image built from the same source code as the native executable, with the container's compiler and the portable target x86-64-v3, using the cluster's MPI library;
+- strong-scaling points with 1 and 2 ranks not repeated: each run takes 30-64 minutes, and the overhead can be measured on the shorter points, which all last more than half a minute;
+- native values: the runs of the strong- and weak-scaling experiments;
 
 The times are the program's internal totals, so they do not include the start-up of the container, which is measured in the next section. The overhead is:
 
@@ -1081,9 +1246,9 @@ Weak scaling:
 | 8 | 80000 | 307.16 ± 0.72 | 308.26 ± 0.19 | +0.36% |
 | 16 | 160000 | 614.90 ± 1.53 | 617.04 ± 1.61 | +0.35% |
 
-In eight of the nine configurations the container is slower by 0.19-0.36%. The difference is small but systematic: in weak scaling it is larger than the run-to-run spread at every point. It is far below the 2-5% expected by the exercise for runs longer than about 30 seconds, so for this compute-bound program the container is essentially free. The container also computes the same results: for every initial condition the energy drift is identical in the native and in the container run.
+In eight of the nine configurations the container is slower by 0.19-0.36%. The difference is small but systematic: in weak scaling it is larger than the run-to-run spread at every point. For this compute-bound program the overhead of the container is below 0.4% of the run time. The container also computes the same results: for every initial condition the energy drift is identical in the native and in the container run.
 
-The exercise asks to explain any non-zero overhead. The two environments differ in more than the container itself: the compiler (GCC 13.3 against 14.3), the OpenMP runtime and the compilation target (x86-64-v3 against native). The compilation-target experiment measured +0.3% between the two targets with the exact square root on 32 ranks, the same size as the difference measured here. So the small overhead is consistent with the different compilation, without any cost of Singularity itself; these measurements cannot separate the two effects.
+The two environments differ in more than the container itself: the compiler (GCC 13.3 against 14.3), the OpenMP runtime and the compilation target (x86-64-v3 against native). The compilation-target experiment measured +0.3% between the two targets with the exact square root on 32 ranks, the same size as the difference measured here. So the small overhead is consistent with the different compilation, without any cost of Singularity itself; these measurements cannot separate the two effects.
 
 The only exception is strong scaling at P = 32, where the container is 2.15% faster, about a hundred times the run-to-run spread. This is the node effect described in the strong-scaling section: the native 32-rank runs ran on genoa004, where the speed per rank at 32 ranks was about 2.5% lower, while the container runs ran on another node (genoa006). Measured against the native one-rank time, the container run at 32 ranks has an efficiency of 98.8%, in line with the other points. Running native and container alternately on the same node would remove this effect.
 
@@ -1147,9 +1312,14 @@ To look at communication alone, without computation, we used the OSU micro-bench
 - `osu_latency` measures the time for a message to go from one process to the other: the message is sent back and forth many times, and the latency is half of the average round-trip time;
 - `osu_bw` measures how much data per second one process can stream to the other: bandwidth = bytes sent / time, in MB/s.
 
-Both were run natively and inside the container, with two processes on two different nodes (`genoa012` and `genoa013`, confirmed by the Slurm accounting), five times for each message size. The same OSU executables and the same host MPI library were used in both cases (checked with `ldd`).
+Set-up:
 
-To make the two cases comparable, both used the same communication path, forced with `OMPI_MCA_pml=ob1` and `OMPI_MCA_btl=self,tcp`, that is ordinary TCP networking. This avoided the incompatible UCX library found in earlier attempts. These numbers are therefore TCP results, not the best that Orfeo's fastest network could give. The last column of the table is 100 x (container / native - 1).
+- native and inside the container, two processes with one thread each, on two different nodes (`genoa012` and `genoa013`, confirmed by the Slurm accounting);
+- five runs for each message size;
+- the same OSU executables and the same host MPI library in both cases (checked with `ldd`);
+- the same communication path, forced with `OMPI_MCA_pml=ob1` and `OMPI_MCA_btl=self,tcp`, that is ordinary TCP; this avoided the incompatible UCX library found in earlier attempts, so these are TCP results, not the best of Orfeo's fastest network.
+
+The last column of the table is 100 x (container / native - 1).
 
 | Benchmark | Message size (bytes) | Native median ± s | Container median ± s | Container difference |
 |---|---:|---:|---:|---:|
@@ -1172,49 +1342,14 @@ Communication through the container is a few percent slower: latency is 3-7% hig
 
 ---
 
-## Limitations and conclusions
+## Conclusions and limitations
 
-Conclusions on correctness and cost:
+The energy drift stays below the chosen tolerance in every run, also over a long run, and the drift does not depend on how the work is divided: it is the same for every number of ranks, for both versions of the ring and inside the container. Halving the time step reduces the energy error as expected for a second-order method, and the cost grows with the square of the number of bodies, as expected for the direct method.
 
-- The simulation is physically correct: the energy drift never exceeded about 5 parts in a million in the reported experiments, and a run of 2000 steps stayed below 1 part in a million.
-- The drift is the same for the same input at every number of ranks, with both ring versions and inside the container.
-- Halving the time step makes the energy error four times smaller, as expected for a second-order method.
-- The cost grows with the square of the number of bodies: ten times more bodies took 100.3 times longer, against a theoretical 100.
+The program is limited by arithmetic rather than by memory or communication. The force computation takes almost all of the run time, each core processes the same number of pairs per second whatever the number of cores, and the time spent waiting for messages stays small. As a consequence, the parallel efficiency on one node stays above 96% in both strong and weak scaling. The small losses come mainly from the energy check, whose work is divided unevenly among the ranks, and at the largest rank count from slower cores on one node. The way the cores of a node are split between ranks and threads changes the run time only slightly.
 
-Conclusions on performance and scaling:
+The optimisations behave differently. Newton's third law saves work on a single core, but with several threads the uneven distribution of the pairs makes it slower than the direct kernel. The approximate inverse square root, written by hand with AVX-512 instructions, is the largest improvement, without a visible effect on energy conservation; its benefit, however, depends on that instruction set, and in a portable build it is lost. Independent partial sums do not help, because the loop is limited by the square root and the division rather than by the chain of additions, while more threads help because each one brings its own arithmetic units. The structure-of-arrays layout gives no gain as long as the compiler cannot vectorise the loop, and overlapping communication with computation cannot save much when communication is already a small part of the run.
 
-- The program is limited by arithmetic, not by memory or communication: the force computation takes 90-99% of the time, and each core processes 0.25-0.27 billion pairs per second from 1 to 64 cores.
-- Strong scaling on one node is almost ideal: 32 ranks are 30.9 times faster than one (97% efficiency, above 99% up to 16 ranks).
-- Weak scaling is almost ideal too: the work-normalised efficiency stays above 99% up to 16 ranks.
-- The small losses come from the energy check, which divides its work unevenly among the ranks, and at 32 ranks from slower cores on one node.
-- The way the 64 cores are split between ranks and threads changes the run time by at most 2%.
+Inside Singularity the program runs almost as fast as natively, and the small difference is consistent with the different compiler and compilation target rather than with a cost of the container itself, once the container uses the cluster's own MPI library. The choice of a portable target costs little for code that the compiler generates by itself, and a lot for code written for one specific instruction set.
 
-Conclusions on the optimisations:
-
-- Newton's third law saves about a third of the force time on one core, but it is slower than the direct kernel from four threads on (65% slower with sixteen), because computing each pair once gives some threads much more work than others.
-- The approximate square root with hand-written AVX-512 code makes the force computation about eight times faster at every thread count, with a negligible effect on energy conservation: with two correction steps the drift is identical to the exact one, with one step the extra drift is thousands of times below the error of the method.
-- In a portable build without AVX-512 the same option loses its vector loop and becomes almost five times slower, even slower than the exact square root.
-- Independent partial sums give about 1%, and the structure-of-arrays layout gives no gain, because the loop is limited by the square root and the division and is not vectorised by the compiler.
-- Overlapping communication with computation does not reduce the run time, because communication is only 0.1-2% of it, but it makes the waiting times more regular.
-
-Conclusions on the container:
-
-- The full simulation in Singularity is 0.2-0.4% slower than the native one in eight of nine configurations; the ninth is explained by a slower node.
-- The small overhead has the same size as the difference between the two compilation targets, so it is consistent with the different compilation rather than with a cost of Singularity itself.
-- Starting the container takes about 0.1 s, and pure communication is only a few percent slower, once the container uses the cluster's own MPI library.
-
-Limitations:
-
-- All solver runs used a single node, so the effect of a real network between nodes is not measured; only the OSU test crosses two nodes, and it uses TCP.
-- No hardware counters (`perf`, PAPI) were available, so what we say about vector instructions and caches is based on timings, the phase timers and compiler reports, not on counted events.
-- The energy drift is a single global number: it shows that energy conservation is equally good with the approximate square root, but it cannot prove that the trajectories are identical.
-- The energy check and the Newton kernel have a load imbalance that was measured and explained but not fixed.
-- Some runs of the same experiment ran on different nodes, and one node was a few percent slower at 32 ranks.
-
-Next steps:
-
-- Balance the work of the energy check and of the Newton kernel.
-- Give the portable build its own AVX2 vector loop, chosen at run time.
-- Compare the final positions of the exact and approximate runs directly.
-- Check with hardware counters that the processor really executes the expected vector instructions.
-- Repeat the scaling and container tests on several nodes.
+These results have some limits. All solver runs used a single node, so the behaviour over a real network between nodes was not measured; only the OSU test crosses two nodes. No hardware counters were available, so statements about vector instructions and caches rely on timings, phase timers and compiler reports. The energy drift is a single global number and cannot prove that trajectories are identical. The load imbalance of the energy check and of the Newton kernel was explained but not fixed. Some runs of the same experiment ran on different nodes, one of which was slower. Finally, the compilation-target experiment measures the loss of the portable build for our code, not the value of AVX-512 over AVX2, and the container was built only for the portable target, so the cost of Singularity alone cannot be fully separated from the effect of the compiler and the target.
