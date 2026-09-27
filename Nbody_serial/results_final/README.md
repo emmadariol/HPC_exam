@@ -19,10 +19,3 @@ Data behind `FINAL_REPORT.md`.
 | Native vs container | `container_summary.csv` | `scaling_100steps/ctr_*` |
 | Container start-up | - | `container_launch/` |
 | OSU latency and bandwidth | `osu_microbench_summary.csv`, `osu_microbench_*.svg` | `osu/` |
-
-Rebuild the summaries and figures from the raw runs:
-
-```sh
-python3 make_scaling_summary.py
-python3 make_thread_sweep.py
-```
