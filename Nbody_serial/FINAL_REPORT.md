@@ -122,31 +122,17 @@ This means:
 - OpenMP turned on
 - No profile-guided optimisation is used
 
-Other programs and builds:
-
-- initial conditions: a small serial generator;
-- memory-layout test: a separate OpenMP program without MPI, so that communication cannot disturb the comparison;
-- vectorisation reports: the same sources compiled with two extra GCC options that print which loops were vectorised;
-- compilation-target test: the main program built twice, changing only `-march`.
-
-The commands are:
+All other programs are built with the same flags, changing only the compiler, OpenMP and a few extra options:
 
 ```sh
-# initial-condition generator (Plummer sphere)
-gcc -std=c11 -DNBODY_USE_DOUBLE -O3 -march=native -Wall -Wextra -Wpedantic -o generate_ic generate_ic.c -lm
+<compiler> -std=c11 -DNBODY_USE_DOUBLE -O3 -march=<target> -Wall -Wextra -Wpedantic [-fopenmp] [extra options] -o <program> <source>.c -lm
+```
 
-# memory-layout test (AoS versus SoA), OpenMP only
-gcc -std=c11 -DNBODY_USE_DOUBLE -O3 -march=native -Wall -Wextra -Wpedantic -fopenmp -o nbody_layout_benchmark nbody_layout_benchmark.c -lm
+Note: the vectorisation reports are obtained by adding `-fopt-info-vec-optimized -fopt-info-vec-missed -c` to this command; GCC then prints to standard error which loops were vectorised and which were not.
 
-# vectorisation reports (compile only, the report goes to standard error)
-gcc   -std=c11 -DNBODY_USE_DOUBLE -O3 -march=native -Wall -Wextra -Wpedantic -fopenmp -fopt-info-vec-optimized -fopt-info-vec-missed -c nbody_direct_serial.c -o /tmp/serial.o 2> vectorization_serial_report.txt
-mpicc -std=c11 -DNBODY_USE_DOUBLE -O3 -march=native -Wall -Wextra -Wpedantic -fopenmp -fopt-info-vec-optimized -fopt-info-vec-missed -c nbody_direct_hybrid.c -o /tmp/hybrid.o 2> vectorization_report.txt
+The OSU micro-benchmarks are built in user space with the cluster MPI:
 
-# compilation-target test: the same solver built for two targets
-mpicc -std=c11 -DNBODY_USE_DOUBLE -O3 -Wall -Wextra -Wpedantic -march=native    -fopenmp -o nbody_direct_hybrid nbody_direct_hybrid.c -lm
-mpicc -std=c11 -DNBODY_USE_DOUBLE -O3 -Wall -Wextra -Wpedantic -march=x86-64-v3 -fopenmp -o nbody_direct_hybrid nbody_direct_hybrid.c -lm
-
-# OSU micro-benchmarks for the native MPI test, built in user space with the cluster MPI
+```sh
 ./configure CC=mpicc --prefix=$HOME/osu && make -j && make install
 ```
 
@@ -202,7 +188,7 @@ flowchart LR
   B["<b>Run</b><br/>E(0) at the start, then E<br/>again every energy-every<br/>steps and after the last<br/>step (long double sums,<br/>exact square root,<br/>MPI_Allreduce over the<br/>ranks)"]
   C["<b>Measure</b><br/>largest relative drift<br/>|E(t) - E(0)| / |E(0)| of<br/>each run"]
   D["<b>Analyse</b><br/>compare with the<br/>tolerance 1e-4; compare<br/>the same seed across P,<br/>ring versions,<br/>native/container"]
-  E["<b>Result</b><br/>table of the largest<br/>drift per group of runs;<br/>long run 4.99e-7"]
+  E["<b>Result</b><br/>largest drift 4.7e-6,<br/>20x below tolerance;<br/>long run 4.99e-7"]
   A --> B --> C --> D --> E
   classDef io fill:#e8f1fb,stroke:#1f77b4,color:#111;
   classDef step fill:#f7f7f7,stroke:#555,color:#111;
@@ -262,33 +248,11 @@ The check works like this:
 
 The rule "i smaller than j" makes the work uneven between ranks: the rank with the first particles accepts almost all its pairs, the rank with the last ones almost none. The strong-scaling section measures the effect of this.
 
-The largest values seen in each group of runs are:
+Results:
 
-| Runs | Particles N | Steps | Ranks x threads | Largest energy drift |
-|---|---:|---:|---|---:|
-| Strong scaling | 100000 | 100 | 1-32 x 1 | 2.1e-6 |
-| Weak scaling | 10000-160000 | 100 | 1-16 x 1 | 4.7e-6 |
-| Same runs inside the container | 10000-160000 | 100 | 1-32 x 1 | identical to native |
-| MPI/OpenMP mapping | 100000 | 20 | 64 cores | 4.9e-7 |
-| Blocking vs overlapped communication | 100000 | 20 | 2-32 x 1 | 4.9e-7 |
-| Optimisation tests | 10000 | 5 | 1 x 1-16 | 1.3e-7 |
-| Compilation targets | 100000 | 10 | 32 x 1 | 1.5e-7 |
-| Time-step convergence | 10000 | 100-400 | 1 x 8 | 2.5e-7 |
-| Long validation run | 10000 | 2000 | 1 x 8 | 5.0e-7 |
-
-All values are below the tolerance of 1e-4: the largest one, 4.7e-6, is about 20 times smaller.
-
-The drift also does not depend on how the work is divided. In the strong-scaling runs the same five initial conditions were run with every number of ranks from 1 to 32. For each input the drift is the same at every rank count to about nine significant digits:
-
-| Input | P = 1 | P = 2 | P = 4 | P = 8 | P = 16 | P = 32 |
-|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 1.7159563851e-6 | 1.7159563855e-6 | 1.7159563845e-6 | 1.7159563851e-6 | 1.7159563848e-6 | 1.7159563848e-6 |
-| 2 | 1.4472776047e-6 | 1.4472776086e-6 | 1.4472776063e-6 | 1.4472776070e-6 | 1.4472776070e-6 | 1.4472776070e-6 |
-| 3 | 2.1184062564e-6 | 2.1184062617e-6 | 2.1184062643e-6 | 2.1184062633e-6 | 2.1184062633e-6 | 2.1184062633e-6 |
-| 4 | 1.6823944506e-6 | 1.6823944516e-6 | 1.6823944512e-6 | 1.6823944509e-6 | 1.6823944512e-6 | 1.6823944509e-6 |
-| 5 | 1.3408127421e-6 | 1.3408127438e-6 | 1.3408127428e-6 | 1.3408127428e-6 | 1.3408127428e-6 | 1.3408127428e-6 |
-
-Only the last digits change, because a different number of ranks adds the forces in a different order. The drift is also identical between the blocking and the overlapped ring (section on hiding communication) and between the native and the container runs (cloud part).
+- in every run of this report the drift is below the tolerance of 1e-4; the largest value, 4.7e-6 (weak scaling, N = 160,000), is about 20 times smaller;
+- the drift does not depend on how the work is divided: for the same initial condition it agrees to about nine significant digits at every rank count from 1 to 32 (for example 1.7159563851e-6 at P = 1 and 1.7159563848e-6 at P = 32). Only the last digits change, because a different number of ranks adds the forces in a different order;
+- the drift is identical between the blocking and the overlapped ring and between the native and the container runs.
 
 ### A longer validation run
 
@@ -303,7 +267,7 @@ The runs above are short (5 to 100 steps). To check energy conservation over a l
 |---:|---:|---:|---:|---:|---:|
 | 10000 | 2000 | 1e-4 | 0.2 | every 10 steps | 4.99e-7 |
 
-Over the whole run the largest drift is 4.99e-7: about 200 times below our tolerance of 1e-4 and 2000 times below 1e-3. The time-step convergence runs, with the same N, dt and threads but only 100 steps, reach at most 2.5e-7 (table above). Running twenty times longer therefore only doubles the largest drift, instead of multiplying it by twenty. This agrees with the leapfrog method, whose energy error oscillates in a bounded range instead of growing with time. The program records only the largest drift, not the full history E(t), so this is an indication rather than a proof.
+Over the whole run the largest drift is 4.99e-7: about 200 times below our tolerance of 1e-4 and 2000 times below 1e-3. The time-step convergence runs, with the same N, dt and threads but only 100 steps, reach at most 2.5e-7. Running twenty times longer therefore only doubles the largest drift, instead of multiplying it by twenty. This agrees with the leapfrog method, whose energy error oscillates in a bounded range instead of growing with time.
 
 ---
 
@@ -1049,23 +1013,6 @@ What this experiment measures, and what it does not:
 - it measures how much the portable build loses for our code as it is written: the same source, compiler and node, with only `-march` changed;
 - it does not measure the value of AVX-512 over AVX2 for the same vector code. The portable build has no AVX2 version of the fast loop, so the approx1 comparison is between a vector loop and a scalar one, and its result was predictable from the code. Measuring it would need the same kernel in an AVX2 version (4 doubles per vector) and an AVX-512 version (8 doubles per vector), timed on the same node; in theory the gain is at most a factor of 2, and less on Zen 4, which executes AVX-512 as two 256-bit halves.
 
-### Portability versus performance
-
-The choice of the compilation target is a trade-off between portability and performance:
-
-- `-march=native`: the fastest build, because it can use every instruction of the build machine (AVX-512 on Zen 4). But it runs only on processors with the same instructions: on an older or different CPU it stops with an "illegal instruction" error. It must be rebuilt on each machine.
-- `-march=x86-64-v3`: one build that runs on almost every x86 processor of the last decade. This is what a container needs, because the same image must run on a laptop, in the cloud and on Orfeo. The price is that AVX-512 and the code written for it are not available.
-
-How much this price is depends on the code, not on the flag alone:
-
-- for code that the compiler writes by itself (the exact square root) the price is almost zero: +0.3%;
-- for code written by hand for one instruction set (the AVX-512 approximate square root) the price is very large: 4.8 times slower, because without AVX-512 that code disappears and a slow scalar fallback is used.
-
-So the portable build loses almost nothing for the version used in all scaling and container runs, and the loss appears only when the program relies on processor-specific code. There are ways to keep both, which we did not implement:
-
-- build one image per target (for example `BUILD_MARCH=znver4` for Orfeo and `x86-64-v3` elsewhere), trading portability of a single image for speed;
-- compile the fast loop for several instruction sets in the same executable (for example AVX-512 and AVX2, with GCC `target_clones` or a check of the processor at start-up), keeping one portable image at the cost of more code to write and test.
-
 ---
 
 ## Hiding communication behind computation
@@ -1151,7 +1098,7 @@ We chose a plain Ubuntu image and not a vendor HPC image, such as the NVIDIA HPC
 
 A vendor image would be the better choice for a GPU code, or for multi-node runs on InfiniBand without a cluster MPI to mount, where its tuned MPI and network libraries are ready to use. The price is a much larger image tied to one vendor.
 
-OpenMPI is installed inside the image because the `mpicc` compiler wrapper and the MPI header files are needed to build the program, but at run time the cluster's own MPI library replaces it. This is the key point for MPI programs in containers: MPI must talk to the cluster's launcher and network, which the container does not know, so the program is built with the container's MPI and run with the cluster's MPI, mounted inside the container. Finally, the container program is compiled with `-march=x86-64-v3` instead of `-march=native`, because the image should run on other machines too. With `native` it would only work on processors like the one that built it, while `x86-64-v3` (AVX2 without AVX-512) runs on almost every recent x86 server. The price is that AVX-512 is not used, and one experiment looks at this cost. The container build command, checked with `make -nB` inside the image, is:
+OpenMPI is installed inside the image because the `mpicc` compiler wrapper and the MPI header files are needed to build the program, but at run time the cluster's own MPI library replaces it. This is the key point for MPI programs in containers: MPI must talk to the cluster's launcher and network, which the container does not know, so the program is built with the container's MPI and run with the cluster's MPI, mounted inside the container. Finally, the container program is compiled with `-march=x86-64-v3` instead of `-march=native`, because the image should run on other machines too (see "Portability versus performance" below). The container build command, checked with `make -nB` inside the image, is:
 
 ```sh
 mpicc -std=c11 -DNBODY_USE_DOUBLE -O3 -march=x86-64-v3 -Wall -Wextra -Wpedantic -fopenmp -o nbody_direct_hybrid nbody_direct_hybrid.c -lm
@@ -1190,6 +1137,23 @@ export SINGULARITYENV_LD_LIBRARY_PATH=/opt/programs/openMPI/4.1.6/lib:/opt/progr
 
 We checked the result with `ldd`, which lists the libraries a program really loads. Inside the container the program loads `libmpi.so.40`, `libopen-rte.so.40` and `libopen-pal.so.40` from `/opt/programs/openMPI/4.1.6/lib` and `libhwloc.so.15` from `/opt/programs/hwloc/2.12.0/lib`, which are exactly the same files used by the native program, while OpenMP (`libgomp.so.1`) comes from the image. If the container had silently used its own MPI, runs on several nodes could fail or use slow communication without any clear error. The first images failed because they did not have glibc 2.38, and later a part of the cluster MPI loaded an incompatible version of the UCX communication library from the image. 
 
+### Portability versus performance
+
+The choice of the compilation target is a trade-off between portability and performance:
+
+- `-march=native`: the fastest build, because it can use every instruction of the build machine (AVX-512 on Zen 4). But it runs only on processors with the same instructions: on an older or different CPU it stops with an "illegal instruction" error. It must be rebuilt on each machine.
+- `-march=x86-64-v3`: one build that runs on almost every x86 processor of the last decade. This is what a container needs, because the same image must run on a laptop, in the cloud and on Orfeo. The price is that AVX-512 and the code written for it are not available.
+
+How much this price is depends on the code, not on the flag alone. The compilation-target experiment of the HPC part measured:
+
+- for code that the compiler writes by itself (the exact square root) the price is almost zero: +0.3%;
+- for code written by hand for one instruction set (the AVX-512 approximate square root) the price is very large: 4.8 times slower, because without AVX-512 that code disappears and a slow scalar fallback is used.
+
+So the portable build loses almost nothing for the version used in all scaling and container runs, and the loss appears only when the program relies on processor-specific code. There are ways to keep both, which we did not implement:
+
+- build one image per target (for example `BUILD_MARCH=znver4` for Orfeo and `x86-64-v3` elsewhere), trading portability of a single image for speed;
+- compile the fast loop for several instruction sets in the same executable (for example AVX-512 and AVX2, with GCC `target_clones` or a check of the processor at start-up), keeping one portable image at the cost of more code to write and test.
+
 ---
 
 ## Native versus container
@@ -1197,10 +1161,10 @@ We checked the result with `ldd`, which lists the libraries a program really loa
 ```mermaid
 flowchart LR
   A["<b>Input</b><br/>the same inputs (seeds)<br/>as the strong- and weak-<br/>scaling runs"]
-  B["<b>Run</b><br/>strong P = 4, 8, 16, 32<br/>and weak P = 1-16 inside<br/>Singularity (x86-64-v3<br/>image, cluster MPI<br/>mounted); 5 runs each"]
+  B["<b>Run</b><br/>strong P = 1-32 and weak<br/>P = 1-16 inside<br/>Singularity (x86-64-v3<br/>image, cluster MPI<br/>mounted); 5 runs each"]
   C["<b>Measure</b><br/>total time, energy drift"]
   D["<b>Analyse</b><br/>overhead = container<br/>median / native median -<br/>1; combined spread"]
-  E["<b>Result</b><br/>+0.19 to +0.36% in 8 of 9<br/>configurations; P = 32<br/>explained by a slower<br/>node"]
+  E["<b>Result</b><br/>+0.19 to +0.36% in 10 of<br/>11 configurations; P = 32<br/>explained by a slower<br/>node"]
   A --> B --> C --> D --> E
   classDef io fill:#e8f1fb,stroke:#1f77b4,color:#111;
   classDef step fill:#f7f7f7,stroke:#555,color:#111;
@@ -1212,11 +1176,10 @@ This is the main container test: does running the program inside Singularity mak
 
 We ran the strong- and weak-scaling experiments inside Singularity with the same settings, the same inputs (the same seeds) and five repetitions per point:
 
-- strong scaling: N = 100,000, 100 steps, P = 4, 8, 16, 32;
+- strong scaling: N = 100,000, 100 steps, P = 1, 2, 4, 8, 16, 32 (the long points split over several Slurm jobs, as for the native runs);
 - weak scaling: 10,000 particles per rank, 100 steps, P = 1, 2, 4, 8, 16;
 - one thread per rank;
 - image built from the same source code as the native executable, with the container's compiler and the portable target x86-64-v3, using the cluster's MPI library;
-- strong-scaling points with 1 and 2 ranks not repeated: each run takes 30-64 minutes, and the overhead can be measured on the shorter points, which all last more than half a minute;
 - native values: the runs of the strong- and weak-scaling experiments;
 
 The times are the program's internal totals, so they do not include the start-up of the container, which is measured in the next section. The overhead is:
@@ -1227,14 +1190,16 @@ overhead = 100 x (container median / native median - 1)      [%]
 
 A positive value means the container is slower.
 
-Strong scaling:
+Strong scaling (the container speedup and efficiency use the container one-rank time, S(P) = T(1) / T(P) and E(P) = S(P) / P):
 
-| P | N | Native median ± s (s) | Container median ± s (s) | Overhead |
-|---:|---:|---:|---:|---:|
-| 4 | 100000 | 960.53 ± 0.86 | 962.36 ± 1.31 | +0.19% |
-| 8 | 100000 | 480.42 ± 1.01 | 481.46 ± 0.89 | +0.22% |
-| 16 | 100000 | 240.56 ± 1.67 | 241.05 ± 1.17 | +0.20% |
-| 32 | 100000 | 123.59 ± 0.02 | 120.94 ± 0.03 | -2.15% |
+| P | N | Native median ± s (s) | Container median ± s (s) | Overhead | Container speedup | Container efficiency |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 100000 | 3823.47 ± 2.27 | 3834.80 ± 0.54 | +0.30% | 1.00 | 100.0% |
+| 2 | 100000 | 1920.50 ± 0.63 | 1925.21 ± 1.40 | +0.25% | 1.99 | 99.6% |
+| 4 | 100000 | 960.53 ± 0.86 | 962.36 ± 1.31 | +0.19% | 3.98 | 99.6% |
+| 8 | 100000 | 480.42 ± 1.01 | 481.46 ± 0.89 | +0.22% | 7.96 | 99.6% |
+| 16 | 100000 | 240.56 ± 1.67 | 241.05 ± 1.17 | +0.20% | 15.91 | 99.4% |
+| 32 | 100000 | 123.59 ± 0.02 | 120.94 ± 0.03 | -2.15% | 31.71 | 99.1% |
 
 Weak scaling:
 
@@ -1246,11 +1211,11 @@ Weak scaling:
 | 8 | 80000 | 307.16 ± 0.72 | 308.26 ± 0.19 | +0.36% |
 | 16 | 160000 | 614.90 ± 1.53 | 617.04 ± 1.61 | +0.35% |
 
-In eight of the nine configurations the container is slower by 0.19-0.36%. The difference is small but systematic: in weak scaling it is larger than the run-to-run spread at every point. For this compute-bound program the overhead of the container is below 0.4% of the run time. The container also computes the same results: for every initial condition the energy drift is identical in the native and in the container run.
+In ten of the eleven configurations the container is slower by 0.19-0.36%. The difference is small but systematic: at P = 1 and 2 and in weak scaling it is larger than the run-to-run spread. Inside the container the strong scaling behaves like the native one: the efficiency stays between 99.1% and 99.6% up to 32 ranks. For this compute-bound program the overhead of the container is below 0.4% of the run time. The container also computes the same results: for every initial condition the energy drift is identical in the native and in the container run.
 
 The two environments differ in more than the container itself: the compiler (GCC 13.3 against 14.3), the OpenMP runtime and the compilation target (x86-64-v3 against native). The compilation-target experiment measured +0.3% between the two targets with the exact square root on 32 ranks, the same size as the difference measured here. So the small overhead is consistent with the different compilation, without any cost of Singularity itself; these measurements cannot separate the two effects.
 
-The only exception is strong scaling at P = 32, where the container is 2.15% faster, about a hundred times the run-to-run spread. This is the node effect described in the strong-scaling section: the native 32-rank runs ran on genoa004, where the speed per rank at 32 ranks was about 2.5% lower, while the container runs ran on another node (genoa006). Measured against the native one-rank time, the container run at 32 ranks has an efficiency of 98.8%, in line with the other points. Running native and container alternately on the same node would remove this effect.
+The only exception is strong scaling at P = 32, where the container is 2.15% faster, about a hundred times the run-to-run spread. This is the node effect described in the strong-scaling section: the native 32-rank runs ran on genoa004, where the speed per rank at 32 ranks was about 2.5% lower, while the container runs ran on another node (genoa006). Measured against the container's own one-rank time, the container run at 32 ranks has an efficiency of 99.1%, in line with the other points. Running native and container alternately on the same node would remove this effect.
 
 ---
 
@@ -1272,20 +1237,14 @@ flowchart LR
 
 Before the program starts, Singularity has to open the image and set up the container. This is a fixed cost per launch: negligible for a long run, but it could dominate a very short test. We measured it by launching a container that does nothing (`singularity exec <image> true`) ten times.
 
-| Repeat | Launch time (s) |
-|---:|---:|
-| 1 | 0.58 |
-| 2 | 0.09 |
-| 3 | 0.09 |
-| 4 | 0.09 |
-| 5 | 0.09 |
-| 6 | 0.09 |
-| 7 | 0.09 |
-| 8 | 0.09 |
-| 9 | 0.09 |
-| 10 | 0.09 |
+The ten launch times were 0.58 s for the first launch and 0.09 s for each of the other nine. With the median, the mean and the sample standard deviation s:
 
-The median start-up time is 0.09 s (spread 0.155 s over all ten launches). The first launch took 0.58 s. We keep it in the statistics; it is probably a "cold start", when the image file is read from disk for the first time, after which it stays in memory and the other nine launches all take 0.09 s. The timer resolution was 0.01 s, so identical values do not mean that the start-up time is perfectly constant.
+| Launches | Median (s) | Mean (s) | Standard deviation s (s) |
+|---|---:|---:|---:|
+| all 10 | 0.09 | 0.14 | 0.155 |
+| 2-10 (after the first) | 0.09 | 0.09 | < 0.01 |
+
+The first launch is probably a "cold start", when the image file is read from disk for the first time; after that it stays in memory. It is kept in the statistics of all ten launches, and it alone produces the whole standard deviation of 0.155 s. The other nine launches all took 0.09 s: their standard deviation is below the 0.01 s resolution of the timer, so identical values do not mean that the start-up time is perfectly constant.
 
 Compared with runs that last from tens of seconds to over an hour, 0.1 s is negligible, which is why it does not show up in the solver comparison.
 

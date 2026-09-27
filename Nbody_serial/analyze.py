@@ -749,22 +749,6 @@ def plot_osu(src: str, prefix: str) -> None:
                 parts.append(f'<text x="{x_of(s):.1f}" y="{height-bottom+22}" text-anchor="middle" font-family="sans-serif" font-size="11">{s}</text>')
         write_svg(f"{prefix}_{suffix}.svg", parts)
 
-def plot_evidence(root: str) -> None:
-    base = Path(root)
-    osu_summary = base / "results_final/osu_microbench_summary.csv"
-    if not osu_summary.exists():
-        osu_summary = base / "results_final/osu_microbench_container_summary.csv"
-    plot_scaling(str(base / "results_final/scaling_64_summary.csv"), str(base / "results_final/scaling_64"))
-    plot_hybrid(str(base / "results_final/hybrid_64_summary.csv"), str(base / "results_final/hybrid_64"))
-    plot_container(str(base / "results_final/container_overhead_summary.csv"), str(base / "results_final/container_overhead"))
-    plot_ablation(str(base / "results_final/ablation_64.csv"), str(base / "results_final/ablation_64"))
-    plot_layout(str(base / "results_final/layout_summary.csv"), str(base / "results_final/layout_force_time"))
-    plot_energy(str(base / "results_final/energy_overhead_summary.csv"), str(base / "results_final/energy_overhead"))
-    arch_summary = base / "results_final/arch_target_comparison_summary.csv"
-    if arch_summary.exists():
-        plot_arch(str(arch_summary), str(base / "results_final/arch_target_comparison"))
-    plot_osu(str(osu_summary), str(base / "results_final/osu_microbench"))
-
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="section", required=True)
@@ -787,8 +771,6 @@ def main() -> None:
         q = psub.add_parser(name)
         q.add_argument("input")
         q.add_argument("prefix")
-    q = psub.add_parser("evidence")
-    q.add_argument("root")
 
     args = parser.parse_args()
     if args.section == "summarize":
@@ -805,22 +787,16 @@ def main() -> None:
                 "osu": summarize_osu,
             }[args.kind](args.input, args.output)
     elif args.section == "plot":
-        if args.kind == "evidence":
-            plot_evidence(args.root)
-        else:
-            {
-                "scaling": plot_scaling,
-                "hybrid": plot_hybrid,
-                "container": plot_container,
-                "ablation": plot_ablation,
-                "layout": plot_layout,
-                "energy": plot_energy,
-                "arch": plot_arch,
-                "osu": plot_osu,
-            }[args.kind](
-                args.input,
-                args.prefix,
-            )
+        {
+            "scaling": plot_scaling,
+            "hybrid": plot_hybrid,
+            "container": plot_container,
+            "ablation": plot_ablation,
+            "layout": plot_layout,
+            "energy": plot_energy,
+            "arch": plot_arch,
+            "osu": plot_osu,
+        }[args.kind](args.input, args.prefix)
 
 if __name__ == "__main__":
     main()
