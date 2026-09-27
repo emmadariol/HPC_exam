@@ -12,12 +12,15 @@ def esc(s):
 
 class Chart:
     def __init__(self, title, xlabel, ylabel, xlabels, ymin, ymax, yticks=None, ylog=False,
-                 yfmt="{:.2g}", pad=False, legend="tl", width=900, height=520):
+                 yfmt="{:.2g}", pad=False, legend="tl", width=900, height=520, xpos=None):
         self.w, self.h = width, height
         self.l, self.t, self.r, self.b = 82, 42, 35, 75
         self.pw, self.ph = width - self.l - self.r, height - self.t - self.b
         n = len(xlabels)
         self.x0, self.x1 = (-0.5, n - 0.5) if pad else (0, max(1, n - 1))  # x positions are category indices
+        if xpos is not None:  # numeric x axis: points at their real (Cartesian) distance, from 0 to the largest value
+            self.x0, self.x1 = 0, max(xpos)
+        self.xpos = xpos if xpos is not None else list(range(n))
         if yticks is None and not ylog:  # round the y range to a nice step
             raw = (ymax - ymin) / 5
             e = 10 ** math.floor(math.log10(raw))
@@ -36,7 +39,7 @@ class Chart:
             f'<text transform="translate(24,{height/2}) rotate(-90)" text-anchor="middle" {F} font-size="14">{esc(ylabel)}</text>',
         ]
         for i, lab in enumerate(xlabels):
-            self.p.append(f'<text x="{self.X(i):.1f}" y="{height-self.b+28}" text-anchor="middle" {F} font-size="12">{esc(lab)}</text>')
+            self.p.append(f'<text x="{self.X(self.xpos[i]):.1f}" y="{height-self.b+28}" text-anchor="middle" {F} font-size="12">{esc(lab)}</text>')
         if yticks is None:
             if ylog:
                 yticks = [10.0 ** e for e in range(round(math.log10(ymin)), round(math.log10(ymax)) + 1)]

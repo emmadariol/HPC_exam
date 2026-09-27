@@ -425,78 +425,16 @@ static void kick(particles_t *p, dtype dt)  // kick: v += dt * a
 }
 
 // ===========================================================================
-// FORCE KERNEL: [OpenMP] + [UNROLL] multiple partial accumulators (scalar)
-// Threads split the targets. For each target the source loop keeps K independent
-// partial sums per component (axp[lane], lane = 0 .. K-1), with K = 1, 2, 4 or 8.
-// No intrinsics and no SIMD directive: only separate local accumulators.
+// FORCE KERNEL: [OpenMP] + [SIMD] + [UNROLL]
+// Threads split the targets; the source loop is unrolled into 1, 2, 4 or 8 independent partial sums.
 // ===========================================================================
-static inline __attribute__((always_inline)) void
-accumulate_row_partial_sums(const dtype *restrict sx,  // one target against all sources, K partial sums
-                            const dtype *restrict sy,
-                            const dtype *restrict sz,
-                            size_t source_n,
-                            dtype xi, dtype yi, dtype zi,
-                            dtype gm, dtype eps2,
-                            const size_t K,  // compile-time constant after inlining: 1, 2, 4 or 8
-                            dtype *ax_out, dtype *ay_out, dtype *az_out)
-{
-  dtype axp[8], ayp[8], azp[8];  // partial sums, one per lane (only the first K are used)
-  size_t lane, j;
-
-  for (lane = 0u; lane < K; ++lane)
-    axp[lane] = ayp[lane] = azp[lane] = (dtype)0.0;
-
-  const size_t source_n_unrolled = source_n - (source_n % K);  // largest multiple of K <= source_n
-
-  for (j = 0u; j < source_n_unrolled; j += K)  // [UNROLL] K sources per iteration, one per lane
-  {
-    for (lane = 0u; lane < K; ++lane)  // K independent chains: lane l only adds to axp[l]
-    {
-      const dtype dx = sx[j + lane] - xi;  // d = r_source - r_target
-      const dtype dy = sy[j + lane] - yi;
-      const dtype dz = sz[j + lane] - zi;
-      const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;  // q = |d|^2 + eps^2 (self-pair: d = 0, zero force)
-      const dtype invr = (dtype)1.0 / dtype_sqrt(r2);  // exact 1/sqrt(q)
-      const dtype s = gm * invr * invr * invr;  // G*m / q^(3/2)
-
-      axp[lane] += dx * s;  // add to chain 'lane'
-      ayp[lane] += dy * s;
-      azp[lane] += dz * s;
-    }
-  }
-
-  dtype ax = (dtype)0.0, ay = (dtype)0.0, az = (dtype)0.0;
-  for (lane = 0u; lane < K; ++lane)  // combine the K partial sums
-  {
-    ax += axp[lane];
-    ay += ayp[lane];
-    az += azp[lane];
-  }
-
-  for (j = source_n_unrolled; j < source_n; ++j)  // leftover sources (fewer than K), one at a time
-  {
-    const dtype dx = sx[j] - xi;
-    const dtype dy = sy[j] - yi;
-    const dtype dz = sz[j] - zi;
-    const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;
-    const dtype invr = (dtype)1.0 / dtype_sqrt(r2);
-    const dtype s = gm * invr * invr * invr;
-    ax += dx * s;
-    ay += dy * s;
-    az += dz * s;
-  }
-
-  *ax_out = ax;
-  *ay_out = ay;
-  *az_out = az;
-}
-
-static void accumulate_sources_scalar_chains(const particles_t *home,  // exact scalar force loop with 1, 2, 4 or 8 partial sums
+static void accumulate_sources_scalar_chains(const particles_t *home,  // scalar force loop with 1, 2, 4 or 8 independent partial sums
                                              const dtype *restrict sx,
                                              const dtype *restrict sy,
                                              const dtype *restrict sz,
                                              size_t source_n, dtype g,
                                              dtype mass, dtype eps2,
+                                             rsqrt_mode_t rsqrt_mode,
                                              size_t chains)
 {
   size_t i;
@@ -508,22 +446,240 @@ static void accumulate_sources_scalar_chains(const particles_t *home,  // exact 
     const dtype xi = home->x[i];  // target position, kept in registers
     const dtype yi = home->y[i];
     const dtype zi = home->z[i];
-    dtype ax, ay, az;
 
-    switch (chains)  // constant K in each call, so the lane loops are fully unrolled and axp[] stays in registers
+    dtype ax = (dtype)0.0, ay = (dtype)0.0, az = (dtype)0.0;  // final sums; also used by the tail loop
+
+    size_t j = 0u;  // first source not yet processed
+
+    switch (chains)  // chains = 1 has no case: everything is done by the tail loop
     {
-    case 2u:
-      accumulate_row_partial_sums(sx, sy, sz, source_n, xi, yi, zi, gm, eps2, 2u, &ax, &ay, &az);
+    // ---- [UNROLL x2] two sources per iteration --------------------------------
+    case 2u:  // two independent partial sums
+    {
+      const size_t source_n_unrolled = source_n - (source_n % 2u);  // largest multiple of 2 <= source_n
+      dtype ax0 = (dtype)0.0, ay0 = (dtype)0.0, az0 = (dtype)0.0;  // partial sums of chain 0
+      dtype ax1 = (dtype)0.0, ay1 = (dtype)0.0, az1 = (dtype)0.0;  // partial sums of chain 1
+
+#pragma omp simd reduction(+ : ax0, ay0, az0) reduction(+ : ax1, ay1, az1)  // [SIMD] ask the compiler to vectorise, sums are reductions
+
+      for (j = 0u; j < source_n_unrolled; j += 2u)  // [UNROLL] two sources per iteration, one per chain
+      {
+        const dtype dx0 = sx[j] - xi;  // d = r_source - r_target
+        const dtype dy0 = sy[j] - yi;
+        const dtype dz0 = sz[j] - zi;
+        const dtype r2_0 = dx0 * dx0 + dy0 * dy0 + dz0 * dz0 + eps2;  // softened distance^2: q = |d|^2 + eps^2
+        const dtype invr0 = invsqrt_force(r2_0, rsqrt_mode);  // 1/sqrt(q)
+        const dtype s0 = gm * invr0 * invr0 * invr0;  // G*m / q^(3/2)
+
+        ax0 += dx0 * s0;  // add to chain 0
+        ay0 += dy0 * s0;
+        az0 += dz0 * s0;
+
+        const dtype dx1 = sx[j + 1u] - xi;  // chain 1: same formula for source j+1
+        const dtype dy1 = sy[j + 1u] - yi;
+        const dtype dz1 = sz[j + 1u] - zi;
+        const dtype r2_1 = dx1 * dx1 + dy1 * dy1 + dz1 * dz1 + eps2;
+        const dtype invr1 = invsqrt_force(r2_1, rsqrt_mode);
+        const dtype s1 = gm * invr1 * invr1 * invr1;
+        ax1 += dx1 * s1;  // add to chain 1
+        ay1 += dy1 * s1;
+        az1 += dz1 * s1;
+      }
+
+      j = source_n_unrolled;  // tail loop starts after the unrolled part
+      ax += ax0 + ax1;  // combine the partial sums
+      ay += ay0 + ay1;
+      az += az0 + az1;
       break;
-    case 4u:
-      accumulate_row_partial_sums(sx, sy, sz, source_n, xi, yi, zi, gm, eps2, 4u, &ax, &ay, &az);
+    }
+
+    // ---- [UNROLL x4] four sources per iteration -------------------------------
+    case 4u:  // four independent partial sums
+    {
+      const size_t source_n_unrolled = source_n - (source_n % 4u);  // largest multiple of 4 <= source_n
+      dtype ax0 = (dtype)0.0, ay0 = (dtype)0.0, az0 = (dtype)0.0;
+      dtype ax1 = (dtype)0.0, ay1 = (dtype)0.0, az1 = (dtype)0.0;
+      dtype ax2 = (dtype)0.0, ay2 = (dtype)0.0, az2 = (dtype)0.0;
+      dtype ax3 = (dtype)0.0, ay3 = (dtype)0.0, az3 = (dtype)0.0;
+
+#pragma omp simd reduction(+ : ax0, ay0, az0) reduction(+ : ax1, ay1, az1) \
+    reduction(+ : ax2, ay2, az2) reduction(+ : ax3, ay3, az3)  // [SIMD] vectorise, one reduction per chain
+      for (j = 0u; j < source_n_unrolled; j += 4u)  // [UNROLL] four sources per iteration, one per chain
+      {
+        const dtype dx0 = sx[j] - xi;  // chain 0: source j
+        const dtype dy0 = sy[j] - yi;
+        const dtype dz0 = sz[j] - zi;
+        const dtype r2_0 = dx0 * dx0 + dy0 * dy0 + dz0 * dz0 + eps2;  // q = |d|^2 + eps^2
+        const dtype invr0 = invsqrt_force(r2_0, rsqrt_mode);  // 1/sqrt(q)
+        const dtype s0 = gm * invr0 * invr0 * invr0;  // G*m / q^(3/2)
+        ax0 += dx0 * s0;
+        ay0 += dy0 * s0;
+        az0 += dz0 * s0;
+
+        const dtype dx1 = sx[j + 1u] - xi;  // chain 1: source j+1
+        const dtype dy1 = sy[j + 1u] - yi;
+        const dtype dz1 = sz[j + 1u] - zi;
+        const dtype r2_1 = dx1 * dx1 + dy1 * dy1 + dz1 * dz1 + eps2;
+        const dtype invr1 = invsqrt_force(r2_1, rsqrt_mode);
+        const dtype s1 = gm * invr1 * invr1 * invr1;
+        ax1 += dx1 * s1;
+        ay1 += dy1 * s1;
+        az1 += dz1 * s1;
+
+        const dtype dx2 = sx[j + 2u] - xi;  // chain 2: source j+2
+        const dtype dy2 = sy[j + 2u] - yi;
+        const dtype dz2 = sz[j + 2u] - zi;
+        const dtype r2_2 = dx2 * dx2 + dy2 * dy2 + dz2 * dz2 + eps2;
+        const dtype invr2 = invsqrt_force(r2_2, rsqrt_mode);
+        const dtype s2 = gm * invr2 * invr2 * invr2;
+        ax2 += dx2 * s2;
+        ay2 += dy2 * s2;
+        az2 += dz2 * s2;
+
+        const dtype dx3 = sx[j + 3u] - xi;  // chain 3: source j+3
+        const dtype dy3 = sy[j + 3u] - yi;
+        const dtype dz3 = sz[j + 3u] - zi;
+        const dtype r2_3 = dx3 * dx3 + dy3 * dy3 + dz3 * dz3 + eps2;
+        const dtype invr3 = invsqrt_force(r2_3, rsqrt_mode);
+        const dtype s3 = gm * invr3 * invr3 * invr3;
+        ax3 += dx3 * s3;
+        ay3 += dy3 * s3;
+        az3 += dz3 * s3;
+      }
+
+      j = source_n_unrolled;  // tail starts here
+      ax += ax0 + ax1 + ax2 + ax3;  // combine the four chains
+      ay += ay0 + ay1 + ay2 + ay3;
+      az += az0 + az1 + az2 + az3;
       break;
-    case 8u:
-      accumulate_row_partial_sums(sx, sy, sz, source_n, xi, yi, zi, gm, eps2, 8u, &ax, &ay, &az);
+    }
+
+    // ---- [UNROLL x8] eight sources per iteration ------------------------------
+    case 8u:  // eight independent partial sums
+    {
+      const size_t source_n_unrolled = source_n - (source_n % 8u);  // largest multiple of 8 <= source_n
+
+      dtype ax0 = (dtype)0.0, ay0 = (dtype)0.0, az0 = (dtype)0.0;
+      dtype ax1 = (dtype)0.0, ay1 = (dtype)0.0, az1 = (dtype)0.0;
+      dtype ax2 = (dtype)0.0, ay2 = (dtype)0.0, az2 = (dtype)0.0;
+      dtype ax3 = (dtype)0.0, ay3 = (dtype)0.0, az3 = (dtype)0.0;
+      dtype ax4 = (dtype)0.0, ay4 = (dtype)0.0, az4 = (dtype)0.0;
+      dtype ax5 = (dtype)0.0, ay5 = (dtype)0.0, az5 = (dtype)0.0;
+      dtype ax6 = (dtype)0.0, ay6 = (dtype)0.0, az6 = (dtype)0.0;
+      dtype ax7 = (dtype)0.0, ay7 = (dtype)0.0, az7 = (dtype)0.0;
+
+#pragma omp simd reduction(+ : ax0, ay0, az0) reduction(+ : ax1, ay1, az1) \
+    reduction(+ : ax2, ay2, az2) reduction(+ : ax3, ay3, az3)             \
+    reduction(+ : ax4, ay4, az4) reduction(+ : ax5, ay5, az5)             \
+    reduction(+ : ax6, ay6, az6) reduction(+ : ax7, ay7, az7)  // [SIMD] vectorise, one reduction per chain
+
+      for (j = 0u; j < source_n_unrolled; j += 8u)  // [UNROLL] eight sources per iteration, one per chain
+      {
+        const dtype dx0 = sx[j] - xi;  // chain 0: source j
+        const dtype dy0 = sy[j] - yi;
+        const dtype dz0 = sz[j] - zi;
+        const dtype r2_0 = dx0 * dx0 + dy0 * dy0 + dz0 * dz0 + eps2;  // q = |d|^2 + eps^2
+        const dtype invr0 = invsqrt_force(r2_0, rsqrt_mode);  // 1/sqrt(q)
+        const dtype s0 = gm * invr0 * invr0 * invr0;  // G*m / q^(3/2)
+        ax0 += dx0 * s0;
+        ay0 += dy0 * s0;
+        az0 += dz0 * s0;
+
+        const dtype dx1 = sx[j + 1u] - xi;  // chain 1: source j+1
+        const dtype dy1 = sy[j + 1u] - yi;
+        const dtype dz1 = sz[j + 1u] - zi;
+        const dtype r2_1 = dx1 * dx1 + dy1 * dy1 + dz1 * dz1 + eps2;
+        const dtype invr1 = invsqrt_force(r2_1, rsqrt_mode);
+        const dtype s1 = gm * invr1 * invr1 * invr1;
+        ax1 += dx1 * s1;
+        ay1 += dy1 * s1;
+        az1 += dz1 * s1;
+
+        const dtype dx2 = sx[j + 2u] - xi;  // chain 2: source j+2
+        const dtype dy2 = sy[j + 2u] - yi;
+        const dtype dz2 = sz[j + 2u] - zi;
+        const dtype r2_2 = dx2 * dx2 + dy2 * dy2 + dz2 * dz2 + eps2;
+        const dtype invr2 = invsqrt_force(r2_2, rsqrt_mode);
+        const dtype s2 = gm * invr2 * invr2 * invr2;
+        ax2 += dx2 * s2;
+        ay2 += dy2 * s2;
+        az2 += dz2 * s2;
+
+        const dtype dx3 = sx[j + 3u] - xi;  // chain 3: source j+3
+        const dtype dy3 = sy[j + 3u] - yi;
+        const dtype dz3 = sz[j + 3u] - zi;
+        const dtype r2_3 = dx3 * dx3 + dy3 * dy3 + dz3 * dz3 + eps2;
+        const dtype invr3 = invsqrt_force(r2_3, rsqrt_mode);
+        const dtype s3 = gm * invr3 * invr3 * invr3;
+        ax3 += dx3 * s3;
+        ay3 += dy3 * s3;
+        az3 += dz3 * s3;
+
+        const dtype dx4 = sx[j + 4u] - xi;  // chain 4: source j+4
+        const dtype dy4 = sy[j + 4u] - yi;
+        const dtype dz4 = sz[j + 4u] - zi;
+        const dtype r2_4 = dx4 * dx4 + dy4 * dy4 + dz4 * dz4 + eps2;
+        const dtype invr4 = invsqrt_force(r2_4, rsqrt_mode);
+        const dtype s4 = gm * invr4 * invr4 * invr4;
+        ax4 += dx4 * s4;
+        ay4 += dy4 * s4;
+        az4 += dz4 * s4;
+
+        const dtype dx5 = sx[j + 5u] - xi;  // chain 5: source j+5
+        const dtype dy5 = sy[j + 5u] - yi;
+        const dtype dz5 = sz[j + 5u] - zi;
+        const dtype r2_5 = dx5 * dx5 + dy5 * dy5 + dz5 * dz5 + eps2;
+        const dtype invr5 = invsqrt_force(r2_5, rsqrt_mode);
+        const dtype s5 = gm * invr5 * invr5 * invr5;
+        ax5 += dx5 * s5;
+        ay5 += dy5 * s5;
+        az5 += dz5 * s5;
+
+        const dtype dx6 = sx[j + 6u] - xi;  // chain 6: source j+6
+        const dtype dy6 = sy[j + 6u] - yi;
+        const dtype dz6 = sz[j + 6u] - zi;
+        const dtype r2_6 = dx6 * dx6 + dy6 * dy6 + dz6 * dz6 + eps2;
+        const dtype invr6 = invsqrt_force(r2_6, rsqrt_mode);
+        const dtype s6 = gm * invr6 * invr6 * invr6;
+        ax6 += dx6 * s6;
+        ay6 += dy6 * s6;
+        az6 += dz6 * s6;
+
+        const dtype dx7 = sx[j + 7u] - xi;  // chain 7: source j+7
+        const dtype dy7 = sy[j + 7u] - yi;
+        const dtype dz7 = sz[j + 7u] - zi;
+        const dtype r2_7 = dx7 * dx7 + dy7 * dy7 + dz7 * dz7 + eps2;
+        const dtype invr7 = invsqrt_force(r2_7, rsqrt_mode);
+        const dtype s7 = gm * invr7 * invr7 * invr7;
+        ax7 += dx7 * s7;
+        ay7 += dy7 * s7;
+        az7 += dz7 * s7;
+      }
+
+      j = source_n_unrolled;  // tail starts here
+      ax += ax0 + ax1 + ax2 + ax3 + ax4 + ax5 + ax6 + ax7;  // combine the eight chains
+      ay += ay0 + ay1 + ay2 + ay3 + ay4 + ay5 + ay6 + ay7;
+      az += az0 + az1 + az2 + az3 + az4 + az5 + az6 + az7;
       break;
-    default:
-      accumulate_row_partial_sums(sx, sy, sz, source_n, xi, yi, zi, gm, eps2, 1u, &ax, &ay, &az);
-      break;
+    }
+    }
+
+    // ---- tail loop: leftover sources, one at a time ---------------------------
+    const size_t tail_start = j;  // remaining sources (all of them when chains = 1)
+#pragma omp simd reduction(+ : ax, ay, az)  // [SIMD] single-chain vectorised loop
+    for (j = tail_start; j < source_n; ++j)
+    {
+      const dtype dx = sx[j] - xi;  // d = r_source - r_target
+      const dtype dy = sy[j] - yi;
+      const dtype dz = sz[j] - zi;
+
+      const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;  // q = |d|^2 + eps^2 (self-pair gives d = 0, so zero force)
+      const dtype invr = invsqrt_force(r2, rsqrt_mode);  // 1/sqrt(q)
+      const dtype s = gm * invr * invr * invr;  // G*m / q^(3/2)
+
+      ax += dx * s;
+      ay += dy * s;
+      az += dz * s;
     }
 
     home->ax[i] += ax;  // add this source block to the target acceleration
@@ -531,43 +687,6 @@ static void accumulate_sources_scalar_chains(const particles_t *home,  // exact 
     home->az[i] += az;
   }
 }
-
-#if !(defined(__AVX512F__) && !defined(NBODY_USE_FLOAT))
-static void accumulate_sources_scalar_approx(const particles_t *home,  // approximate modes without AVX-512: plain scalar loop
-                                             const dtype *restrict sx,
-                                             const dtype *restrict sy,
-                                             const dtype *restrict sz,
-                                             size_t source_n, dtype g,
-                                             dtype mass, dtype eps2,
-                                             rsqrt_mode_t rsqrt_mode)
-{
-  size_t i;
-  const dtype gm = g * mass;
-
-#pragma omp parallel for schedule(static)  // [OpenMP] each thread owns different targets
-  for (i = 0u; i < home->n; ++i)
-  {
-    const dtype xi = home->x[i], yi = home->y[i], zi = home->z[i];
-    dtype ax = (dtype)0.0, ay = (dtype)0.0, az = (dtype)0.0;
-    size_t j;
-    for (j = 0u; j < source_n; ++j)
-    {
-      const dtype dx = sx[j] - xi;
-      const dtype dy = sy[j] - yi;
-      const dtype dz = sz[j] - zi;
-      const dtype r2 = dx * dx + dy * dy + dz * dz + eps2;
-      const dtype invr = invsqrt_force(r2, rsqrt_mode);  // float estimate + Newton steps
-      const dtype s = gm * invr * invr * invr;
-      ax += dx * s;
-      ay += dy * s;
-      az += dz * s;
-    }
-    home->ax[i] += ax;
-    home->ay[i] += ay;
-    home->az[i] += az;
-  }
-}
-#endif
 
 // ===========================================================================
 // [AVX-512] HAND-WRITTEN VECTOR KERNEL
@@ -664,12 +783,11 @@ static void accumulate_sources_rsqrt14_pd(const particles_t *home,  // force loo
     home->az[i] += az;
   }
 }
-
 #endif
 
 // ===========================================================================
 // KERNEL DISPATCH
-// Exact rsqrt -> scalar kernel with partial accumulators; approximate rsqrt -> AVX-512 kernel (or plain scalar loop).
+// Approximate rsqrt -> AVX-512 kernel; exact rsqrt -> scalar kernel with unrolling.
 // ===========================================================================
 static void accumulate_sources(const particles_t *home,  // dispatch: AVX-512 routine or scalar chains
                                const dtype *restrict sx,
@@ -682,18 +800,16 @@ static void accumulate_sources(const particles_t *home,  // dispatch: AVX-512 ro
 {
   const dtype eps2 = eps * eps;  // softening squared
 
-  if (rsqrt_mode == RSQRT_EXACT)  // exact mode: scalar loop with partial accumulators, exact square root only
+#if defined(__AVX512F__) && !defined(NBODY_USE_FLOAT)
+  if (rsqrt_mode != RSQRT_EXACT)  // approximate modes use the AVX-512 routine
   {
-    accumulate_sources_scalar_chains(home, sx, sy, sz, source_n, g, mass, eps2,
-                                     (size_t)accumulator_mode);
+    accumulate_sources_rsqrt14_pd(home, sx, sy, sz, source_n, g, mass, eps2, rsqrt_mode);
     return;
   }
-
-#if defined(__AVX512F__) && !defined(NBODY_USE_FLOAT)
-  accumulate_sources_rsqrt14_pd(home, sx, sy, sz, source_n, g, mass, eps2, rsqrt_mode);  // approximate modes: AVX-512
-#else
-  accumulate_sources_scalar_approx(home, sx, sy, sz, source_n, g, mass, eps2, rsqrt_mode);  // approximate modes, no AVX-512
 #endif
+
+  accumulate_sources_scalar_chains(home, sx, sy, sz, source_n, g, mass, eps2,  // exact mode (or no AVX-512): scalar chains
+                                   rsqrt_mode, (size_t)accumulator_mode);
 }
 
 // ===========================================================================
@@ -1347,13 +1463,6 @@ int main(int argc, char **argv)
            DTYPE_NAME, accumulator_mode_name(accumulator_mode),
            max_rel_drift, (double)energy_tol,
            (max_rel_drift <= (double)energy_tol) ? "OK" : "WARNING");  // OK if the drift stays below the tolerance
-#if defined(__AVX512F__) && !defined(NBODY_USE_FLOAT)
-    printf("# force_implementation=%s\n",
-           kernel_mode == KERNEL_DIRECT && rsqrt_mode != RSQRT_EXACT
-             ? "avx512-rsqrt-chains-v1" : "scalar");
-#else
-    puts("# force_implementation=scalar");
-#endif
     printf("# timing_max_seconds total=%.6f io=%.6f drift=%.6f "
            "force=%.6f comm_wait=%.6f kick=%.6f energy=%.6f\n",
            timing.total, timing.io, timing.drift, timing.force,

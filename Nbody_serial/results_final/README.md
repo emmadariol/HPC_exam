@@ -1,13 +1,13 @@
 # results_final
 
-Data behind `FINAL_REPORT.md`: only the CSV files and the 16 figures used in the report.
+Data behind `FINAL_REPORT.md`: only the CSV files and the 17 figures used in the report.
 Slurm outputs, per-run logs, job scripts and build logs were removed.
 
 | Report experiment | Data |
 |---|---|
 | 1. Energy conservation | column `max_rel_drift` in every CSV; long run in `energy_long_20260923_170127/` |
 | 2. Cost of the energy check | `energy.csv`, `energy_summary.csv`, `energy_overhead.svg` |
-| 3. Phase breakdown and memory bandwidth | `scaling_100steps/strong_P1_*`, `scaling_100steps/strong_P8_32`, `mapping_*`, `energy_long_*`; `memory_bandwidth.csv`, `memory_bandwidth_summary.csv` |
+| 3. Profiling: phase breakdown and Gpairs/s | `scaling_100steps/strong_P1_*`, `scaling_100steps/strong_P8_32`, `mapping_*`, `energy_long_*` |
 | 4. Strong scaling (N = 100000, 100 steps) | `scaling_100steps/strong_*/` (native); summary `native_strong_summary.csv` and figures `strong_*.svg` in `scaling_100steps/` |
 | 5. Weak scaling (10000 per rank, 100 steps) | `scaling_100steps/weak_*/`; summary `native_weak_summary.csv`, figures `weak_*.svg` |
 | 6. MPI/OpenMP mapping | `mapping_numa/`, `mapping_socket/`, `mapping_core/` |

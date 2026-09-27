@@ -7,7 +7,6 @@ generate_ic
 nbody_direct_serial
 nbody_direct_hybrid
 nbody_layout_benchmark
-memory_bandwidth
 
 # Generated particle states and scratch inputs
 *.bin
@@ -16,6 +15,7 @@ preflight_*.bin
 
 # Python cache
 __pycache__/
+results_final/__pycache__/
 *.pyc
 
 # Slurm and local run logs

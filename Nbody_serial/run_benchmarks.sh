@@ -9,7 +9,6 @@ Commands:
   scaling     strong/weak MPI or MPI+OpenMP scaling
   hybrid      fixed-resource P x T sweep; writes one merged summary
   ablation    compare kernel, math, communication and accumulator variants
-  chains      partial accumulators 1/2/4/8 in the exact force loop, 1 rank, T threads
   layout      AoS-vs-SoA memory-layout benchmark
   energy      energy-diagnostic overhead benchmark
   container   native-vs-container solver overhead plus launch overhead
@@ -164,26 +163,6 @@ bench_scaling() {
       done
     done
   done
-  echo "wrote $out"
-}
-
-bench_chains() {
-  # Multiple partial accumulators (axp[lane]) in the exact scalar force loop.
-  # One rank, so no communication; the same input for every accumulator count.
-  # Output: one scaling-format CSV with the accumulator count in its own column.
-  local out="${OUT:-results_chains.csv}"
-  local tmp="${out%.csv}_tmp.csv"
-  nsteps="${NSTEPS:-5}"          # short runs: the force loop dominates
-  energy_every="$nsteps"         # energy only at the start and at the end
-  printf "kind,N,nsteps,ranks,threads,repeat,integrator,comm,kernel,rsqrt,accumulators,dtype,total,io,drift,force,comm_wait,kick,energy,gpairs,status,max_rel_drift\n" > "$out"
-  for threads in ${THREADS:-1 2 4 8 16}; do
-    for acc in ${CHAINS:-1 2 4 8}; do
-      ( ACCUMULATORS="$acc" THREADS="$threads" RANKS=1 SCALING_KINDS=strong \
-        STRONG_N="${N:-10000}" COMM=sendrecv KERNEL=direct RSQRT=exact OUT="$tmp" bench_scaling ) >/dev/null
-      tail -n +2 "$tmp" >> "$out"
-    done
-  done
-  rm -f "$tmp"
   echo "wrote $out"
 }
 
@@ -668,7 +647,6 @@ case "$cmd" in
   scaling) bench_scaling ;;
   hybrid) bench_hybrid ;;
   ablation) bench_ablation ;;
-  chains) bench_chains ;;
   layout) bench_layout ;;
   energy) bench_energy ;;
   container) bench_container ;;

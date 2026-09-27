@@ -40,7 +40,7 @@ for P in Ps:
     strong.append({"ranks": P, "N": 100000, "runs": len(g), "all_ok": ok(g),
                    "total_median": t, "total_stdev": sd(g, "total"),
                    "speedup": T1 / t, "efficiency": T1 / t / P,
-                   "force_median": f, "efficiency_force": F1 / f / P,
+                   "force_median": f,
                    "comm_wait_median": med(g, "comm_wait"), "comm_wait_percent": 100 * med(g, "comm_wait") / t,
                    "energy_median": e, "efficiency_energy": E1 / e / P, "energy_percent": 100 * e / t,
                    "io_median": med(g, "io"), "gpairs_per_rank": med(g, "gpairs") / P,
@@ -82,39 +82,44 @@ for (k, P) in sorted(ctr, key=lambda x: (x[0], x[1])):
 write("container_summary.csv", cont)
 
 # ---- figures (same look as the other report figures)
-xl, xi = [str(p) for p in Ps], list(range(len(Ps)))
+xl, xi = [str(p) for p in Ps], Ps  # real P values: Cartesian x axis
 c = Chart("Strong scaling N=100000, 100 steps: run time", "MPI ranks P (one thread each)", "median total time (s)",
-          xl, 0, T1 * 1.05, yfmt="{:.0f}", legend="tr")
+          xl, 0, T1 * 1.05, yfmt="{:.0f}", legend="tr", xpos=Ps)
 c.line(xi, [T1 / p for p in Ps], GREY, dash="6,4", r=0, label="ideal T(1)/P")
 c.line(xi, [s["total_median"] for s in strong], PALETTE[0], label="measured")
 c.save("strong_runtime.svg")
 
 c = Chart("Strong scaling N=100000, 100 steps: speedup", "MPI ranks P (one thread each)", "speedup T(1)/T(P)",
-          xl, 0, 32, yticks=[0, 8, 16, 24, 32])
+          xl, 0, 32, yticks=[0, 8, 16, 24, 32], yfmt="{:.0f}", xpos=Ps)
 c.line(xi, Ps, GREY, dash="6,4", r=0, label="ideal")
 c.line(xi, [s["speedup"] for s in strong], PALETTE[0], label="total time")
-c.line(xi, [F1 / s["force_median"] for s in strong], PALETTE[1], label="force phase")
 c.text(xi[-1], strong[-1]["speedup"], f"{strong[-1]['speedup']:.1f}", dx=30, dy=40, anchor="end")
 c.save("strong_speedup.svg")
 
-c = Chart("Strong scaling N=100000, 100 steps: efficiency by phase", "MPI ranks P (one thread each)",
-          "parallel efficiency S(P)/P", xl, 0, 1.1, yticks=[0, 0.2, 0.4, 0.6, 0.8, 1.0], legend="bl")
+c = Chart("Strong scaling N=100000, 100 steps: efficiency", "MPI ranks P (one thread each)",
+          "parallel efficiency S(P)/P", xl, 0.9, 1.02, yticks=[0.90, 0.92, 0.94, 0.96, 0.98, 1.00], yfmt="{:.2f}", legend="bl", xpos=Ps)
 c.hline(1.0)
 c.line(xi, [s["efficiency"] for s in strong], PALETTE[0], label="total time")
-c.line(xi, [s["efficiency_force"] for s in strong], PALETTE[1], label="force phase")
-c.line(xi, [s["efficiency_energy"] for s in strong], PALETTE[2], label="energy check")
 c.legend("ideal", GREY)
 c.save("strong_efficiency.svg")
 
-xw, xwi = [str(p) for p in Pw], list(range(len(Pw)))
+xw, xwi = [str(p) for p in Pw], Pw  # real P values: Cartesian x axis
 c = Chart("Weak scaling, 10000 particles per rank: run time", "MPI ranks P (N = 10000 x P)", "median total time (s)",
-          xw, 0, max(s["total_median"] for s in weak) * 1.1, yfmt="{:.0f}")
+          xw, 0, max(s["total_median"] for s in weak) * 1.1, yfmt="{:.0f}", xpos=Pw)
 c.line(xwi, [s["ideal_time"] for s in weak], GREY, dash="6,4", r=0, label="ideal: time grows like P")
 c.line(xwi, [s["total_median"] for s in weak], PALETTE[0], label="measured")
 c.save("weak_time.svg")
 
-c = Chart("Weak scaling: work-normalised efficiency", "MPI ranks P (N = 10000 x P)", "efficiency",
-          xw, 0, 1.1, yticks=[0, 0.2, 0.4, 0.6, 0.8, 1.0], legend="bl")
+
+c = Chart("Weak scaling: work-normalised speedup", "MPI ranks P (N = 10000 x P)", "speedup R(P) T(1) / T(P)",
+          xw, 0, 16, yticks=[0, 4, 8, 12, 16], yfmt="{:.0f}", xpos=Pw)
+c.line(xwi, Pw, GREY, dash="6,4", r=0, label="ideal")
+c.line(xwi, [s["work_speedup"] for s in weak], PALETTE[0], label="measured")
+c.text(xwi[-1], weak[-1]["work_speedup"], f"{weak[-1]['work_speedup']:.1f}", dx=30, dy=40, anchor="end")
+c.save("weak_speedup.svg")
+
+c = Chart("Weak scaling: work-normalised efficiency", "MPI ranks P (N = 10000 x P)", "efficiency S(P)/P",
+          xw, 0, 1.1, yticks=[0, 0.2, 0.4, 0.6, 0.8, 1.0], legend="bl", xpos=Pw)
 c.hline(1.0)
 c.line(xwi, [s["work_efficiency"] for s in weak], PALETTE[0], label="measured")
 c.legend("ideal", GREY)
@@ -133,6 +138,6 @@ c.legend("strong scaling, N = 100000", PALETTE[0])
 c.legend("weak scaling, 10000 per rank", PALETTE[1])
 c.save("container_overhead.svg")
 
-for s in strong: print("S", s["ranks"], round(s["total_median"], 2), round(s["total_stdev"], 2), round(s["speedup"], 2), round(100*s["efficiency"], 1), round(100*s["efficiency_force"], 1), round(100*s["efficiency_energy"], 1), round(s["comm_wait_percent"], 2), round(s["energy_percent"], 2), round(s["gpairs_per_rank"], 4), f"{s['max_rel_drift']:.2e}")
+for s in strong: print("S", s["ranks"], round(s["total_median"], 2), round(s["total_stdev"], 2), round(s["speedup"], 2), round(100*s["efficiency"], 1), round(100*s["efficiency_energy"], 1), round(s["comm_wait_percent"], 2), round(s["energy_percent"], 2), round(s["gpairs_per_rank"], 4), f"{s['max_rel_drift']:.2e}")
 for s in weak: print("W", s["ranks"], s["N"], round(s["total_median"], 2), round(s["total_stdev"], 2), round(s["ideal_time"], 1), round(s["time_over_ideal"], 3), round(s["work_speedup"], 2), round(100*s["work_efficiency"], 1), round(s["comm_wait_percent"], 2), round(s["energy_percent"], 2), f"{s['max_rel_drift']:.2e}")
 for o in cont: print("C", o["kind"], o["ranks"], o["N"], round(o["native_median"], 2), round(o["native_stdev"], 2), round(o["container_median"], 2), round(o["container_stdev"], 2), round(o["overhead_percent"], 2), round(o["combined_spread_percent"], 2), o["same_energy_drift"])

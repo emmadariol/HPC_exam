@@ -13,7 +13,6 @@ BENCH:
   scaling     MPI strong/weak scaling
   hybrid      MPI+OpenMP P x T sweep
   ablation    optimisation ablation study
-  chains      accumulator sweep in the real hybrid force kernel
   evidence    layout + energy evidence
   container   native-vs-Singularity container overhead
   osu         OSU latency/bandwidth native-vs-container
@@ -115,7 +114,6 @@ case "$bench" in
   scaling) default_time="01:59:00"; default_cpus="64" ;;
   hybrid) default_time="01:59:00"; default_cpus="64" ;;
   ablation) default_time="01:30:00"; default_cpus="64" ;;
-  chains) default_time="00:30:00"; default_cpus="16" ;;
   evidence) default_time="01:30:00"; default_cpus="8" ;;
   container) default_time="01:00:00"; default_cpus="4" ;;
   osu) default_time="00:40:00"; default_cpus="2" ;;
@@ -151,10 +149,6 @@ case "$bench" in
   ablation)
     # Optimization ablation: one raw CSV plus one bar chart.
     payload='OUT="${RESULT_DIR}/ablation.csv" bash ./run_benchmarks.sh ablation; python3 analyze.py summarize ablation "$RESULT_DIR/ablation.csv" "$RESULT_DIR/ablation_summary.csv"; python3 analyze.py plot ablation "$RESULT_DIR/ablation.csv" "$RESULT_DIR/ablation"'
-    ;;
-  chains)
-    # Partial accumulators 1/2/4/8 in the exact force loop, 1 rank, 1-16 threads.
-    payload='OUT="${RESULT_DIR}/chains.csv" bash ./run_benchmarks.sh chains'
     ;;
   evidence)
     # Non-scaling solver evidence used by the report: system info, memory layout

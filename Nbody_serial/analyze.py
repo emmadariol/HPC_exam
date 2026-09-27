@@ -354,61 +354,6 @@ def summarize_energy(src: str, dst: str) -> None:
     write_csv(dst, fields, rows)
 
 
-def summarize_memory(src: str, dst: str) -> None:
-    """Summarize STREAM-style RAM-bandwidth measurements.
-
-    The raw CSV contains one row per repeated launch and streaming kernel.  The
-    summary reports medians and standard deviations in GB/s, which directly
-    satisfies the written-report requirement to document measured RAM bandwidth.
-    """
-    groups: dict[tuple[str, int, int, int], list[dict[str, object]]] = defaultdict(list)
-    failures: dict[tuple[str, int, int, int], int] = defaultdict(int)
-    for row in read_csv(src):
-        kernel = row["kernel"]
-        n = int(row["N"])
-        threads = int(row["threads"])
-        inner_repeats = int(row["inner_repeats"])
-        key = (kernel, n, threads, inner_repeats)
-        try:
-            gbps = float(row["GBps"])
-            seconds = float(row["best_seconds"])
-        except ValueError:
-            gbps = math.nan
-            seconds = math.nan
-        if row.get("status") == "OK" and math.isfinite(gbps) and math.isfinite(seconds):
-            row["GBps"] = gbps
-            row["best_seconds"] = seconds
-            row["checksum"] = float(row["checksum"])
-            groups[key].append(row)
-        else:
-            failures[key] += 1
-
-    rows: list[dict[str, object]] = []
-    for (kernel, n, threads, inner_repeats), values in sorted(groups.items()):
-        bandwidths = [float(v["GBps"]) for v in values]
-        seconds = [float(v["best_seconds"]) for v in values]
-        checksums = [float(v["checksum"]) for v in values]
-        rows.append({
-            "kernel": kernel,
-            "N": n,
-            "threads": threads,
-            "inner_repeats": inner_repeats,
-            "runs": len(values),
-            "failed_runs": failures.get((kernel, n, threads, inner_repeats), 0),
-            "median_GBps": statistics.median(bandwidths),
-            "stdev_GBps": statistics.stdev(bandwidths) if len(bandwidths) > 1 else 0.0,
-            "median_seconds": statistics.median(seconds),
-            "checksum_median": statistics.median(checksums),
-            "all_ok": failures.get((kernel, n, threads, inner_repeats), 0) == 0,
-        })
-
-    fields = [
-        "kernel", "N", "threads", "inner_repeats", "runs", "failed_runs",
-        "median_GBps", "stdev_GBps", "median_seconds", "checksum_median", "all_ok",
-    ]
-    write_csv(dst, fields, rows)
-
-
 def summarize_container(src: str, dst: str) -> None:
     """Compare native and containerized solver timings.
 
@@ -954,38 +899,6 @@ def plot_energy(src: str, prefix: str) -> None:
     )
 
 
-def plot_memory(src: str, prefix: str) -> None:
-    """Plot STREAM-style RAM bandwidth by streaming kernel.
-
-    The report needs one compact figure showing measured memory bandwidth.  A
-    bar chart is clearer than a line plot because copy, scale, add, and triad
-    are separate kernels rather than an ordered scaling sweep.
-    """
-    rows = read_csv(src)
-    order = ["copy", "scale", "add", "triad"]
-    rows = sorted(rows, key=lambda r: order.index(r["kernel"]) if r["kernel"] in order else len(order))
-    if not rows:
-        return
-
-    parts, width, height, left, top, right, bottom = axes("STREAM-style RAM bandwidth", "kernel", "GB/s")
-    pw, ph = width - left - right, height - top - bottom
-    max_y = max(float(r["median_GBps"]) for r in rows) * 1.12
-    bar_w = pw / len(rows) * 0.55
-
-    def y_of(v: float) -> float:
-        return top + ph * (1.0 - v / max_y)
-
-    for i, row in enumerate(rows):
-        value = float(row["median_GBps"])
-        x = left + pw * (i + 0.5) / len(rows)
-        y = y_of(value)
-        parts.append(f'<rect x="{x-bar_w/2:.1f}" y="{y:.1f}" width="{bar_w:.1f}" height="{height-bottom-y:.1f}" fill="{palette(i)}"/>')
-        parts.append(f'<text x="{x:.1f}" y="{y-7:.1f}" text-anchor="middle" font-family="sans-serif" font-size="11">{value:.1f}</text>')
-        parts.append(f'<text x="{x:.1f}" y="{height-bottom+22}" text-anchor="middle" font-family="sans-serif" font-size="12">{row["kernel"]}</text>')
-
-    write_svg(f"{prefix}.svg", parts)
-
-
 def plot_arch(src: str, prefix: str) -> None:
     """Plot native compiler target timings.
 
@@ -1080,9 +993,6 @@ def plot_evidence(root: str) -> None:
     plot_ablation(str(base / "results_final/ablation_64.csv"), str(base / "results_final/ablation_64"))
     plot_layout(str(base / "results_final/layout_summary.csv"), str(base / "results_final/layout_force_time"))
     plot_energy(str(base / "results_final/energy_overhead_summary.csv"), str(base / "results_final/energy_overhead"))
-    memory_summary = base / "results_final/memory_bandwidth_summary.csv"
-    if memory_summary.exists():
-        plot_memory(str(memory_summary), str(base / "results_final/memory_bandwidth"))
     arch_summary = base / "results_final/arch_target_comparison_summary.csv"
     if arch_summary.exists():
         plot_arch(str(arch_summary), str(base / "results_final/arch_target_comparison"))
@@ -1110,7 +1020,7 @@ def main() -> None:
 
     s = sub.add_parser("summarize")
     ssub = s.add_subparsers(dest="kind", required=True)
-    for name in ("scaling", "layout", "energy", "memory", "container", "ablation", "arch", "osu"):
+    for name in ("scaling", "layout", "energy", "container", "ablation", "arch", "osu"):
         p = ssub.add_parser(name)
         p.add_argument("input")
         p.add_argument("output")
@@ -1122,7 +1032,7 @@ def main() -> None:
 
     p = sub.add_parser("plot")
     psub = p.add_subparsers(dest="kind", required=True)
-    for name in ("scaling", "hybrid", "container", "ablation", "layout", "energy", "memory", "arch", "osu"):
+    for name in ("scaling", "hybrid", "container", "ablation", "layout", "energy", "arch", "osu"):
         q = psub.add_parser(name)
         q.add_argument("input")
         q.add_argument("prefix")
@@ -1138,7 +1048,6 @@ def main() -> None:
                 "scaling": summarize_scaling,
                 "layout": summarize_layout,
                 "energy": summarize_energy,
-                "memory": summarize_memory,
                 "container": summarize_container,
                 "ablation": summarize_ablation,
                 "arch": summarize_arch,
@@ -1155,7 +1064,6 @@ def main() -> None:
                 "ablation": plot_ablation,
                 "layout": plot_layout,
                 "energy": plot_energy,
-                "memory": plot_memory,
                 "arch": plot_arch,
                 "osu": plot_osu,
             }[args.kind](
