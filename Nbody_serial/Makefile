@@ -5,7 +5,7 @@ CFLAGS    ?= -O3 -march=native -Wall -Wextra -Wpedantic
 OMPFLAGS  ?= -fopenmp
 LDLIBS    ?= -lm
 PRECISION ?= double
-PROGRAMS := nbody_direct_serial nbody_direct_hybrid nbody_layout_benchmark generate_ic memory_bandwidth
+PROGRAMS := nbody_direct_serial nbody_direct_hybrid nbody_layout_benchmark generate_ic
 HEADERS  := nbody_common.h
 
 # Compile-time precision is selected through preprocessor symbols consumed by
@@ -105,7 +105,3 @@ bench-perf: all
 
 clean:
 	rm -f $(PROGRAMS) *.o *.bin
-
-# STREAM-like memory-bandwidth test; needs OpenMP (the implicit make rule would omit -fopenmp).
-memory_bandwidth: memory_bandwidth.c
-	$(CC) $(STD) $(CFLAGS) $(OMPFLAGS) -o $@ $< $(LDLIBS)

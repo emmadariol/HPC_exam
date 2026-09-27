@@ -9,9 +9,9 @@ Commands:
   scaling     strong/weak MPI or MPI+OpenMP scaling
   hybrid      fixed-resource P x T sweep; writes one merged summary
   ablation    compare kernel, math, communication and accumulator variants
+  chains      partial accumulators 1/2/4/8 in the exact force loop, 1 rank, T threads
   layout      AoS-vs-SoA memory-layout benchmark
   energy      energy-diagnostic overhead benchmark
-  memory      STREAM-style RAM-bandwidth benchmark
   container   native-vs-container solver overhead plus launch overhead
   osu         OSU latency/bandwidth native, container, or both
   arch        native build target comparison: -march=native vs x86-64-v3
@@ -22,7 +22,6 @@ Examples:
   ./run_benchmarks.sh scaling --ranks "1 2 4 8" --threads 1 --out results.csv
   ./run_benchmarks.sh container --image nbody.sif --runtime singularity
   ./run_benchmarks.sh osu --mode both --image nbody.sif --out osu.csv
-  ./run_benchmarks.sh memory --threads 64 --out memory_bandwidth.csv
 EOF
 }
 
@@ -165,6 +164,26 @@ bench_scaling() {
       done
     done
   done
+  echo "wrote $out"
+}
+
+bench_chains() {
+  # Multiple partial accumulators (axp[lane]) in the exact scalar force loop.
+  # One rank, so no communication; the same input for every accumulator count.
+  # Output: one scaling-format CSV with the accumulator count in its own column.
+  local out="${OUT:-results_chains.csv}"
+  local tmp="${out%.csv}_tmp.csv"
+  nsteps="${NSTEPS:-5}"          # short runs: the force loop dominates
+  energy_every="$nsteps"         # energy only at the start and at the end
+  printf "kind,N,nsteps,ranks,threads,repeat,integrator,comm,kernel,rsqrt,accumulators,dtype,total,io,drift,force,comm_wait,kick,energy,gpairs,status,max_rel_drift\n" > "$out"
+  for threads in ${THREADS:-1 2 4 8 16}; do
+    for acc in ${CHAINS:-1 2 4 8}; do
+      ( ACCUMULATORS="$acc" THREADS="$threads" RANKS=1 SCALING_KINDS=strong \
+        STRONG_N="${N:-10000}" COMM=sendrecv KERNEL=direct RSQRT=exact OUT="$tmp" bench_scaling ) >/dev/null
+      tail -n +2 "$tmp" >> "$out"
+    done
+  done
+  rm -f "$tmp"
   echo "wrote $out"
 }
 
@@ -312,44 +331,6 @@ bench_energy() {
     done
   done
   rm -f "$input"
-  echo "wrote $out"
-}
-
-bench_memory() {
-  # Standalone STREAM-style RAM-bandwidth benchmark.  This is separate from the
-  # N-body kernels because the written report must document hardware memory
-  # bandwidth directly, not only application-level pair-interaction throughput.
-  local out="${OUT:-memory_bandwidth.csv}"
-  local threads="${THREADS:-${MEMORY_THREADS:-64}}"
-  local stream_n="${STREAM_N:-67108864}"
-  local stream_inner="${STREAM_INNER:-10}"
-  [[ "$threads" != *[[:space:]]* ]] || { echo "memory benchmark requires one scalar THREADS value, got: $threads" >&2; exit 2; }
-  make memory_bandwidth >/dev/null
-  printf "kernel,N,threads,repeat,inner_repeats,best_seconds,GBps,checksum,status\n" > "$out"
-  for rep in $(seq 1 "$warmups"); do
-    STREAM_N="$stream_n" STREAM_INNER="$stream_inner" \
-      OMP_NUM_THREADS="$threads" OMP_PLACES="${OMP_PLACES:-cores}" OMP_PROC_BIND="${OMP_PROC_BIND:-spread}" \
-      "$launcher" $cpu_bind --ntasks=1 --cpus-per-task="$threads" ./memory_bandwidth >/dev/null 2>&1 || true
-  done
-  for rep in $(seq 1 "$repeats"); do
-    local log rc
-    set +e
-    log="$(STREAM_N="$stream_n" STREAM_INNER="$stream_inner" \
-      OMP_NUM_THREADS="$threads" OMP_PLACES="${OMP_PLACES:-cores}" OMP_PROC_BIND="${OMP_PROC_BIND:-spread}" \
-      "$launcher" $cpu_bind --ntasks=1 --cpus-per-task="$threads" ./memory_bandwidth 2>&1)"
-    rc=$?
-    set -e
-    if (( rc != 0 )); then
-      printf "RUN_FAILED,%s,%s,%s,%s,nan,nan,nan,RUN_FAILED\n" "$stream_n" "$threads" "$rep" "$stream_inner" >> "$out"
-      printf "warning: memory bandwidth failed rep=%s rc=%s\n%s\n" "$rep" "$rc" "$log" >&2
-    else
-      printf "%s\n" "$log" |
-        awk -F, -v rep="$rep" '
-          BEGIN { OFS="," }
-          $1 ~ /^(copy|scale|add|triad)$/ && NF >= 7 { print $1,$2,$3,rep,$4,$5,$6,$7,"OK" }
-        ' >> "$out"
-    fi
-  done
   echo "wrote $out"
 }
 
@@ -687,9 +668,9 @@ case "$cmd" in
   scaling) bench_scaling ;;
   hybrid) bench_hybrid ;;
   ablation) bench_ablation ;;
+  chains) bench_chains ;;
   layout) bench_layout ;;
   energy) bench_energy ;;
-  memory) bench_memory ;;
   container) bench_container ;;
   osu) bench_osu ;;
   arch) bench_arch ;;
