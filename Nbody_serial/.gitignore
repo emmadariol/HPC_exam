@@ -15,7 +15,6 @@ preflight_*.bin
 
 # Python cache
 __pycache__/
-results_final/__pycache__/
 *.pyc
 
 # Slurm and local run logs

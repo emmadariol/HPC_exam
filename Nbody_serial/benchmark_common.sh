@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 
-# Shared execution and parsing helpers for run_benchmarks.sh.
-# This file is sourced once; it does not spawn a process per benchmark run.
-
-detect_runtime() {
+detect_runtime() {  # which container runtime is available
   if [[ -n "${RUNTIME:-}" ]]; then
     printf "%s" "$RUNTIME"
   elif command -v singularity >/dev/null 2>&1; then
@@ -17,7 +14,7 @@ detect_runtime() {
   fi
 }
 
-parse_solver_csv() {
+parse_solver_csv() {  # solver output -> CSV row
   local prefix="$1"
   local format="${2:-full}"
   awk -v prefix="$prefix" -v format="$format" '
@@ -63,7 +60,7 @@ parse_solver_csv() {
   '
 }
 
-run_mpi_solver() {
+run_mpi_solver() {  # launch the solver with srun
   local ranks="$1"
   local threads="$2"
   shift 2
@@ -75,13 +72,13 @@ run_mpi_solver() {
     --cpus-per-task="${SRUN_CPUS_PER_TASK:-$threads}" "${wrapper[@]}" "$@"
 }
 
-launcher_distribution_args() {
+launcher_distribution_args() {  # --ntasks-per-node when set
   if [[ "$launcher" == *srun* && -n "${SRUN_NTASKS_PER_NODE:-}" ]]; then
     printf -- "--ntasks-per-node=%s\n" "$SRUN_NTASKS_PER_NODE"
   fi
 }
 
-append_comma_path() {
+append_comma_path() {  # add a path to a comma-separated list
   local current="$1"
   local addition="$2"
   if [[ -z "$current" ]]; then
@@ -93,7 +90,7 @@ append_comma_path() {
   fi
 }
 
-prepend_colon_path() {
+prepend_colon_path() {  # add a path to a colon-separated list
   local current="$1"
   local addition="$2"
   if [[ -z "$current" ]]; then
@@ -105,15 +102,11 @@ prepend_colon_path() {
   fi
 }
 
-configure_container_mpi_env() {
-  # The assignment requires the containerized MPI executables to load the exact
-  # host MPI/network stack.  On Orfeo these prefixes are provided by the
-  # openMPI/4.1.6 and hwloc modules.  The variables below can be overridden when
-  # running on a different cluster, or disabled with CONTAINER_HOST_MPI=0.
+configure_container_mpi_env() {  # make the container use the cluster MPI
   [[ "${CONTAINER_HOST_MPI:-1}" == "1" ]] || return 0
 
-  local mpi_prefix="${HOST_MPI_PREFIX:-/opt/programs/openMPI/4.1.6}"
-  local hwloc_prefix="${HOST_HWLOC_PREFIX:-/opt/programs/hwloc/2.12.0}"
+  local mpi_prefix="${HOST_MPI_PREFIX:-/opt/programs/openMPI/4.1.6}"  # cluster Open MPI
+  local hwloc_prefix="${HOST_HWLOC_PREFIX:-/opt/programs/hwloc/2.12.0}"  # cluster hwloc
   local bindpath="${SINGULARITY_BINDPATH:-${APPTAINER_BINDPATH:-}}"
   local ldpath="${SINGULARITYENV_LD_LIBRARY_PATH:-${APPTAINERENV_LD_LIBRARY_PATH:-}}"
 
@@ -126,9 +119,9 @@ configure_container_mpi_env() {
     [[ -d "$hwloc_prefix/lib" ]] && ldpath="$(prepend_colon_path "$ldpath" "$hwloc_prefix/lib")"
   fi
 
-  export SINGULARITY_BINDPATH="$bindpath"
+  export SINGULARITY_BINDPATH="$bindpath"  # mount the cluster folders
   export APPTAINER_BINDPATH="$bindpath"
-  export SINGULARITYENV_LD_LIBRARY_PATH="$ldpath"
+  export SINGULARITYENV_LD_LIBRARY_PATH="$ldpath"  # load the cluster libraries first
   export APPTAINERENV_LD_LIBRARY_PATH="$ldpath"
   export SINGULARITYENV_OMPI_MCA_pml="${OMPI_MCA_pml:-ob1}"
   export APPTAINERENV_OMPI_MCA_pml="${OMPI_MCA_pml:-ob1}"
@@ -138,7 +131,7 @@ configure_container_mpi_env() {
   export APPTAINERENV_OMPI_MCA_btl_vader_single_copy_mechanism="${OMPI_MCA_btl_vader_single_copy_mechanism:-none}"
 }
 
-run_container_mpi() {
+run_container_mpi() {  # run an MPI program inside the container
   local runtime="$1"
   local image="$2"
   local ranks="$3"
@@ -169,7 +162,7 @@ run_container_mpi() {
   esac
 }
 
-run_container_single() {
+run_container_single() {  # run one command inside the container
   local runtime="$1"
   local image="$2"
   shift 2
@@ -183,7 +176,7 @@ run_container_single() {
   esac
 }
 
-run_hybrid_solver() {
+run_hybrid_solver() {  # run the solver, native or in the container
   local mode="$1" runtime="$2" image="$3" ranks="$4" threads="$5" input="$6"
   shift 6
   local args=(

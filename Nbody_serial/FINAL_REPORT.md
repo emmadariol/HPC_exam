@@ -432,11 +432,11 @@ The force computation needs no separate efficiency: the number of pairs is fixed
 | 16 | 6250 | 240.56 | 1.67 | 15.89 | 99.3% | 55.1% | 0.26% | 0.2670 |
 | 32 | 3125 | 123.59 | 0.02 | 30.94 | 96.7% | 52.9% | 0.24% | 0.2599 |
 
-<p align="center"><img src="results_final/scaling_100steps/strong_runtime.svg" alt="Strong-scaling run time at N=100000" width="60%"></p>
+<p align="center"><img src="results_final/strong_runtime.svg" alt="Strong-scaling run time at N=100000" width="60%"></p>
 
 _The run time falls from about 64 minutes on one core to about 2 minutes on 32 cores, following the ideal line T(1)/P._
 
-<p align="center"><img src="results_final/scaling_100steps/strong_speedup.svg" alt="Strong-scaling speedup at N=100000" width="49%"> <img src="results_final/scaling_100steps/strong_efficiency.svg" alt="Strong-scaling efficiency at N=100000" width="49%"></p>
+<p align="center"><img src="results_final/strong_speedup.svg" alt="Strong-scaling speedup at N=100000" width="49%"> <img src="results_final/strong_efficiency.svg" alt="Strong-scaling efficiency at N=100000" width="49%"></p>
 
 _Left: the speedup reaches 30.9 at 32 ranks, against an ideal of 32. Right: the efficiency stays above 99% up to 16 ranks and falls to 96.7% at 32 ranks (note the vertical scale, from 0.90 to 1.02)._
 
@@ -537,11 +537,11 @@ This speedup is a model-based estimate: the large single-core runs were not done
 | 8 | 80000 | 307.16 | 0.72 | 304.9 | 1.007 | 7.94 | 99.3% |
 | 16 | 160000 | 614.90 | 1.53 | 609.8 | 1.008 | 15.87 | 99.2% |
 
-<p align="center"><img src="results_final/scaling_100steps/weak_time.svg" alt="Weak-scaling run time" width="60%"></p>
+<p align="center"><img src="results_final/weak_time.svg" alt="Weak-scaling run time" width="60%"></p>
 
 _The time grows with P even though each rank keeps the same number of particles, as expected for an all-pairs method. The measured curve lies on the ideal one: at 16 ranks the ideal is 609.8 s and the measurement 614.9 s, 0.8% higher._
 
-<p align="center"><img src="results_final/scaling_100steps/weak_speedup.svg" alt="Weak-scaling work-normalised speedup" width="49%"> <img src="results_final/scaling_100steps/weak_efficiency.svg" alt="Weak-scaling work-normalised efficiency" width="49%"></p>
+<p align="center"><img src="results_final/weak_speedup.svg" alt="Weak-scaling work-normalised speedup" width="49%"> <img src="results_final/weak_efficiency.svg" alt="Weak-scaling work-normalised efficiency" width="49%"></p>
 
 _Left: the work-normalised speedup reaches 15.9 at 16 ranks, against an ideal of 16. Right: the work-normalised efficiency stays above 99% at every P._
 
@@ -671,7 +671,7 @@ With one thread there is no conflict between threads, so this test shows the ben
 | 8 | 0.2801 | 0.3401 | 1.21 | 0.3285 |
 | 16 | 0.1407 | 0.2326 | 1.65 | 0.1697 |
 
-<p align="center"><img src="results_final/thread_sweep/newton_threads_time.svg" alt="Newton's third law vs direct kernel: force time" width="49%"> <img src="results_final/thread_sweep/newton_threads_ratio.svg" alt="Newton's third law vs direct kernel: time ratio" width="49%"></p>
+<p align="center"><img src="results_final/newton_threads_time.svg" alt="Newton's third law vs direct kernel: force time" width="49%"> <img src="results_final/newton_threads_ratio.svg" alt="Newton's third law vs direct kernel: time ratio" width="49%"></p>
 
 _Left: the direct kernel follows the ideal line, halving its time at every doubling of threads, while Newton's kernel improves much less. Right: Newton is faster with 1 and 2 threads and slower from 4 threads on, 1.65 times slower with 16._
 
@@ -1334,7 +1334,7 @@ The last column of the table is 100 x (container / native - 1).
 
 For latency a positive difference means slower communication in the container; for bandwidth a negative difference means lower throughput.
 
-<p align="center"><img src="results_final/required_table/osu_microbench_latency.svg" alt="OSU native-vs-container latency" width="49%"> <img src="results_final/required_table/osu_microbench_bandwidth.svg" alt="OSU native-vs-container bandwidth" width="49%"></p>
+<p align="center"><img src="results_final/osu_microbench_latency.svg" alt="OSU native-vs-container latency" width="49%"> <img src="results_final/osu_microbench_bandwidth.svg" alt="OSU native-vs-container bandwidth" width="49%"></p>
 
 _Left: latency inside the container is a few percent higher at all selected sizes. Right: for large messages the container reaches about 4-5% less bandwidth._
 

@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -euo pipefail  # stop at the first error
 
-# Run this mode under the SAME srun placement options as the solver.
-# It checks the current rank, without generating particles or running a benchmark.
-# Usage: srun ... bash collect_system_info.sh --verify-binding numa|socket|core
-if [[ "${1:-}" == "--verify-binding" ]]; then
+if [[ "${1:-}" == "--verify-binding" ]]; then  # check the CPU mask of this rank
   python3 - "${2:?expected numa, socket or core}" <<'PY'
 import json
 import os
@@ -46,56 +43,44 @@ PY
   exit 0
 fi
 
-# Collect reproducibility metadata for the node that actually runs a Slurm job.
-# This script is intentionally read-only: it records hardware, compiler, MPI,
-# memory, NUMA, and OpenMP/MPI environment details without changing the system.
-out="${1:-results_final/system_info.txt}"
+out="${1:-results_final/system_info.txt}"  # output file
 mkdir -p "$(dirname "$out")"
 
 {
-  # Timestamp and kernel/OS information make it possible to identify the exact
-  # platform used for the final figures.
   echo "# system information"
   date -Is
   echo
   echo "## uname"
   uname -a || true
-  # CPU topology is needed to justify the chosen rank/thread counts and to
-  # explain why EPYC/GENOA nodes have different useful scaling ranges.
   echo
   echo "## cpu"
-  lscpu || true
+  lscpu || true  # CPU model and topology
 
-  # NUMA layout matters for memory bandwidth and first-touch effects.
   echo
   echo "## numa"
   if command -v numactl >/dev/null 2>&1; then
-    numactl -H
+    numactl -H  # NUMA domains
   else
     echo "numactl not available"
   fi
-  # Memory capacity is recorded to prove that the chosen N values fit in-core.
   echo
   echo "## memory"
-  free -h || true
+  free -h || true  # memory
 
-  # Compiler and MPI versions are part of the experimental environment.
   echo
   echo "## compiler"
-  cc --version || true
+  cc --version || true  # C compiler
   echo
   echo "## mpi compiler"
-  mpicc --version || true
+  mpicc --version || true  # MPI compiler wrapper
   echo
   echo "## mpi runtime"
-  mpirun --version || true
+  mpirun --version || true  # MPI runtime
   echo "## linked MPI and OpenMP runtimes"
-  ldd ./nbody_direct_hybrid || true
-  # Runtime environment variables document binding/threading choices inherited
-  # from the batch script or cluster modules.
+  ldd ./nbody_direct_hybrid || true  # libraries used by the solver
   echo
   echo "## openmp environment"
-  env | sort | grep -E '^(OMP_|GOMP_|KMP_|I_MPI_|OMPI_|MPICH_)' || true
+  env | sort | grep -E '^(OMP_|GOMP_|KMP_|I_MPI_|OMPI_|MPICH_)' || true  # OpenMP and MPI variables
 } > "$out"
 
 echo "wrote $out"

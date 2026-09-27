@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -euo pipefail  # stop at the first error
 
-usage() {
+usage() {  # help text
   cat <<'EOF'
 usage: ./run_benchmarks.sh COMMAND [options]
 
@@ -24,19 +24,14 @@ Examples:
 EOF
 }
 
-# The first positional argument selects the benchmark family.  Everything after
-# it is interpreted as generic key/value configuration.
-cmd="${1:-}"
+cmd="${1:-}"  # first argument: which benchmark
 if [[ -z "$cmd" || "$cmd" == "--help" || "$cmd" == "-h" ]]; then
   usage
   exit 0
 fi
 shift
 
-# Convert CLI options to exported uppercase variables.  Example:
-#   --strong-n 50000  -> STRONG_N=50000
-# This makes the script easy to call from Make, Slurm, or an interactive shell.
-while [[ $# -gt 0 ]]; do
+while [[ $# -gt 0 ]]; do  # --key value options become KEY=value variables
   case "$1" in
     --*=*)
       key="${1%%=*}"
@@ -57,37 +52,27 @@ while [[ $# -gt 0 ]]; do
   key="${key#--}"
   key="${key//-/_}"
   key="$(printf "%s" "$key" | tr '[:lower:]' '[:upper:]')"
-  export "$key=$val"
+  export "$key=$val"  # export the option
 done
 
-# Common defaults.  Every value can be overridden either as an environment
-# variable or via the command-line conversion above.
-launcher="${LAUNCHER:-srun}"
-cpu_bind="${CPU_BIND:---cpu-bind=verbose,cores}"
-# The benchmark suite uses only the Plummer initial condition (model 0).
-model=0
-dt="${DT:-1e-4}"
-eps="${EPS:-0.05}"
-nsteps="${NSTEPS:-100}"
-repeats="${REPEATS:-5}"
-warmups="${WARMUPS:-1}"
-energy_every="${ENERGY_EVERY:-100}"
+launcher="${LAUNCHER:-srun}"  # MPI launcher
+cpu_bind="${CPU_BIND:---cpu-bind=verbose,cores}"  # each rank on its own cores, masks printed
+model=0  # initial condition: Plummer sphere
+dt="${DT:-1e-4}"  # time step
+eps="${EPS:-0.05}"  # softening length
+nsteps="${NSTEPS:-100}"  # steps per run
+repeats="${REPEATS:-5}"  # measured repetitions
+warmups="${WARMUPS:-1}"  # warm-up runs, not recorded
+energy_every="${ENERGY_EVERY:-100}"  # energy check interval
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Load helpers in the current shell: this adds no process per benchmark run.
-source "$script_dir/benchmark_common.sh"
+source "$script_dir/benchmark_common.sh"  # shared helper functions
 
-write_failed_scaling_row() {
-  # Failed solver runs are recorded as CSV rows instead of aborting the whole
-  # sweep.  This preserves partial evidence and makes transient Slurm/MPI
-  # failures visible in post-processing.
+write_failed_scaling_row() {  # CSV row for a failed run
   printf "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,unknown,nan,nan,nan,nan,nan,nan,nan,nan,RUN_FAILED,nan\n" "$@"
 }
 
-bench_scaling() {
-  # Strong scaling keeps N fixed while resources grow; weak scaling grows N
-  # proportionally to ranks.  Both are produced by the same loop so the report
-  # can compare behavior without changing code paths.
+bench_scaling() {  # strong and weak scaling
   local strong_n="${STRONG_N:-100000}"
   local weak_per_rank="${WEAK_PER_RANK:-10000}"
   local ranks_list="${RANKS:-1 2 4 8 16 32 64}"
@@ -108,10 +93,7 @@ bench_scaling() {
   make nbody_direct_hybrid generate_ic >/dev/null
   printf "kind,N,nsteps,ranks,threads,repeat,integrator,comm,kernel,rsqrt,accumulators,dtype,total,io,drift,force,comm_wait,kick,energy,gpairs,status,max_rel_drift\n" > "$out"
 
-  run_case() {
-    # One measured solver execution.  It creates a deterministic input, runs
-    # native or container mode, parses the concise solver summary, and removes
-    # the temporary binary input afterwards.
+  run_case() {  # one solver run
     local kind="$1" n="$2" ranks="$3" threads="$4" rep="$5" record="${6:-1}"
     local input="${kind}_N${n}_P${ranks}_T${threads}_seed${rep}.bin"
     local log rc prefix
@@ -119,9 +101,7 @@ bench_scaling() {
       echo "skip kernel=newton with ranks=$ranks: this variant is single-rank only" >&2
       return 0
     fi
-    ./generate_ic --model "$model" --n "$n" --seed "$((1000 + rep))" --output "$input" >/dev/null
-    # Temporarily disable `set -e` around the launched job: one failed run must
-    # become a RUN_FAILED CSV row, not kill the entire benchmark sweep.
+    ./generate_ic --model "$model" --n "$n" --seed "$((1000 + rep))" --output "$input" >/dev/null  # input with a fixed seed per repetition
     set +e
     if [[ "$use_container" == "1" ]]; then
       log="$(run_hybrid_solver container "$runtime" "$image" "$ranks" "$threads" "$input" \
@@ -134,7 +114,7 @@ bench_scaling() {
     fi
     rc=$?
     set -e
-    prefix="$kind,$n,$nsteps,$ranks,$threads,$rep,kdk,$comm,$kernel,$rsqrt,$accumulators"
+    prefix="$kind,$n,$nsteps,$ranks,$threads,$rep,kdk,$comm,$kernel,$rsqrt,$accumulators"  # first CSV columns of the run
     if [[ -n "${RESULT_DIR:-}" ]]; then
       printf "%s\n" "$log" > "$RESULT_DIR/${kind}_N${n}_P${ranks}_T${threads}_rep${rep}_record${record}.log"
     fi
@@ -145,20 +125,18 @@ bench_scaling() {
       printf "warning: scaling failed kind=%s N=%s P=%s T=%s rep=%s rc=%s\n%s\n" "$kind" "$n" "$ranks" "$threads" "$rep" "$rc" "$log" >&2
     else
       if [[ "$record" == "1" ]]; then
-        printf "%s\n" "$log" | parse_solver_csv "$prefix" >> "$out"
+        printf "%s\n" "$log" | parse_solver_csv "$prefix" >> "$out"  # solver output -> CSV row
       fi
     fi
     rm -f "$input"
   }
 
-  # Warmups are executed but not recorded; repeated measurements are recorded
-  # and later summarized with medians/outlier handling in analyze.py.
-  for kind in ${SCALING_KINDS:-strong weak}; do
+  for kind in ${SCALING_KINDS:-strong weak}; do  # strong and/or weak
     for ranks in $ranks_list; do
       local n="$strong_n"
-      [[ "$kind" == "weak" ]] && n=$((weak_per_rank * ranks))
+      [[ "$kind" == "weak" ]] && n=$((weak_per_rank * ranks))  # weak scaling: N grows with P
       for threads in $threads_list; do
-        for rep in $(seq 1 "$warmups"); do run_case "$kind" "$n" "$ranks" "$threads" "$rep" 0 >/dev/null; done
+        for rep in $(seq 1 "$warmups"); do run_case "$kind" "$n" "$ranks" "$threads" "$rep" 0 >/dev/null; done  # warm-up runs
         for rep in ${REP_LIST:-$(seq 1 "$repeats")}; do run_case "$kind" "$n" "$ranks" "$threads" "$rep"; done  # REP_LIST="3 4" runs only those repeats (same seeds)
       done
     done
@@ -166,10 +144,7 @@ bench_scaling() {
   echo "wrote $out"
 }
 
-bench_hybrid() {
-  # Hybrid scaling compares several MPI-rank x OpenMP-thread decompositions at a
-  # fixed total core budget.  Each pair gets its own raw CSV, while the summary
-  # file is merged once so plotting remains simple.
+bench_hybrid() {  # P x T mappings on the same cores
   local prefix="${RESULT_PREFIX:-results_hybrid}"
   local summary="${SUMMARY:-${prefix}_summary.csv}"
   local pairs="${HYBRID_PAIRS:-64x1 32x2 16x4 8x8 4x16}"
@@ -179,17 +154,14 @@ bench_hybrid() {
     local threads="${pair#*x}"
     local raw="${prefix}_P${ranks}_T${threads}.csv"
     local partial="${prefix}_P${ranks}_T${threads}_summary.csv"
-    RANKS="$ranks" THREADS="$threads" SRUN_CPUS_PER_TASK="$threads" OUT="$raw" bench_scaling
-    python3 analyze.py summarize scaling "$raw" "$partial"
+    RANKS="$ranks" THREADS="$threads" SRUN_CPUS_PER_TASK="$threads" OUT="$raw" bench_scaling  # run this P x T pair
+    python3 analyze.py summarize scaling "$raw" "$partial"  # summary of this pair
     if [[ ! -s "$summary" ]]; then cp "$partial" "$summary"; else tail -n +2 "$partial" >> "$summary"; fi
   done
-  python3 analyze.py plot hybrid "$summary" "$prefix"
+  python3 analyze.py plot hybrid "$summary" "$prefix"  # plot all pairs
 }
 
-bench_ablation() {
-  # Ablation isolates one optimization dimension at a time: algorithmic kernel,
-  # inverse-square-root implementation, communication mode, and per-thread
-  # accumulator count.  The output is intentionally simple for bar-plotting.
+bench_ablation() {  # Newton, rsqrt, communication, partial sums
   local ranks="${RANKS:-64}"
   local n="${N:-10000}"
   local out="${OUT:-results_ablation.csv}"
@@ -198,9 +170,7 @@ bench_ablation() {
   ./generate_ic --model "$model" --n "$n" --seed "${SEED:-123}" --output "$input" >/dev/null
   printf "Test_Type,Config,Time_Sec,N,nsteps,ranks,threads,repeat,dt,eps,energy_every,force,comm_wait,gpairs,status,max_rel_drift\n" > "$out"
 
-  ablation_case() {
-    # Record median-ready total times for one variant.  Failures are written as
-    # NaN so the plotter can skip them while the raw CSV still documents them.
+  ablation_case() {  # one variant, one run
     local test_type="$1" config="$2" ranks="$3"
     shift 3
     local log rc time_sec
@@ -228,25 +198,22 @@ bench_ablation() {
     fi
   }
 
-  for rep in $(seq 1 "$repeats"); do ablation_case Kernel direct 1 --kernel direct; done
-  for rep in $(seq 1 "$repeats"); do ablation_case Kernel newton 1 --kernel newton; done
-  for rep in $(seq 1 "$repeats"); do ablation_case Math exact "$ranks" --rsqrt exact; done
-  for rep in $(seq 1 "$repeats"); do ablation_case Math approx1 "$ranks" --rsqrt approx1; done
-  for rep in $(seq 1 "$repeats"); do ablation_case Math approx2 "$ranks" --rsqrt approx2; done
-  for rep in $(seq 1 "$repeats"); do ablation_case Comm sendrecv "$ranks" --comm sendrecv; done
-  for rep in $(seq 1 "$repeats"); do ablation_case Comm overlap "$ranks" --comm overlap; done
-  for rep in $(seq 1 "$repeats"); do ablation_case Accumulators 1 "$ranks" --accumulators 1; done
+  for rep in $(seq 1 "$repeats"); do ablation_case Kernel direct 1 --kernel direct; done  # direct kernel
+  for rep in $(seq 1 "$repeats"); do ablation_case Kernel newton 1 --kernel newton; done  # Newton's third law
+  for rep in $(seq 1 "$repeats"); do ablation_case Math exact "$ranks" --rsqrt exact; done  # exact square root
+  for rep in $(seq 1 "$repeats"); do ablation_case Math approx1 "$ranks" --rsqrt approx1; done  # rsqrt14 + 1 Newton step
+  for rep in $(seq 1 "$repeats"); do ablation_case Math approx2 "$ranks" --rsqrt approx2; done  # rsqrt14 + 2 Newton steps
+  for rep in $(seq 1 "$repeats"); do ablation_case Comm sendrecv "$ranks" --comm sendrecv; done  # blocking ring
+  for rep in $(seq 1 "$repeats"); do ablation_case Comm overlap "$ranks" --comm overlap; done  # overlapped ring
+  for rep in $(seq 1 "$repeats"); do ablation_case Accumulators 1 "$ranks" --accumulators 1; done  # 1 partial sum
   for rep in $(seq 1 "$repeats"); do ablation_case Accumulators 2 "$ranks" --accumulators 2; done
   for rep in $(seq 1 "$repeats"); do ablation_case Accumulators 4 "$ranks" --accumulators 4; done
-  for rep in $(seq 1 "$repeats"); do ablation_case Accumulators 8 "$ranks" --accumulators 8; done
+  for rep in $(seq 1 "$repeats"); do ablation_case Accumulators 8 "$ranks" --accumulators 8; done  # 8 partial sums
   rm -f "$input"
   echo "wrote $out"
 }
 
-bench_layout() {
-  # Memory-layout evidence: compare Array-of-Structures (AoS) and
-  # Structure-of-Arrays (SoA) force kernels over a thread sweep, including
-  # checksums to show that the layouts compute equivalent accelerations.
+bench_layout() {  # AoS vs SoA
   local n="${N:-10000}"
   local threads_list="${THREADS:-1 2 4 8}"
   local inner_repeats="${INNER_REPEATS:-3}"
@@ -268,10 +235,7 @@ bench_layout() {
   echo "wrote $out"
 }
 
-bench_energy() {
-  # Energy diagnostics are scientifically useful but expensive because they add
-  # an O(N^2) potential-energy pass.  This sweep quantifies how often the report
-  # can afford to compute the diagnostic.
+bench_energy() {  # cost of the energy check
   local n="${N:-10000}"
   local ranks="${RANKS:-8}"
   local threads="${THREADS:-1}"
@@ -282,10 +246,8 @@ bench_energy() {
   ./generate_ic --model "$model" --n "$n" --seed "${SEED:-5151}" --output "$input" >/dev/null
   printf "N,nsteps,ranks,threads,repeat,energy_every,total,force,energy,status,max_rel_drift\n" > "$out"
   if [[ -z "$list" ]]; then
-    list="1 5 10 $nsteps"
+    list="1 5 10 $nsteps"  # default energy-every values
   fi
-  # Values larger than nsteps are equivalent to "final step only"; normalize and
-  # de-duplicate them to avoid wasting allocations on repeated energy settings.
   list="$(for ee in $list; do if (( ee > nsteps )); then echo "$nsteps"; else echo "$ee"; fi; done | awk '!seen[$0]++')"
   for ee in $list; do
     for rep in $(seq 1 "$warmups"); do
@@ -313,10 +275,7 @@ bench_energy() {
   echo "wrote $out"
 }
 
-bench_container() {
-  # Solver container overhead benchmark required by the container part of the
-  # assignment.  It compares native and container executions for the same
-  # deterministic inputs, plus a separate launch-only overhead measurement.
+bench_container() {  # native vs container
   local image="${IMAGE:-nbody.sif}"
   local out="${OUT:-container_overhead.csv}"
   local launch_out="${LAUNCH_OUT:-container_launch_overhead.csv}"
@@ -335,8 +294,6 @@ bench_container() {
   fi
   printf "kind,mode,N,ranks,threads,repeat,total,status,max_rel_drift\n" > "$out"
   container_case() {
-    # Pair native/container timings as closely as possible: same N, same rank
-    # count, same repeat index, same generated input seed.
     local kind="$1" mode="$2" n="$3" ranks="$4" rep="$5"
     local input="container_${kind}_N${n}_P${ranks}_seed${rep}.bin"
     local log rc prefix
@@ -360,13 +317,13 @@ bench_container() {
   }
   for ranks in $ranks_list; do
     for rep in $(seq 1 "$repeats"); do
-      container_case strong native "$strong_n" "$ranks" "$rep"
-      container_case strong container "$strong_n" "$ranks" "$rep"
-      container_case weak native "$((n_per_rank * ranks))" "$ranks" "$rep"
-      container_case weak container "$((n_per_rank * ranks))" "$ranks" "$rep"
+      container_case strong native "$strong_n" "$ranks" "$rep"  # strong, native
+      container_case strong container "$strong_n" "$ranks" "$rep"  # strong, container
+      container_case weak native "$((n_per_rank * ranks))" "$ranks" "$rep"  # weak, native
+      container_case weak container "$((n_per_rank * ranks))" "$ranks" "$rep"  # weak, container
     done
   done
-  printf "repeat,seconds\n" > "$launch_out"
+  printf "repeat,seconds\n" > "$launch_out"  # container start-up times
   for rep in $(seq 1 "$launch_repeats"); do
     seconds="$( { time -p run_container_single "$runtime" "$image" true; } 2>&1 | awk '/^real /{print $2}' )" || seconds="nan"
     printf "%s,%s\n" "$rep" "${seconds:-nan}" >> "$launch_out"
@@ -374,10 +331,8 @@ bench_container() {
   echo "wrote $out and $launch_out"
 }
 
-parse_osu() {
+parse_osu() {  # OSU output -> CSV
   local mode_name="$1" bench="$2" metric="$3"
-  # OSU tools print whitespace-separated tables after comment/header lines; only
-  # numeric rows become CSV records.
   awk -v mode="$mode_name" -v bench="$bench" -v metric="$metric" '
     BEGIN { OFS="," }
     /^[[:space:]]*[0-9]+[[:space:]]+/ { print mode, bench, metric, $1, $2 }
@@ -409,18 +364,14 @@ extract_lib_path() {
   '
 }
 
-write_mpi_linkage_check() {
-  # Mandatory correctness check for container MPI runs: compare dynamic MPI
-  # linkage outside and inside the container.  The job fails unless libmpi.so is
-  # resolved to the same host path, preventing accidental OSU measurements with
-  # Ubuntu/container MPI instead of the Orfeo MPI stack.
+write_mpi_linkage_check() {  # compare the MPI library used native vs container
   local runtime="$1" image="$2" native_tool="$3" container_tool="$4" out="$5"
   local native_path native_ldd container_ldd native_libmpi container_libmpi
   local interesting='libmpi|libopen-rte|libopen-pal|libpmix|libucp|libucs|libuct|libucm|libfabric|libpsm|libibverbs|libhwloc'
 
   mkdir -p "$(dirname "$out")"
   native_path="$(resolve_command_path "$native_tool")"
-  native_ldd="$(ldd "$native_path" 2>&1 || true)"
+  native_ldd="$(ldd "$native_path" 2>&1 || true)"  # libraries of the native program
   container_ldd="$(
     run_container_single "$runtime" "$image" sh -lc '
       tool="$1"
@@ -443,8 +394,8 @@ write_mpi_linkage_check() {
     printf "%s\n" "$container_ldd" | grep -E "container_resolved_tool|$interesting" || true
   } > "$out"
 
-  native_libmpi="$(printf "%s\n" "$native_ldd" | extract_lib_path 'libmpi\.so')"
-  container_libmpi="$(printf "%s\n" "$container_ldd" | extract_lib_path 'libmpi\.so')"
+  native_libmpi="$(printf "%s\n" "$native_ldd" | extract_lib_path 'libmpi\.so')"  # libmpi used natively
+  container_libmpi="$(printf "%s\n" "$container_ldd" | extract_lib_path 'libmpi\.so')"  # libmpi used in the container
 
   if printf "%s\n" "$container_ldd" | grep -qE "GLIBC_[0-9.]+.*not found|version .* not found"; then
     {
@@ -478,10 +429,7 @@ write_mpi_linkage_check() {
   } >> "$out"
 }
 
-bench_osu() {
-  # OSU Micro-Benchmarks provide a direct MPI communication comparison
-  # independent of the N-body code.  The Docker/SIF image includes OSU binaries
-  # so native-vs-container latency and bandwidth can be reported.
+bench_osu() {  # OSU latency and bandwidth
   local mode="${MODE:-both}"
   local image="${IMAGE:-nbody.sif}"
   local out="${OUT:-osu_microbench.csv}"
@@ -491,13 +439,8 @@ bench_osu() {
   local container_bw="${CONTAINER_OSU_BW:-osu_bw}"
   local runtime
   runtime="$(detect_runtime 2>/dev/null || true)"
-  # Use the same stable OpenMPI transport on both sides of the OSU comparison.
-  # On Orfeo, host OpenMPI's UCX component can otherwise pick UCX libraries from
-  # the container namespace, causing API-version warnings or RDMA aborts.  The
-  # ob1/tcp path is slower than optimized UCX, but it is symmetric and avoids a
-  # false native-vs-container mismatch.
-  export OMPI_MCA_pml="${OMPI_MCA_pml:-ob1}"
-  export OMPI_MCA_btl="${OMPI_MCA_btl:-self,tcp}"
+  export OMPI_MCA_pml="${OMPI_MCA_pml:-ob1}"  # Open MPI point-to-point layer
+  export OMPI_MCA_btl="${OMPI_MCA_btl:-self,tcp}"  # transports: self and TCP
   export OMPI_MCA_btl_vader_single_copy_mechanism="${OMPI_MCA_btl_vader_single_copy_mechanism:-none}"
   export SINGULARITYENV_OMPI_MCA_pml="$OMPI_MCA_pml"
   export APPTAINERENV_OMPI_MCA_pml="$OMPI_MCA_pml"
@@ -507,8 +450,6 @@ bench_osu() {
   export APPTAINERENV_OMPI_MCA_btl_vader_single_copy_mechanism="$OMPI_MCA_btl_vader_single_copy_mechanism"
   printf "mode,benchmark,metric,bytes,value\n" > "$out"
   run_osu_one() {
-    # Run one OSU executable in native or container mode.  Warnings go to stderr;
-    # successful numeric rows are appended to the shared CSV.
     local mode_name="$1" bench="$2" metric="$3" tool="$4" record="${5:-1}"
     local log rc
     set +e
@@ -518,7 +459,7 @@ bench_osu() {
       SRUN_NTASKS_PER_NODE="${OSU_NTASKS_PER_NODE:-}"
       mapfile -t distribution_args < <(launcher_distribution_args)
       SRUN_NTASKS_PER_NODE="$saved_ntasks_per_node"
-      log="$("$launcher" $cpu_bind -n 2 "${distribution_args[@]}" "$tool" 2>&1)"
+      log="$("$launcher" $cpu_bind -n 2 "${distribution_args[@]}" "$tool" 2>&1)"  # native: 2 processes
     else
       log="$(SRUN_NTASKS_PER_NODE="${OSU_NTASKS_PER_NODE:-}" \
         run_container_mpi "$runtime" "$image" 2 1 "$tool" 2>&1)"
@@ -532,10 +473,6 @@ bench_osu() {
     fi
   }
   run_osu_repeated() {
-    # OSU performs many internal iterations per invocation, but the project
-    # deliverables ask for statistics over repeated measurements.  Repeat the
-    # whole launched benchmark so analyze.py can report median and stdev across
-    # comparable native/container runs.
     local mode_name="$1" bench="$2" metric="$3" tool="$4"
     local rep
     for rep in $(seq 1 "$warmups"); do
@@ -553,8 +490,8 @@ bench_osu() {
       write_mpi_linkage_check "$runtime" "$image" "$latency" "$container_latency" \
         "${MPI_LINKAGE_OUT:-$(dirname "$out")/osu_mpi_linkage_check.txt}"
     fi
-    run_osu_repeated native latency latency_us "$latency"
-    run_osu_repeated native bandwidth bandwidth_MBps "$bw"
+    run_osu_repeated native latency latency_us "$latency"  # native latency
+    run_osu_repeated native bandwidth bandwidth_MBps "$bw"  # native bandwidth
   fi
   if [[ "$mode" == "container" || "$mode" == "both" ]]; then
     [[ -n "$runtime" ]] || { echo "no container runtime found" >&2; exit 127; }
@@ -562,17 +499,13 @@ bench_osu() {
       write_mpi_linkage_check "$runtime" "$image" "${OSU_NATIVE_REFERENCE:-$latency}" "$container_latency" \
         "${MPI_LINKAGE_OUT:-$(dirname "$out")/osu_mpi_linkage_check.txt}"
     fi
-    run_osu_repeated container latency latency_us "$container_latency"
-    run_osu_repeated container bandwidth bandwidth_MBps "$container_bw"
+    run_osu_repeated container latency latency_us "$container_latency"  # container latency
+    run_osu_repeated container bandwidth bandwidth_MBps "$container_bw"  # container bandwidth
   fi
   echo "wrote $out"
 }
 
-bench_arch() {
-  # Isolate the compilation-target effect requested by the container section:
-  # compare the same native run built with -march=native and -march=x86-64-v3.
-  # This keeps the architectural penalty separate from Singularity runtime
-  # overhead, which is measured by bench_container().
+bench_arch() {  # -march=native vs -march=x86-64-v3
   local out="${OUT:-arch_target_comparison.csv}"
   local n="${N:-100000}"
   local ranks="${RANKS:-64}"
@@ -580,9 +513,9 @@ bench_arch() {
   local base_cflags="${BASE_CFLAGS:--O3 -Wall -Wextra -Wpedantic}"
   local input="arch_compare_N${n}.bin"
   printf "target,N,nsteps,ranks,threads,repeat,total,status,max_rel_drift\n" > "$out"
-  for target in native x86-64-v3; do
+  for target in native x86-64-v3; do  # the two compilation targets
     make clean >/dev/null
-    CFLAGS="$base_cflags -march=$target" make nbody_direct_hybrid generate_ic >/dev/null
+    CFLAGS="$base_cflags -march=$target" make nbody_direct_hybrid generate_ic >/dev/null  # build for this target
     ./generate_ic --model "$model" --n "$n" --seed "${SEED:-5151}" --output "$input" >/dev/null
     for rep in $(seq 1 "$warmups"); do
       run_hybrid_solver native "" "" "$ranks" "$threads" "$input" \
@@ -610,10 +543,7 @@ bench_arch() {
   echo "wrote $out"
 }
 
-bench_perf() {
-  # Optional hardware-counter snapshot.  It is not required for the main report
-  # but can help discuss bottlenecks such as instruction count, cache misses, or
-  # branch misses when the cluster allows `perf`.
+bench_perf() {  # hardware counters with perf
   local input="${INPUT:-perf_counter_input.bin}"
   local n="${N:-20000}"
   local ranks="${RANKS:-1}"
@@ -643,7 +573,7 @@ bench_perf() {
   rm -f "$input"
 }
 
-case "$cmd" in
+case "$cmd" in  # run the chosen benchmark
   scaling) bench_scaling ;;
   hybrid) bench_hybrid ;;
   ablation) bench_ablation ;;

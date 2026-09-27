@@ -1,29 +1,28 @@
 # results_final
 
-Data behind `FINAL_REPORT.md`: only the CSV files and the 17 figures used in the report.
-Slurm outputs, per-run logs, job scripts and build logs were removed.
+Data behind `FINAL_REPORT.md`.
 
-| Report experiment | Data |
-|---|---|
-| 1. Energy conservation | column `max_rel_drift` in every CSV; long run in `energy_long_20260923_170127/` |
-| 2. Cost of the energy check | `energy.csv`, `energy_summary.csv`, `energy_overhead.svg` |
-| 3. Profiling: phase breakdown and Gpairs/s | `scaling_100steps/strong_P1_*`, `scaling_100steps/strong_P8_32`, `mapping_*`, `energy_long_*` |
-| 4. Strong scaling (N = 100000, 100 steps) | `scaling_100steps/strong_*/` (native); summary `native_strong_summary.csv` and figures `strong_*.svg` in `scaling_100steps/` |
-| 5. Weak scaling (10000 per rank, 100 steps) | `scaling_100steps/weak_*/`; summary `native_weak_summary.csv`, figures `weak_*.svg` |
-| 6. MPI/OpenMP mapping | `mapping_numa/`, `mapping_socket/`, `mapping_core/` |
-| 7-9. Newton, rsqrt, accumulators (T = 1) | `ablation_complete_20260922_083515/` |
-| 7-9. Same tests with T = 2, 4, 8, 16 | `ablation_T{2,4,8,16}_20260923_165910/`; summary and figure in `thread_sweep/` |
-| 8. rsqrt time-step convergence | `rsqrt_conv_<method>_n<steps>_20260923_170127/`; summary and figure in `rsqrt_convergence/` |
-| 10. AoS vs SoA | `layout.csv`, `layout_summary.csv`, `layout_force_time.svg` |
-| 11. native vs x86-64-v3 | `arch_target_comparison*.csv` (N=10000), `arch_exact_20260923_170254/`, `arch_approx1_20260924_134326/` (N=100000) |
-| 12. Blocking vs overlapped ring | `overlap_20260923_132533/` (summary CSV and figure in that folder) |
-| 13. Native vs container solver | `scaling_100steps/ctr_*/` (container) against the native folders; summary `container_summary.csv`, figure `container_overhead.svg` |
-| 14. Container launch | `required_table/container_launch_overhead.csv` |
-| 15. OSU latency/bandwidth | `required_table/osu_microbench_*` |
+- this folder: summary CSV files, the figures used in the report, and the scripts that rebuild them;
+- `raw/`: the raw CSV of every run, one subfolder per experiment or Slurm job.
 
-The folders `scaling_100steps/`, `thread_sweep/`, `rsqrt_convergence/` and
-`overlap_20260923_132533/` contain a small Python script that rebuilds their summary
-CSV and figures from the raw CSVs; run it from inside the folder with `python3 <script>.py`.
-The scripts draw with `svgplot.py` (no matplotlib needed), which reproduces the look of the figures made by `analyze.py`.
+| Report experiment | Summary and figures (this folder) | Raw runs (`raw/`) |
+|---|---|---|
+| Energy conservation | column `max_rel_drift` in every CSV | `energy_long_20260923_170127/` |
+| Cost of the energy check | `energy_summary.csv` | `energy_check/` |
+| Strong and weak scaling | `native_strong_summary.csv`, `native_weak_summary.csv`, `strong_*.svg`, `weak_*.svg` | `scaling_100steps/strong_*`, `scaling_100steps/weak_*` |
+| Mapping ranks and threads | - | `mapping_numa/`, `mapping_socket/`, `mapping_core/` |
+| Newton, rsqrt, partial sums | `thread_sweep_summary.csv`, `newton_threads_*.svg` | `ablation_complete_20260922_083515/`, `ablation_T*_20260923_165910/` |
+| rsqrt time-step convergence | `rsqrt_convergence_summary.csv` | `rsqrt_conv_*_20260923_170127/` |
+| AoS vs SoA | `layout_summary.csv`, `layout_force_time.svg` | `layout/` |
+| native vs x86-64-v3 | `arch_target_comparison_summary.csv` (N = 10000) | `arch_short_N10000/`, `arch_exact_20260923_170254/`, `arch_approx1_20260924_134326/` |
+| Blocking vs overlapped ring | `overlap_summary.csv` | `overlap/` |
+| Native vs container | `container_summary.csv` | `scaling_100steps/ctr_*` |
+| Container start-up | - | `container_launch/` |
+| OSU latency and bandwidth | `osu_microbench_summary.csv`, `osu_microbench_*.svg` | `osu/` |
 
-In `scaling_100steps/` each subfolder is one Slurm job (`strong_P1_rep3` = strong scaling, P = 1, repetition 3; `ctr_` = inside the container). The long points were split over several jobs with `REP_LIST`.
+Rebuild the summaries and figures from the raw runs:
+
+```sh
+python3 make_scaling_summary.py
+python3 make_thread_sweep.py
+```

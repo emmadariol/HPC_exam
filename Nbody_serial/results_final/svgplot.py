@@ -1,14 +1,11 @@
-"""Small SVG plotting helper with the same look as the figures made by analyze.py."""
 import math
 
 PALETTE = ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf"]
 GREY = "#555"
 F = 'font-family="sans-serif"'
 
-
 def esc(s):
     return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
 
 class Chart:
     def __init__(self, title, xlabel, ylabel, xlabels, ymin, ymax, yticks=None, ylog=False,
