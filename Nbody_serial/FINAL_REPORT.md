@@ -1020,22 +1020,12 @@ export SINGULARITYENV_LD_LIBRARY_PATH=/opt/programs/openMPI/4.1.6/lib:/opt/progr
 
 We checked the result with `ldd`, which lists the libraries a program really loads. Inside the container the program loads `libmpi.so.40`, `libopen-rte.so.40` and `libopen-pal.so.40` from `/opt/programs/openMPI/4.1.6/lib` and `libhwloc.so.15` from `/opt/programs/hwloc/2.12.0/lib`, which are exactly the same files used by the native program, while OpenMP (`libgomp.so.1`) comes from the image. If the container had silently used its own MPI, runs on several nodes could fail or use slow communication without any clear error. The first images failed because they did not have glibc 2.38, and later a part of the cluster MPI loaded an incompatible version of the UCX communication library from the image. 
 
-### Portability versus performance
+#### Portability versus performance
 
 The choice of the compilation target is a trade-off between portability and performance:
 
 - `-march=native`: the fastest build, because it can use every instruction of the build machine (AVX-512 on Zen 4). But it runs only on processors with the same instructions: on an older or different CPU it stops with an "illegal instruction" error. It must be rebuilt on each machine.
 - `-march=x86-64-v3`: one build that runs on almost every x86 processor of the last decade. This is what a container needs, because the same image must run on a laptop, in the cloud and on Orfeo. The price is that AVX-512 and the code written for it are not available.
-
-How much this price is depends on the code, not on the flag alone. The compilation-target experiment of the HPC part measured:
-
-- for code that the compiler writes by itself (the exact square root) the price is almost zero: 15.06 s against 15.01 s;
-- for code written by hand for one instruction set (the AVX-512 approximate square root) the build is 4.8 times slower, because without AVX-512 that code disappears and a slow scalar fallback is used.
-
-So the portable build loses almost nothing for the version used in all scaling and container runs, and the loss appears only when the program relies on processor-specific code. There are ways to keep both, which we did not implement:
-
-- build one image per target (for example `BUILD_MARCH=znver4` for Orfeo and `x86-64-v3` elsewhere), trading portability of a single image for speed;
-- compile the fast loop for several instruction sets in the same executable (for example AVX-512 and AVX2, with GCC `target_clones` or a check of the processor at start-up), keeping one portable image at the cost of more code to write and test.
 
 ---
 
