@@ -1,0 +1,3 @@
+build,function,instructions,fma,vmulsd,vaddsd_vsubsd,vsqrtsd,vdivsd
+nofma,accumulate_sources_scalar_chains,2793,0,388,400,15,15
+fma,accumulate_sources_scalar_chains,2603,186,202,214,15,15

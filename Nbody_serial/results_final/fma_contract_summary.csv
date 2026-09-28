@@ -1,0 +1,3 @@
+build,compiler_flags,fma_instructions,N,nsteps,ranks,threads,rsqrt,accumulators,runs,force_median,force_stdev,total_median,total_stdev,energy_median,max_rel_drift
+nofma,-std=c11,12,10000,5,1,1,exact,1,5,2.260288,0.001213,2.625442,0.012746,0.359163,1.7300258730569728e-08
+fma,-std=c11 -ffp-contract=fast,311,10000,5,1,1,exact,1,5,2.081253,0.000866,2.441944,0.001562,0.355315,1.7300258730569728e-08
