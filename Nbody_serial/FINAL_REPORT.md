@@ -573,7 +573,7 @@ _Left: the direct kernel follows the ideal line, halving its time at every doubl
 
 The main reason is how the work is divided. In Newton's kernel, row i contains only the pairs with j > i, so the first rows are long and the last rows almost empty. `schedule(static)` gives each thread an equal number of rows, so the thread with the first rows has much more work than the others, and everybody waits for it. The energy check shows the same kind of imbalance between MPI ranks.
 
-### When the saving outweighs the cost of the conflict, and when it does not
+### When the saving outweighs the cost of the conflict
 
 Three effects decide the result:
 
